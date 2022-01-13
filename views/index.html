@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    @import url(//fonts.googleapis.com/earlyaccess/jejugothic.css);
+
+    * {
+      font-family: 'Jeju Gothic', serif;
+    }
+
+    body {
+      height: 100vh;
+    }
+
+    .container {
+      height: 100%;
+    }
+  </style>
+
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+
+  <title>STORE MANAGER</title>
+</head>
+
+<body>
+  <div id="search-div" class="container d-flex align-items-center justify-content-center">
+    <div class="w-40">
+      <h5 id="url-validator" class="text-center">상품 정보를 열람할 스토어의 주소를 입력해주세요.</h5>
+      <div class="input-group rounded px-3 py-2">
+        <input id="search-input" type="search" class="form-control rounded" placeholder="스토어 URL" aria-label="스토어 URL"
+          aria-describedby="search-addon" value="https://smartstore.naver.com/" />
+        </input>
+        <button id="search-button" class="btn btn-primary fas fa-search"></input>
+      </div>
+
+      <h6 class="text-center p-3">스토어의 주소는 https://smartstore.naver.com/스토어-고유-URL입니다.<br>
+        스토어 고유 URL은 영문 소문자, 숫자, 특수문자(-,_)로 구성될 수 있습니다.
+      </h6>
+    </div>
+  </div>
+  <script>
+    const searchDiv = document.getElementById('search-div');
+    const input = document.getElementById('search-input');
+    const button = document.getElementById('search-button');
+    const urlValidator = document.getElementById('url-validator');
+
+    input.addEventListener('input', (event) => {
+      if (input.value.length == 0) {
+        urlValidator.textContent = '상품 정보를 열람할 스토어의 주소를 입력하세요.';
+      }
+      else {
+        if (input.value.startsWith('https://smartstore.naver.com/')) {
+          storeUrl = input.value.split('https://smartstore.naver.com/')[1];
+
+          if (storeUrl.length == 0) {
+            urlValidator.textContent = '스토어 고유 URL을 입력해주세요.';
+          }
+          else {
+            if (new RegExp('^[a-z0-9_-]+$').test(storeUrl)) {
+              urlValidator.textContent = '알맞은 스토어 주소입니다.';
+            }
+            else {
+              urlValidator.textContent = `잘못된 스토어 고유 URL: ${storeUrl}`;
+            }
+          }
+        }
+        else {
+          urlValidator.textContent = '잘못된 스토어 주소입니다. 하단 설명을 참고해주세요.';
+        }
+      }
+    });
+
+    input.addEventListener('keyup', function (event) {
+      if (event.code == 'Enter') {
+        search();
+      }
+    });
+
+    button.addEventListener('click', function (event) {
+      search();
+    });
+
+    function search() {
+      var baseUrl = 'https://smartstore.naver.com/';
+      var storeUrl = input.value.split(baseUrl)[1];
+
+      if (new RegExp('^[a-z0-9_-]+$').test(storeUrl)) {
+        swal.fire({
+          title: '잠시만요!',
+          text: '스토어에 접속하는 중입니다.',
+          showCancelButton: false,
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          heightAuto: false,
+        });
+
+        fetch('/searchStore', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ store_url: storeUrl })
+        })
+          .then(async (res) => {
+            var json = await res.json();
+            swal.close();
+
+            if (json.result == 'OK') {
+              swal.fire({
+                title: '스토어 발견!',
+                text: `'${json.store_title}' 스토어로 진행 하시겠습니까?`,
+                icon: 'success',
+                showCancelButton: true,
+                heightAuto: false,
+              }).then((res) => {
+                if (res.isConfirmed) {
+                  var form = document.createElement('form');
+                  form.style.visibility = 'hidden';
+                  form.method = 'POST';
+                  form.action = storeUrl;
+
+                  var input = document.createElement('input');
+                  input.name = 'store_title';
+                  input.value = json.store_title;
+                  form.appendChild(input);
+
+                  document.body.appendChild(form);
+                  form.submit();
+                }
+              });
+            }
+            else {
+              swal.fire({
+                title: '이런!',
+                html: '입력하신 주소로 스토어를 찾지 못했습니다.<br>스토어 주소를 다시 한 번 확인해주세요.',
+                icon: 'error',
+                heightAuto: false,
+              });
+            }
+          });
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

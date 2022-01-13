@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        @import url(//fonts.googleapis.com/earlyaccess/jejugothic.css);
+
+        * {
+            font-family: 'Jeju Gothic', serif;
+        }
+
+        body {
+            height: 100vh;
+        }
+
+        .container {
+            height: 100%;
+        }
+
+        .ibutton {
+            background: none;
+            padding: 0px;
+            border: none;
+        }
+
+        table {
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 16px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2
+        }
+    </style>
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+
+    <title>STORE MANAGER - {store_title}</title>
+</head>
+
+<body>
+    <div class="container align-items-center justify-content-center">
+        <p></p>
+        <div class="d-flex" style="width: 660px; margin: auto;">
+            <form action="/">
+                <button class="ibutton" type="submit">
+                    <i id="home-icon" class="fa fa-home" style="font-size: 44px; margin: 9px 8px 0px 0px;"></i>
+                </button>
+            </form>
+            <h1 style="font-weight: 600;">{store_title}</h1>
+        </div>
+        <div class="d-flex p-2 border" style="width: 660px; margin: auto;">
+            <select id="base-select" class="form-select w-auto" style="width: 250px !important; margin: auto;">
+                <option selected>열람할 데이터 선택</option>
+            </select>
+            <select id="compare-select" class="form-select w-auto" style="width: 250px !important; margin:auto;">
+                <option selected>비교할 데이터 선택</option>
+            </select>
+            <span style="margin: auto;">또는</span>
+            <button id="update-button" type="button" class="btn btn-primary" style="margin: auto;">업데이트</button>
+        </div>
+        <div class="container">
+            <div class="container">
+                <p>&nbsp;</p>
+                <div id="sort-form" hidden>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
+                            checked="checked">
+                        <label class="form-check-label">상태가 바뀐 제품을 위로</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
+                            value="by-popularity" checked="checked">
+                        <label class="form-check-label">인기 순으로</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent">
+                        <label class="form-check-label">최신 순으로</label>
+                    </div>
+                </div>
+                <table id="result-table"></table>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            const storeUrl = '{store_url}';
+            const loading = {
+                title: '잠시만요!',
+                text: `데이터를 불러오는 중입니다.`,
+                showCancelButton: false,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+            };
+            const failed = {
+                title: '이런!',
+                html: '데이터를 불러오지 못했습니다.<br>다시 시도해주세요.',
+                icon: 'error',
+                heightAuto: false,
+            };
+
+            var productList = [];
+            var compareProductList = [];
+
+            var baseSelect = document.getElementById('base-select');
+            var compareSelect = document.getElementById('compare-select');
+            var compareSelect = document.getElementById('compare-select');
+            var updateButton = document.getElementById('update-button');
+            var resultTable = document.getElementById('result-table');
+            var sortForm = document.getElementById('sort-form');
+            var highlightChanges = document.getElementById('highlight-changes');
+            var byPopularity = document.getElementById('by-popularity');
+            var byRecent = document.getElementById('by-recent');
+
+            swal.fire(loading);
+
+            fetch(`${storeUrl}/historyList`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+            }).then(async (res) => {
+                var json = await res.json();
+
+                if (json.result != 'OK') {
+                    swal.fire(failed);
+                    return;
+                }
+
+                var historyList = json.historyList;
+
+                for (var i = baseSelect.options.length - 1; i > 0; i--) {
+                    baseSelect.remove(i);
+                }
+
+                for (var i = compareSelect.options.length - 1; i > 0; i--) {
+                    compareSelect.remove(i);
+                }
+
+                for (var history of historyList.sort().reverse()) {
+                    var date = new Date(history);
+                    var option = new Option(date.toLocaleString('ko-KR'), Number(date));
+                    baseSelect.add(option);
+                }
+
+                swal.close();
+
+                if (historyList.length == 0) {
+                    swal.fire({
+                        title: '잠깐!',
+                        html: '해당 스토어에 대한 기록이 하나도 없습니다.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요.',
+                        icon: 'warning',
+                    });
+                }
+
+                baseSelect.addEventListener('change', (event) => {
+                    var value = event.target.value;
+                    var tempValue = compareSelect.value;
+
+                    for (var i = compareSelect.options.length - 1; i > 0; i--) {
+                        compareSelect.remove(i);
+                    }
+
+                    if (isNaN(value)) {
+                        resultTable.hidden = true;
+                        sortForm.hidden = true;
+                        return;
+                    }
+
+                    for (var history of historyList.sort().reverse()) {
+                        if (history != value) {
+                            var date = new Date(history);
+                            var option = new Option(date.toLocaleString('ko-KR'), Number(date));
+                            compareSelect.add(option);
+                        }
+                    }
+
+                    swal.fire(loading);
+
+                    fetch(`${storeUrl}/${value}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                    }).then(async (res) => {
+                        var json = await res.json();
+
+                        if (json.result != 'OK') {
+                            swal.fire(failed);
+                            return;
+                        }
+
+                        productList = json.history;
+
+                        resultTable.hidden = false;
+                        sortForm.hidden = false;
+                        fillTable(productList);
+
+                        swal.close();
+                    });
+                });
+
+                compareSelect.addEventListener('change', (event) => {
+                    var value = event.target.value;
+
+                    if (isNaN(value)) {
+                        compareProductList = [];
+
+                        fillTable(productList);
+                        return;
+                    }
+
+                    swal.fire(loading);
+
+                    fetch(`${storeUrl}/${value}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                    }).then(async (res) => {
+                        var json = await res.json();
+
+                        if (json.result != 'OK') {
+                            swal.fire(failed);
+                            return;
+                        }
+
+                        compareProductList = json.history;
+                        fillTable(productList, compareProductList);
+                        swal.close();
+                    });
+                });
+
+                updateButton.addEventListener('click', () => {
+                    swal.fire(loading);
+
+                    fetch(`/${storeUrl}/update`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                    }).then(async (res) => {
+                        var json = await res.json()
+                        var date = json.date;
+
+                        if (json.result != 'OK') {
+                            var updateFailed = failed;
+                            updateFailed.html = '업데이트에 실패 하였습니다.<br>다시 시도해주세요.';
+                            swal.fire(updateFailed);
+                            return;
+                        }
+
+                        productList = json.productList;
+
+                        fetch(`${storeUrl}/historyList`, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                        }).then(async (res) => {
+                            var json = await res.json();
+
+                            if (json.result != 'OK') {
+                                var updateFailed = failed;
+                                updateFailed.html = '업데이트에 실패 하였습니다.<br>다시 시도해주세요.';
+                                swal.fire(updateFailed);
+                                return;
+                            }
+
+                            var historyList = json.historyList;
+
+                            swal.fire({
+                                title: '업데이트 성공!',
+                                text: '바로 열람 하시겠습니까?',
+                                icon: 'success',
+                                heightAuto: false,
+                                showCancelButton: true,
+                            }).then(async (res) => {
+                                if (res.isConfirmed) {
+                                    for (var i = baseSelect.options.length - 1; i > 0; i--) {
+                                        baseSelect.remove(i);
+                                    }
+
+                                    for (var i = compareSelect.options.length - 1; i > 0; i--) {
+                                        compareSelect.remove(i);
+                                    }
+
+                                    for (var history of historyList.sort().reverse()) {
+                                        var historyDate = new Date(history);
+                                        var baseOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
+                                        var compareOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
+
+                                        baseSelect.add(baseOption);
+
+                                        if (Number(historyDate) != date) {
+                                            compareSelect.add(compareOption);
+                                        }
+                                    }
+
+                                    fillTable(productList);
+                                    resultTable.hidden = false;
+                                    sortForm.hidden = false;
+
+                                    baseSelect.selectedIndex = 1;
+                                }
+                                else {
+                                    var tempBaseValue = baseSelect.value;
+                                    var tempCompareValue = compareSelect.value;
+
+                                    for (var i = baseSelect.options.length - 1; i > 0; i--) {
+                                        baseSelect.remove(i);
+                                    }
+
+                                    for (var i = compareSelect.options.length - 1; i > 0; i--) {
+                                        compareSelect.remove(i);
+                                    }
+
+                                    for (var history of historyList.sort().reverse()) {
+                                        var historyDate = new Date(history);
+                                        var baseOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
+                                        var compareOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
+
+                                        baseSelect.add(baseOption);
+
+                                        if (Number(historyDate) != tempBaseValue) {
+                                            compareSelect.add(compareOption);
+                                        }
+                                    }
+
+                                    baseSelect.value = tempBaseValue;
+                                    compareSelect.value = tempCompareValue;
+                                }
+                            });
+                        });
+                    });
+                });
+            });
+
+            sortForm.addEventListener('input', () => {
+                fillTable(productList, compareProductList);
+            });
+
+            function fillTable(productList, compareProductList = []) {
+                resultTable.innerHTML = '';
+                var tr = document.createElement('tr');
+
+                var th1 = document.createElement('th');
+                th1.innerHTML = '상품 코드';
+                tr.appendChild(th1);
+
+                var th2 = document.createElement('th');
+                th2.innerHTML = '상품명';
+                tr.appendChild(th2);
+
+                var th3 = document.createElement('th');
+                th3.innerHTML = '가격';
+                tr.appendChild(th3);
+
+                var th4 = document.createElement('th');
+                th4.innerHTML = '상태';
+                tr.appendChild(th4);
+
+                resultTable.appendChild(tr);
+                var sortMethod = function () { };
+
+                if (byPopularity.checked) {
+                    sortMethod = function (a, b) { return a.popularityIndex - b.popularityIndex };
+                }
+                else if (byRecent.checked) {
+                    sortMethod = function (a, b) { return b.id - a.id };
+                }
+
+                productList = productList.sort(sortMethod);
+
+                if (compareProductList.length > 0 & highlightChanges.checked) {
+                    var unchangedProductList = [];
+                    var changedProductList = [];
+
+                    for (var product of productList) {
+                        var compareProduct = compareProductList.find(element => element.id == product.id);
+
+                        if (compareProduct == undefined) {
+                            compareProduct = product;
+                        }
+
+                        if (product.price == compareProduct.price & product.isSoldOut == compareProduct.isSoldOut) {
+                            unchangedProductList.push(product);
+                        }
+                        else {
+                            changedProductList.push(product);
+                        }
+                    }
+
+                    productList = changedProductList.concat(unchangedProductList);
+                }
+
+                for (var product of productList) {
+
+                    if (!product.isNew && compareProductList.length > 0) {
+                        var compareProduct = compareProductList.find(element => element.id == product.id);
+
+                        if (compareProduct == undefined) {
+                            product.isNew = true;
+                            compareProduct = product;
+                        }
+
+                        var tr = document.createElement('tr');
+
+                        var th1 = document.createElement('th');
+                        th1.innerHTML = product.id;
+                        th1.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th1);
+
+                        var a = document.createElement('a');
+                        a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${product.id}`);
+                        a.innerHTML = product.title.length > 64 ? `${product.title.substr(0, 60)}···` : product.title;
+
+                        var th2 = document.createElement('th');
+                        th2.appendChild(a);
+                        th2.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th2);
+
+                        var th3 = document.createElement('th');
+                        if (product.price == compareProduct.price) {
+                            th3.innerHTML = product.price;
+                        }
+                        else {
+                            th3.innerHTML = `${compareProduct.price}<br>→ ${product.price}`;
+                        }
+
+                        th3.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th3);
+
+                        var th4 = document.createElement('th');
+                        if (product.isNew) {
+                            th4.innerHTML = '신규';
+                        }
+                        else {
+                            if (product.isSoldOut == compareProduct.isSoldOut) {
+                                th4.innerHTML = product.isSoldOut ? '품절' : '판매중';
+                            }
+                            else {
+                                th4.innerHTML = `${compareProduct.isSoldOut ? '품절' : '판매중'}<br>→ ${product.isSoldOut ? '품절' : '판매중'}`;
+                            }
+                        }
+                        th4.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th4);
+                        resultTable.appendChild(tr);
+                    }
+                    else {
+                        var tr = document.createElement('tr');
+
+                        var th1 = document.createElement('th');
+                        th1.innerHTML = product.id;
+                        th1.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th1);
+
+                        var a = document.createElement('a');
+                        a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${product.id}`);
+                        a.innerHTML = product.title.length > 64 ? `${product.title.substr(0, 60)}···` : product.title;
+
+                        var th2 = document.createElement('th');
+                        th2.appendChild(a);
+                        th2.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th2);
+
+                        var th3 = document.createElement('th');
+                        th3.innerHTML = product.price;
+                        th3.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th3);
+
+                        var th4 = document.createElement('th');
+                        th4.innerHTML = product.isSoldOut ? '품절' : '판매중';
+                        th4.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th4);
+                        resultTable.appendChild(tr);
+                    }
+                }
+            }
+        </script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
