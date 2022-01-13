@@ -290,4 +290,4 @@ app.post('/:store_url/:history', async (req, res) => {
   });
 })
 
-app.listen(8080);
+app.listen(80);
