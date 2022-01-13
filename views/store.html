@@ -82,13 +82,14 @@
                         <label class="form-check-label">상태가 바뀐 제품을 위로</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
-                            value="by-popularity" checked="checked">
-                        <label class="form-check-label">인기 순으로</label>
+                        <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent"
+                            checked="checked">
+                        <label class="form-check-label">최신 순으로</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent">
-                        <label class="form-check-label">최신 순으로</label>
+                        <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
+                            value="by-popularity">
+                        <label class="form-check-label">인기 순으로</label>
                     </div>
                 </div>
                 <table id="result-table"></table>
@@ -404,45 +405,48 @@
                 resultTable.appendChild(tr);
                 var sortMethod = function () { };
 
-                if (byPopularity.checked) {
-                    sortMethod = function (a, b) { return a.popularityIndex - b.popularityIndex };
-                }
-                else if (byRecent.checked) {
+                if (byRecent.checked) {
                     sortMethod = function (a, b) { return b.id - a.id };
                 }
+                else if (byPopularity.checked) {
+                    sortMethod = function (a, b) { return a.popularityIndex - b.popularityIndex };
+                }
 
-                productList = productList.sort(sortMethod);
+                var sortedProductList = [...productList].sort(sortMethod);
 
                 if (compareProductList.length > 0 & highlightChanges.checked) {
                     var unchangedProductList = [];
                     var changedProductList = [];
 
-                    for (var product of productList) {
+                    for (var product of sortedProductList) {
                         var compareProduct = compareProductList.find(element => element.id == product.id);
 
                         if (compareProduct == undefined) {
-                            compareProduct = product;
-                        }
-
-                        if (product.price == compareProduct.price & product.isSoldOut == compareProduct.isSoldOut) {
-                            unchangedProductList.push(product);
+                            changedProductList.push(product);
                         }
                         else {
-                            changedProductList.push(product);
+                            if (product.price == compareProduct.price & product.isSoldOut == compareProduct.isSoldOut) {
+                                unchangedProductList.push(product);
+                            }
+                            else {
+                                changedProductList.push(product);
+                            }
                         }
                     }
 
-                    productList = changedProductList.concat(unchangedProductList);
+                    sortedProductList = changedProductList.concat(unchangedProductList);
                 }
 
-                for (var product of productList) {
-
-                    if (!product.isNew && compareProductList.length > 0) {
+                for (var product of sortedProductList) {
+                    if (compareProductList.length > 0) {
                         var compareProduct = compareProductList.find(element => element.id == product.id);
 
                         if (compareProduct == undefined) {
                             product.isNew = true;
                             compareProduct = product;
+                        }
+                        else {
+                            product.isNew = false;
                         }
 
                         var tr = document.createElement('tr');
