@@ -152,7 +152,7 @@ app.post('/searchStore', (req, res) => {
 
         res.json({ result: 'OK', store_title: storeTitle, category_url: categoryUrl });
       } else {
-        res.json({ result: 'STORE NOT FOUND' });
+        res.json({ result: 'error', error: '존재하지 않거나 운영을 중단한 스토어입니다.' });
       }
     });
   }).on('error', (error) => {
