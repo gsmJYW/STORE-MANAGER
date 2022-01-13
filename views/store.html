@@ -46,8 +46,6 @@
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 
     <title>STORE MANAGER - {store_title}</title>
 </head>
@@ -58,14 +56,15 @@
         <div class="d-flex" style="width: 660px; margin: auto;">
             <form action="/">
                 <button class="ibutton" type="submit">
-                    <i id="home-icon" class="fa fa-home" style="font-size: 44px; margin: 9px 8px 0px 0px;"></i>
+                    <i id="home-icon" class="fa fa-home" style="font-size: 30px; margin: 1px 0px 0px 0px;"></i>
                 </button>
             </form>
-            <h1 style="font-weight: 600;">{store_title}</h1>
+            <span style="margin: 0px 0px 0px 8px"></span>
+            <h2 style="font-weight: 600;">{store_title}</h2>
         </div>
         <div class="d-flex p-2 border" style="width: 660px; margin: auto;">
             <select id="base-select" class="form-select w-auto" style="width: 250px !important; margin: auto;">
-                <option selected>열람할 데이터 선택</option>
+                <option selected>확인할 데이터 선택</option>
             </select>
             <select id="compare-select" class="form-select w-auto" style="width: 250px !important; margin:auto;">
                 <option selected>비교할 데이터 선택</option>
@@ -98,19 +97,35 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             const storeUrl = '{store_url}';
+
             const loading = {
                 title: '잠시만요!',
-                text: `데이터를 불러오는 중입니다.`,
                 showCancelButton: false,
                 showConfirmButton: false,
                 allowOutsideClick: false,
-            };
-            const failed = {
-                title: '이런!',
-                html: '데이터를 불러오지 못했습니다.<br>다시 시도해주세요.',
-                icon: 'error',
                 heightAuto: false,
             };
+
+            const failed = {
+                title: '이런!',
+                icon: 'error',
+                confirmButtonText: '어떻게 된거죠?',
+                cancelButtonText: '알겠어요',
+                showCancelButton: true,
+                heightAuto: false,
+            };
+
+            function showError(res) {
+                if (res.isConfirmed) {
+                    swal.fire({
+                        title: '원인',
+                        html: json.error,
+                        confirmButtonText: '알겠어요',
+                        showCancelButton: false,
+                        heightAuto: false,
+                    });
+                }
+            }
 
             var productList = [];
             var compareProductList = [];
@@ -125,6 +140,7 @@
             var byPopularity = document.getElementById('by-popularity');
             var byRecent = document.getElementById('by-recent');
 
+            loading.html = '제품 기록을 불러오는 중이에요.';
             swal.fire(loading);
 
             fetch(`${storeUrl}/historyList`, {
@@ -137,7 +153,8 @@
                 var json = await res.json();
 
                 if (json.result != 'OK') {
-                    swal.fire(failed);
+                    failed.html = '제품 기록을 불러오지 못했어요.<br>새로고침을 시도해주세요.';
+                    swal.fire(failed).then(showError);
                     return;
                 }
 
@@ -161,9 +178,10 @@
 
                 if (historyList.length == 0) {
                     swal.fire({
-                        title: '잠깐!',
-                        html: '해당 스토어에 대한 기록이 하나도 없습니다.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요.',
-                        icon: 'warning',
+                        title: '처음이세요?',
+                        html: '아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!',
+                        confirmButtonText: '알겠어요',
+                        showCancelButton: false,
                     });
                 }
 
@@ -189,7 +207,8 @@
                         }
                     }
 
-                    swal.fire(loading);
+                    loading.html = '제품 기록을 불러오는 중이에요.';
+                    swal.fire(loading).then(showError);
 
                     fetch(`${storeUrl}/${value}`, {
                         method: 'POST',
@@ -201,7 +220,8 @@
                         var json = await res.json();
 
                         if (json.result != 'OK') {
-                            swal.fire(failed);
+                            failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
+                            swal.fire(failed).then(showError);
                             return;
                         }
 
@@ -225,6 +245,7 @@
                         return;
                     }
 
+                    loading.html = '제품 기록을 불러오는 중이에요.';
                     swal.fire(loading);
 
                     fetch(`${storeUrl}/${value}`, {
@@ -237,7 +258,8 @@
                         var json = await res.json();
 
                         if (json.result != 'OK') {
-                            swal.fire(failed);
+                            failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
+                            swal.fire(failed).then(showError);
                             return;
                         }
 
@@ -248,6 +270,7 @@
                 });
 
                 updateButton.addEventListener('click', () => {
+                    loading.html = '업데이트는 살짝 오래 걸려요!';
                     swal.fire(loading);
 
                     fetch(`/${storeUrl}/update`, {
@@ -261,9 +284,8 @@
                         var date = json.date;
 
                         if (json.result != 'OK') {
-                            var updateFailed = failed;
-                            updateFailed.html = '업데이트에 실패 하였습니다.<br>다시 시도해주세요.';
-                            swal.fire(updateFailed);
+                            failed.html = '업데이트에 실패 하였어요.<br>다시 시도해주세요.';
+                            swal.fire(failed).then(showError);
                             return;
                         }
 
@@ -279,9 +301,8 @@
                             var json = await res.json();
 
                             if (json.result != 'OK') {
-                                var updateFailed = failed;
-                                updateFailed.html = '업데이트에 실패 하였습니다.<br>다시 시도해주세요.';
-                                swal.fire(updateFailed);
+                                failed.html = '업데이트에 성공했지만 제품 기록을 불러오지 못했어요.<br>새로 고침을 시도해주세요.';
+                                swal.fire(failed).then(showError);
                                 return;
                             }
 
@@ -289,9 +310,11 @@
 
                             swal.fire({
                                 title: '업데이트 성공!',
-                                text: '바로 열람 하시겠습니까?',
+                                html: '바로 확인 하시겠어요?',
                                 icon: 'success',
                                 heightAuto: false,
+                                confirmButtonText: '네',
+                                cancelButtonText: '됐어요!',
                                 showCancelButton: true,
                             }).then(async (res) => {
                                 if (res.isConfirmed) {
