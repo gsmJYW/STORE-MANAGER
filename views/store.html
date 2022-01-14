@@ -438,7 +438,25 @@
                 }
 
                 for (var product of sortedProductList) {
-                    if (compareProductList.length > 0) {
+                    var tr = document.createElement('tr');
+
+                    var th1 = document.createElement('th');
+                    th1.innerHTML = product.id;
+
+                    var a = document.createElement('a');
+                    a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${product.id}`);
+                    a.innerHTML = product.title.length > 64 ? `${product.title.substr(0, 60)}···` : product.title;
+
+                    var th2 = document.createElement('th');
+                    th2.appendChild(a);
+
+                    var th3 = document.createElement('th');
+                    th3.innerHTML = product.price;
+
+                    var th4 = document.createElement('th');
+                    th4.innerHTML = product.isSoldOut ? '품절' : '판매중';
+
+                    if (!isNaN(compareSelect.value)) {
                         var compareProduct = compareProductList.find(element => element.id == product.id);
 
                         if (compareProduct == undefined) {
@@ -449,77 +467,33 @@
                             product.isNew = false;
                         }
 
-                        var tr = document.createElement('tr');
-
-                        var th1 = document.createElement('th');
-                        th1.innerHTML = product.id;
-                        th1.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th1);
-
-                        var a = document.createElement('a');
-                        a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${product.id}`);
-                        a.innerHTML = product.title.length > 64 ? `${product.title.substr(0, 60)}···` : product.title;
-
-                        var th2 = document.createElement('th');
-                        th2.appendChild(a);
-                        th2.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th2);
-
-                        var th3 = document.createElement('th');
-                        if (product.price == compareProduct.price) {
-                            th3.innerHTML = product.price;
-                        }
-                        else {
-                            th3.innerHTML = `${compareProduct.price}<br>→ ${product.price}`;
+                        if (product.price != compareProduct.price) {
+                            th3.innerHTML = `${compareProduct.price}<br>→ ${th3.innerHTML}`;
                         }
 
-                        th3.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th3);
-
-                        var th4 = document.createElement('th');
                         if (product.isNew) {
-                            th4.innerHTML = '신규';
+                            th4.innerHTML = `신규(${th4.innerHTML})`;
                         }
                         else {
-                            if (product.isSoldOut == compareProduct.isSoldOut) {
-                                th4.innerHTML = product.isSoldOut ? '품절' : '판매중';
-                            }
-                            else {
-                                th4.innerHTML = `${compareProduct.isSoldOut ? '품절' : '판매중'}<br>→ ${product.isSoldOut ? '품절' : '판매중'}`;
+                            if (product.isSoldOut != compareProduct.isSoldOut) {
+                                th4.innerHTML = `${compareProduct.isSoldOut ? '품절' : '판매중'}<br>→ ${th4.innerHTML}`;
                             }
                         }
-                        th4.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th4);
-                        resultTable.appendChild(tr);
                     }
-                    else {
-                        var tr = document.createElement('tr');
 
-                        var th1 = document.createElement('th');
-                        th1.innerHTML = product.id;
-                        th1.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th1);
+                    th1.setAttribute('style', 'font-weight: 400');
+                    tr.appendChild(th1);
 
-                        var a = document.createElement('a');
-                        a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${product.id}`);
-                        a.innerHTML = product.title.length > 64 ? `${product.title.substr(0, 60)}···` : product.title;
+                    th2.setAttribute('style', 'font-weight: 400');
+                    tr.appendChild(th2);
 
-                        var th2 = document.createElement('th');
-                        th2.appendChild(a);
-                        th2.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th2);
+                    th3.setAttribute('style', 'font-weight: 400');
+                    tr.appendChild(th3);
 
-                        var th3 = document.createElement('th');
-                        th3.innerHTML = product.price;
-                        th3.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th3);
+                    th4.setAttribute('style', 'font-weight: 400');
+                    tr.appendChild(th4);
 
-                        var th4 = document.createElement('th');
-                        th4.innerHTML = product.isSoldOut ? '품절' : '판매중';
-                        th4.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th4);
-                        resultTable.appendChild(tr);
-                    }
+                    resultTable.appendChild(tr);
                 }
             }
         </script>
