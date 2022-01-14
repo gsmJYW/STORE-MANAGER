@@ -35,7 +35,7 @@
       <div class="input-group rounded px-3 py-2">
         <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none;"
           placeholder="스토어 URL" aria-label="스토어 URL" aria-describedby="search-addon"
-          value="https://smartstore.naver.com/" />
+          value="https://smartstore.naver.com/" spellcheck="false" />
         </input>
         <button id="search-button" class="btn btn-primary fas fa-search" disabled></input>
       </div>
@@ -48,19 +48,19 @@
   </div>
   <script>
     const searchDiv = document.getElementById('search-div');
-    const input = document.getElementById('search-input');
-    const button = document.getElementById('search-button');
+    const searchInput = document.getElementById('search-input');
+    const searchButton = document.getElementById('search-button');
     const urlValidator = document.getElementById('url-validator');
 
-    input.addEventListener('input', (event) => {
-      button.disabled = true;
+    searchInput.addEventListener('input', (event) => {
+      searchButton.disabled = true;
 
-      if (input.value.length == 0) {
+      if (searchInput.value.length == 0) {
         urlValidator.textContent = '스토어 주소를 입력해주세요';
       }
       else {
-        if (input.value.startsWith('https://smartstore.naver.com/')) {
-          storeUrl = input.value.split('https://smartstore.naver.com/')[1];
+        if (searchInput.value.startsWith('https://smartstore.naver.com/')) {
+          storeUrl = searchInput.value.split('https://smartstore.naver.com/')[1];
 
           if (storeUrl.length == 0) {
             urlValidator.textContent = '스토어 고유 URL을 붙여주세요';
@@ -68,7 +68,7 @@
           else {
             if (new RegExp('^[a-z0-9_-]+$').test(storeUrl)) {
               urlValidator.textContent = '좋네요!';
-              button.disabled = false;
+              searchButton.disabled = false;
             }
             else {
               urlValidator.textContent = `잘못된 스토어 고유 URL이에요 → ${storeUrl}`;
@@ -81,13 +81,13 @@
       }
     });
 
-    input.addEventListener('keyup', function (event) {
-      if (event.code == 'Enter' && !button.disabled) {
+    searchInput.addEventListener('keyup', function (event) {
+      if (event.code == 'Enter' && !searchButton.disabled) {
         search();
       }
     });
 
-    button.addEventListener('click', function (event) {
+    searchButton.addEventListener('click', function (event) {
       search();
     });
 
