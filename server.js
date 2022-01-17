@@ -27,9 +27,9 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
-function getProductAmount(storeUrl, categoryUrl) {
+function getProductAmount(storeUrl) {
   return new Promise((resolve, reject) => {
-    https.get(`https://smartstore.naver.com/${storeUrl}/category/${categoryUrl}`, (res) => {
+    https.get(`https://smartstore.naver.com/${storeUrl}/category/ALL`, (res) => {
       var data = '';
 
       res.on('error', (error) => reject(error));
@@ -48,12 +48,12 @@ function getProductAmount(storeUrl, categoryUrl) {
   });
 }
 
-function getProductList(storeUrl, categoryUrl, productAmount) {
+function getProductList(storeUrl, productAmount) {
   return new Promise((resolve, reject) => {
     var productList = [];
 
     for (var page = 0; page < Math.ceil(productAmount / 80); page++) {
-      https.get(`https://smartstore.naver.com/${storeUrl}/category/${categoryUrl}/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
+      https.get(`https://smartstore.naver.com/${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
         var data = '';
 
         res.on('data', (chunk) => {
@@ -159,24 +159,24 @@ app.post('/searchStore', (req, res) => {
     resp.on('end', () => {
       var document = parser.parse(data);
       var titleElements = document.getElementsByTagName('title');
-      var categoryElements = document.querySelectorAll('._3HQCww4jR6');
 
-      if (titleElements.length > 0 && categoryElements.length > 0) {
+      if (titleElements.length > 0) {
         var storeTitle = titleElements[0].text;
 
-        var categoryLink = categoryElements.pop().getAttribute('href');
-        var categoryUrl = categoryLink.split('/').pop().split('?')[0];
+        if (storeTitle.trim() != '현재 운영되고 있지 않습니다.') {
+          var doc = db
+            .collection('smartstore')
+            .doc(storeUrl)
 
-        var doc = db
-          .collection('smartstore')
-          .doc(storeUrl)
+          doc.set({ storeTitle: storeTitle });
 
-        doc.set({ storeTitle: storeTitle, categoryUrl: categoryUrl });
-
-        res.json({ result: 'OK', store_title: storeTitle, category_url: categoryUrl });
-      } else {
-        res.json({ result: 'error', error: '존재하지 않거나 운영을 중단한 스토어입니다.' });
+          res.json({ result: 'OK', store_title: storeTitle });
+          return;
+        }
       }
+
+      res.json({ result: 'error', error: '존재하지 않거나 운영을 중단한 스토어입니다.' });
+      return;
     });
   }).on('error', (error) => {
     res.json({
@@ -202,7 +202,6 @@ app.get('/:store_url', async (req, res) => {
     .get();
 
   var storeTitle = querySnapshot.get('storeTitle');
-  var categoryUrl = querySnapshot.get('categoryUrl');
 
   if (!querySnapshot.exists) {
     https.get(`https://smartstore.naver.com/${storeUrl}`, (resp) => {
@@ -215,19 +214,15 @@ app.get('/:store_url', async (req, res) => {
       resp.on('end', () => {
         var document = parser.parse(data);
         var titleElements = document.getElementsByTagName('title');
-        var categoryElements = document.querySelectorAll('._3HQCww4jR6');
 
-        if (titleElements.length > 0 && categoryElements.length > 0) {
+        if (titleElements.length > 0) {
           storeTitle = titleElements[0].text;
-
-          var categoryLink = categoryElements.pop().getAttribute('href');
-          categoryUrl = categoryLink.split('/').pop().split('?')[0];
 
           var doc = db
             .collection('smartstore')
             .doc(storeUrl)
 
-          doc.set({ storeTitle: storeTitle, categoryUrl: categoryUrl });
+          doc.set({ storeTitle: storeTitle });
         }
         else {
           res.sendFile(__dirname + '/views/storeNotFound.html')
@@ -242,7 +237,6 @@ app.get('/:store_url', async (req, res) => {
       var htmlString = data.toString();
       htmlString = htmlString.replaceAll('{store_url}', storeUrl);
       htmlString = htmlString.replaceAll('{store_title}', storeTitle);
-      htmlString = htmlString.replaceAll('{category_url}', categoryUrl);
       res.send(htmlString);
     });
   }
@@ -279,11 +273,10 @@ app.post('/:store_url/historyList', async (req, res) => {
   });
 })
 
-app.post('/:store_url/:category_url/update', (req, res) => {
+app.post('/:store_url/update', (req, res) => {
   var storeUrl = req.params.store_url;
-  var categoryUrl = req.params.category_url;
 
-  getProductAmount(storeUrl, categoryUrl).then((productAmount, productAmountReject) => {
+  getProductAmount(storeUrl).then((productAmount, productAmountReject) => {
     if (productAmountReject != undefined) {
       res.json({
         result: 'error',
@@ -291,7 +284,7 @@ app.post('/:store_url/:category_url/update', (req, res) => {
       })
       return;
     }
-    getProductList(storeUrl, storeInfo.category_url, productAmount).then((productList, productListReject) => {
+    getProductList(storeUrl, productAmount).then((productList, productListReject) => {
       if (productListReject != undefined) {
         res.json({
           result: 'error',
