@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    @import url(//fonts.googleapis.com/earlyaccess/jejugothic.css);
+
+    * {
+      font-family: 'Jeju Gothic', serif;
+    }
+
+    body {
+      height: 100vh;
+    }
+
+    .container {
+      height: 100%;
+    }
+  </style>
+
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+
+  <title>STORE MANAGER - 주의</title>
+</head>
+
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    swal.fire({
+      title: '이런!',
+      html: '입력하신 주소로 스토어를 찾지 못했어요.<br>스토어 주소를 다시 한 번 확인해주세요.',
+      icon: 'error',
+      confirmButtonText: '메인으로',
+      allowOutsideClick: false,
+      showCancelButton: false,
+      heightAuto: false,
+    }).then((res) => {
+      var form = document.createElement('form');
+      form.style.visibility = 'hidden';
+      form.method = 'GET';
+      form.action = '/';
+      document.body.appendChild(form);
+      form.submit();
+    });
+  </script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
