@@ -158,25 +158,25 @@ app.post('/searchStore', (req, res) => {
     resp.on('data', (chunk) => data += chunk);
     resp.on('end', () => {
       var document = parser.parse(data);
+
       var titleElements = document.getElementsByTagName('title');
+      var errorElement = document.querySelector('._141KVzmWyN');
 
       if (titleElements.length > 0) {
         var storeTitle = titleElements[0].text;
 
-        if (storeTitle.trim() != '현재 운영되고 있지 않습니다.') {
-          var doc = db
-            .collection('smartstore')
-            .doc(storeUrl)
-
-          doc.set({ storeTitle: storeTitle });
-
-          res.json({ result: 'OK', store_title: storeTitle });
+        if (errorElement != undefined) {
+          res.json({ result: 'error', error: errorElement.innerHTML });
           return;
         }
-      }
 
-      res.json({ result: 'error', error: '존재하지 않거나 운영을 중단한 스토어입니다.' });
-      return;
+        var doc = db
+          .collection('smartstore')
+          .doc(storeUrl)
+
+        doc.set({ storeTitle: storeTitle });
+        res.json({ result: 'OK', store_title: storeTitle });
+      }
     });
   }).on('error', (error) => {
     res.json({
@@ -207,30 +207,32 @@ app.get('/:store_url', async (req, res) => {
     https.get(`https://smartstore.naver.com/${storeUrl}`, (resp) => {
       var data = '';
 
-      resp.on('error', (error) => {
-        res.sendFile(__dirname + '/views/storeNotFound.html')
-      });
+      resp.on('error', (error) => res.sendFile(__dirname + '/views/storeNotFound.html'));
       resp.on('data', (chunk) => data += chunk);
       resp.on('end', () => {
         var document = parser.parse(data);
+
         var titleElements = document.getElementsByTagName('title');
+        var errorElement = document.querySelector('._141KVzmWyN');
 
         if (titleElements.length > 0) {
           storeTitle = titleElements[0].text;
+
+          if (errorElement != undefined) {
+            res.sendFile(__dirname + '/views/storeNotFound.html');
+            return;
+          }
 
           var doc = db
             .collection('smartstore')
             .doc(storeUrl)
 
           doc.set({ storeTitle: storeTitle });
+          return;
         }
-        else {
-          res.sendFile(__dirname + '/views/storeNotFound.html')
-        }
+        res.sendFile(__dirname + '/views/storeNotFound.html')
       });
-    }).on('error', (error) => {
-      res.sendFile(__dirname + '/views/storeNotFound.html')
-    });
+    }).on('error', (error) => res.sendFile(__dirname + '/views/storeNotFound.html'));
   }
   else {
     fs.readFile(__dirname + '/views/store.html', (error, data) => {
@@ -280,14 +282,14 @@ app.post('/:store_url/update', (req, res) => {
     if (productAmountReject != undefined) {
       res.json({
         result: 'error',
-        error: error.message,
+        error: '전체 제품 개수를 가져오는데 실패 하였습니다.',
       })
       return;
     }
     getProductList(storeUrl, productAmount).then((productList, productListReject) => {
       if (productListReject != undefined) {
         res.json({
-          result: 'error',
+          result: '제품 정보를 가져오는데 실패 하였습니다.',
           error: error.message,
         })
         return;
@@ -310,8 +312,8 @@ app.post('/:store_url/update', (req, res) => {
         date: Number(now),
         productList: productList,
       });
-    });
-  });
+    }).catch((error) => res.json({ result: 'error', error: error }));
+  }).catch((error) => res.json({ result: 'error', error: error }));
 });
 
 app.post('/:store_url/:history', async (req, res) => {
