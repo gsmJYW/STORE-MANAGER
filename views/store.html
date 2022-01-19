@@ -20,12 +20,6 @@
             height: 100%;
         }
 
-        .ibutton {
-            background: none;
-            padding: 0px;
-            border: none;
-        }
-
         table {
             border-spacing: 0;
             width: 100%;
@@ -53,49 +47,69 @@
 <body>
     <div class="container align-items-center justify-content-center">
         <p></p>
-        <div class="d-flex" style="width: 660px; margin: auto;">
+        <div class="d-flex" style="width: 680px; margin: auto;">
             <form action="/">
-                <button class="ibutton" type="submit">
+                <button type="submit" style="background: none; padding: 0px; border: none;">
                     <i id="home-icon" class="fa fa-home" style="font-size: 30px; margin: 1px 0px 0px 0px;"></i>
                 </button>
             </form>
             <span style="margin: 0px 0px 0px 8px"></span>
             <h2 style="font-weight: 600;">{store_title}</h2>
         </div>
-        <div class="d-flex p-2 border" style="width: 660px; margin: auto;">
-            <select id="base-select" class="form-select w-auto" style="width: 250px !important; margin: auto;">
-                <option selected>확인할 데이터 선택</option>
+        <div class="d-flex p-2 border" style="width: 680px; margin: auto;">
+            <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin:auto;">
+                <option value="0" selected>이전 데이터 선택</option>
             </select>
-            <select id="compare-select" class="form-select w-auto" style="width: 250px !important; margin:auto;">
-                <option selected>비교할 데이터 선택</option>
+            <span style="margin: auto;"> → </span>
+            <select id="new-select" class="form-select w-auto" style="width: 250px !important; margin: auto;">
+                <option value="0" selected>최근 데이터 선택</option>
             </select>
             <span style="margin: auto;">또는</span>
             <button id="update-button" type="button" class="btn btn-primary" style="margin: auto;">업데이트</button>
         </div>
-        <div class="container">
-            <div class="container">
-                <p>&nbsp;</p>
-                <div id="sort-form" hidden>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
-                            checked="checked">
-                        <label class="form-check-label">상태가 바뀐 제품을 위로</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent"
-                            checked="checked">
-                        <label class="form-check-label">최신 순으로</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
-                            value="by-popularity">
-                        <label class="form-check-label">인기 순으로</label>
+        <div class="container" id="result" style="width: 90%" hidden>
+            <p>&nbsp;</p>
+            <div id="sort-form">
+                <div class="form-check form-check-inline" style="padding-top: 4px;">
+                    <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
+                        checked="checked">
+                    <label class="form-check-label">상태가 바뀐 제품을 위로</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent"
+                        checked="checked">
+                    <label class="form-check-label">최신 순으로</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
+                        value="by-popularity">
+                    <label class="form-check-label">인기 순으로</label>
+                </div>
+                <div class="d-flex" style="float: right; margin: auto;">
+                    <span id="product-amount" style="margin: auto; padding-bottom: 7px;"></span>
+                    <div class="p-1"></div>
+                    <div class="pb-2">
+                        <button id="update-button" type="button" class="btn btn-primary"
+                            style="margin: auto; padding: 4px 10px; font-size: 14px;" onclick="ExportToExcel();">
+                            엑셀 파일 (.xlsx)&nbsp;
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
+                                viewBox="0 0 16 16" width="16" height="16">
+                                <path
+                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
+                                </path>
+                                <path
+                                    d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z">
+                                </path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
-                <table id="result-table"></table>
             </div>
+            <table id="result-table"></table>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+        <!-- <script src="xlsx.min.js"></script> -->
         <script>
             const storeUrl = '{store_url}';
 
@@ -116,11 +130,11 @@
                 heightAuto: false,
             };
 
-            function showError(res) {
+            function showError(res, error) {
                 if (res.isConfirmed) {
                     swal.fire({
                         title: '원인',
-                        html: json.error,
+                        html: error,
                         confirmButtonText: '알겠어요',
                         showCancelButton: false,
                         heightAuto: false,
@@ -128,21 +142,35 @@
                 }
             }
 
-            var productList = [];
-            var compareProductList = [];
+            var historyList = [];
 
-            var baseSelect = document.getElementById('base-select');
-            var compareSelect = document.getElementById('compare-select');
-            var compareSelect = document.getElementById('compare-select');
+            var oldProductList = [];
+            var newProductList = [];
+
+            var sortedProductList = [];
+
+            var oldSelect = document.getElementById('old-select');
+            var newSelect = document.getElementById('new-select');
             var updateButton = document.getElementById('update-button');
+            var result = document.getElementById('result');
             var resultTable = document.getElementById('result-table');
             var sortForm = document.getElementById('sort-form');
             var highlightChanges = document.getElementById('highlight-changes');
             var byPopularity = document.getElementById('by-popularity');
             var byRecent = document.getElementById('by-recent');
+            var productAmount = document.getElementById('product-amount');
 
             loading.html = '제품 기록을 불러오는 중이에요.';
             swal.fire(loading);
+
+            function getOption(date) {
+                var date = new Date(date);
+
+                var text = date.toLocaleString('ko-KR');
+                var value = Number(date);
+
+                return new Option(text, value);
+            }
 
             fetch(`${storeUrl}/historyList`, {
                 method: 'POST',
@@ -155,24 +183,16 @@
 
                 if (json.result != 'OK') {
                     failed.html = '제품 기록을 불러오지 못했어요.<br>새로고침을 시도해주세요.';
-                    swal.fire(failed).then(showError);
+                    swal.fire(failed).then((res) => showError(res, json.error));
                     return;
                 }
 
-                var historyList = json.historyList;
+                historyList = json.historyList;
+                historyList.sort((a, b) => b - a);
 
-                for (var i = baseSelect.options.length - 1; i > 0; i--) {
-                    baseSelect.remove(i);
-                }
-
-                for (var i = compareSelect.options.length - 1; i > 0; i--) {
-                    compareSelect.remove(i);
-                }
-
-                for (var history of historyList.sort().reverse()) {
-                    var date = new Date(history);
-                    var option = new Option(date.toLocaleString('ko-KR'), Number(date));
-                    baseSelect.add(option);
+                for (var history of historyList) {
+                    oldSelect.add(getOption(history));
+                    newSelect.add(getOption(history));
                 }
 
                 swal.close();
@@ -186,70 +206,31 @@
                     });
                 }
 
-                baseSelect.addEventListener('change', (event) => {
-                    var value = event.target.value;
-                    var tempValue = compareSelect.value;
-
-                    for (var i = compareSelect.options.length - 1; i > 0; i--) {
-                        compareSelect.remove(i);
-                    }
-
-                    if (isNaN(value)) {
-                        resultTable.hidden = true;
-                        sortForm.hidden = true;
+                oldSelect.addEventListener('change', (event) => {
+                    if (oldSelect.value == 0) {
+                        oldProductList = [];
+                        updateTable(newProductList = newProductList);
                         return;
                     }
 
-                    for (var history of historyList.sort().reverse()) {
-                        if (history != value) {
-                            var date = new Date(history);
-                            var option = new Option(date.toLocaleString('ko-KR'), Number(date));
-                            compareSelect.add(option);
-                        }
-                    }
-
-                    loading.html = '제품 기록을 불러오는 중이에요.';
-                    swal.fire(loading).then(showError);
-
-                    fetch(`${storeUrl}/${value}`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                    }).then(async (res) => {
-                        var json = await res.json();
-
-                        if (json.result != 'OK') {
-                            failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
-                            swal.fire(failed).then(showError);
-                            return;
-                        }
-
-                        productList = json.history;
-
-                        resultTable.hidden = false;
-                        sortForm.hidden = false;
-                        fillTable(productList);
-
-                        swal.close();
-                    });
-                });
-
-                compareSelect.addEventListener('change', (event) => {
-                    var value = event.target.value;
-
-                    if (isNaN(value)) {
-                        compareProductList = [];
-
-                        fillTable(productList);
-                        return;
+                    if (oldSelect.value >= newSelect.value) {
+                        newProductList = [];
+                        newSelect.selectedIndex = 0;
+                        updateTable();
                     }
 
                     loading.html = '제품 기록을 불러오는 중이에요.';
                     swal.fire(loading);
 
-                    fetch(`${storeUrl}/${value}`, {
+                    function showOldSelectError(error) {
+                        oldProductList = [];
+                        oldSelect.selectedIndex = 0;
+
+                        failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
+                        swal.fire(failed).then((res) => showError(res, error));
+                    }
+
+                    fetch(`${storeUrl}/${oldSelect.value}`, {
                         method: 'POST',
                         headers: {
                             'Accept': 'application/json',
@@ -259,20 +240,65 @@
                         var json = await res.json();
 
                         if (json.result != 'OK') {
-                            failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
-                            swal.fire(failed).then(showError);
+                            showOldSelectError(json.error);
                             return;
                         }
 
-                        compareProductList = json.history;
-                        fillTable(productList, compareProductList);
+                        oldProductList = json.history;
+                        updateTable(oldProductList, newProductList);
                         swal.close();
-                    });
+                    }).catch((error) => showOldSelectError(error));
+                });
+
+                newSelect.addEventListener('change', (event) => {
+                    if (newSelect.value == 0) {
+                        newProductList = [];
+                        updateTable(oldProductList = oldProductList);
+                        return;
+                    }
+
+                    if (oldSelect.value >= newSelect.value) {
+                        oldProductList = [];
+                        oldSelect.selectedIndex = 0;
+                        updateTable();
+                    }
+
+                    loading.html = '제품 기록을 불러오는 중이에요.';
+                    swal.fire(loading);
+
+                    function showNewSelectError(error) {
+                        newProductList = [];
+                        newSelect.selectedIndex = 0;
+
+                        failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
+                        swal.fire(failed).then((res) => showError(res, error));
+                    }
+
+                    fetch(`${storeUrl}/${newSelect.value}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                    }).then(async (res) => {
+                        var json = await res.json();
+
+                        if (json.result != 'OK') {
+                            showNewSelectError(json.error);
+                            return;
+                        }
+
+                        newProductList = json.history;
+                        updateTable(oldProductList, newProductList);
+                        swal.close();
+                    }).catch((error) => showNewSelectError(error));
                 });
 
                 updateButton.addEventListener('click', () => {
                     loading.html = '업데이트는 살짝 오래 걸려요!';
                     swal.fire(loading);
+
+                    failed.html = '업데이트에 실패 하였어요.<br>다시 시도해주세요.';
 
                     fetch(`/${storeUrl}/update`, {
                         method: 'POST',
@@ -282,108 +308,120 @@
                         },
                     }).then(async (res) => {
                         var json = await res.json()
-                        var date = json.date;
 
                         if (json.result != 'OK') {
-                            failed.html = '업데이트에 실패 하였어요.<br>다시 시도해주세요.';
-                            swal.fire(failed).then(showError);
+                            swal.fire(failed).then((res) => showError(res, json.error));
                             return;
                         }
 
-                        productList = json.productList;
+                        var updateDate = json.date;
+                        historyList.unshift(updateDate);
 
-                        fetch(`${storeUrl}/historyList`, {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                            },
+                        swal.fire({
+                            title: '업데이트 성공!',
+                            html: '바로 확인 하시겠어요?',
+                            icon: 'success',
+                            heightAuto: false,
+                            confirmButtonText: '네',
+                            cancelButtonText: '됐어요!',
+                            showCancelButton: true,
                         }).then(async (res) => {
-                            var json = await res.json();
+                            var oldSelectValue = oldSelect.value;
+                            var newSelectValue = newSelect.value;
 
-                            if (json.result != 'OK') {
-                                failed.html = '업데이트에 성공했지만 제품 기록을 불러오지 못했어요.<br>새로 고침을 시도해주세요.';
-                                swal.fire(failed).then(showError);
-                                return;
+                            while (oldSelect.options.length > 1) {
+                                oldSelect.remove(1);
                             }
 
-                            var historyList = json.historyList;
+                            while (newSelect.options.length > 1) {
+                                newSelect.remove(1);
+                            }
 
-                            swal.fire({
-                                title: '업데이트 성공!',
-                                html: '바로 확인 하시겠어요?',
-                                icon: 'success',
-                                heightAuto: false,
-                                confirmButtonText: '네',
-                                cancelButtonText: '됐어요!',
-                                showCancelButton: true,
-                            }).then(async (res) => {
-                                if (res.isConfirmed) {
-                                    for (var i = baseSelect.options.length - 1; i > 0; i--) {
-                                        baseSelect.remove(i);
-                                    }
+                            for (var history of historyList.sort().reverse()) {
+                                oldSelect.add(getOption(history));
+                                newSelect.add(getOption(history));
+                            }
 
-                                    for (var i = compareSelect.options.length - 1; i > 0; i--) {
-                                        compareSelect.remove(i);
-                                    }
+                            oldSelect.value = oldSelectValue;
 
-                                    for (var history of historyList.sort().reverse()) {
-                                        var historyDate = new Date(history);
-                                        var baseOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
-                                        var compareOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
+                            if (res.isConfirmed) {
+                                newSelect.value = updateDate;
+                                newProductList = json.productList;
+                                updateTable(oldProductList, newProductList);
+                            }
+                            else {
+                                newSelect.value = newSelectValue;
+                            }
 
-                                        baseSelect.add(baseOption);
-
-                                        if (Number(historyDate) != date) {
-                                            compareSelect.add(compareOption);
-                                        }
-                                    }
-
-                                    fillTable(productList);
-                                    resultTable.hidden = false;
-                                    sortForm.hidden = false;
-
-                                    baseSelect.selectedIndex = 1;
-                                }
-                                else {
-                                    var tempBaseValue = baseSelect.value;
-                                    var tempCompareValue = compareSelect.value;
-
-                                    for (var i = baseSelect.options.length - 1; i > 0; i--) {
-                                        baseSelect.remove(i);
-                                    }
-
-                                    for (var i = compareSelect.options.length - 1; i > 0; i--) {
-                                        compareSelect.remove(i);
-                                    }
-
-                                    for (var history of historyList.sort().reverse()) {
-                                        var historyDate = new Date(history);
-                                        var baseOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
-                                        var compareOption = new Option(historyDate.toLocaleString('ko-KR'), Number(historyDate));
-
-                                        baseSelect.add(baseOption);
-
-                                        if (Number(historyDate) != tempBaseValue) {
-                                            compareSelect.add(compareOption);
-                                        }
-                                    }
-
-                                    baseSelect.value = tempBaseValue;
-                                    compareSelect.value = tempCompareValue;
-                                }
-                            });
+                            console.log(oldProductList);
+                            console.log(newProductList);
                         });
+                    }).catch((error) => {
+                        swal.fire(failed).then((res) => showError(res, json.error));
                     });
                 });
+            }).catch((error) => {
+                swal.fire(failed).then((res) => showError(res, error));
             });
 
             sortForm.addEventListener('input', () => {
-                fillTable(productList, compareProductList);
+                updateTable(oldProductList, newProductList);
             });
 
-            function fillTable(productList, compareProductList = []) {
+            function updateTable(oldProductList = [], newProductList = []) {
                 resultTable.innerHTML = '';
+                productAmount.textContent = '제품 수량: ';
+
+                var sortMethod = function () { };
+
+                if (byRecent.checked) {
+                    sortMethod = function (a, b) { return b.id - a.id };
+                }
+                else if (byPopularity.checked) {
+                    sortMethod = function (a, b) { return a.popularityIndex - b.popularityIndex };
+                }
+
+                if (newProductList.length > 0) {
+                    sortedProductList = [...newProductList].sort(sortMethod);
+                }
+                else if (oldProductList.length > 0) {
+                    sortedProductList = [...oldProductList].sort(sortMethod);
+                }
+                else {
+                    result.hidden = true;
+                    return;
+                }
+
+                result.hidden = false;
+
+                if (oldProductList.length > 0 & newProductList.length > 0) {
+                    productAmount.textContent += `${oldProductList.length.toLocaleString('ko-KR')}개 → `;
+
+                    if (highlightChanges.checked) {
+                        var unchangedProductList = [];
+                        var changedProductList = [];
+
+                        for (var product of sortedProductList) {
+                            var oldProduct = oldProductList.find(element => element.id == product.id);
+
+                            if (oldProduct == undefined) {
+                                changedProductList.push(product);
+                            }
+                            else {
+                                if (product.price == oldProduct.price & product.isSoldOut == oldProduct.isSoldOut) {
+                                    unchangedProductList.push(product);
+                                }
+                                else {
+                                    changedProductList.push(product);
+                                }
+                            }
+                        }
+                        sortedProductList = changedProductList.concat(unchangedProductList);
+                    }
+                }
+
+                productAmount.textContent += `${sortedProductList.length.toLocaleString('ko-KR')}개`;
+
                 var tr = document.createElement('tr');
 
                 var th1 = document.createElement('th');
@@ -403,39 +441,6 @@
                 tr.appendChild(th4);
 
                 resultTable.appendChild(tr);
-                var sortMethod = function () { };
-
-                if (byRecent.checked) {
-                    sortMethod = function (a, b) { return b.id - a.id };
-                }
-                else if (byPopularity.checked) {
-                    sortMethod = function (a, b) { return a.popularityIndex - b.popularityIndex };
-                }
-
-                var sortedProductList = [...productList].sort(sortMethod);
-
-                if (compareProductList.length > 0 & highlightChanges.checked) {
-                    var unchangedProductList = [];
-                    var changedProductList = [];
-
-                    for (var product of sortedProductList) {
-                        var compareProduct = compareProductList.find(element => element.id == product.id);
-
-                        if (compareProduct == undefined) {
-                            changedProductList.push(product);
-                        }
-                        else {
-                            if (product.price == compareProduct.price & product.isSoldOut == compareProduct.isSoldOut) {
-                                unchangedProductList.push(product);
-                            }
-                            else {
-                                changedProductList.push(product);
-                            }
-                        }
-                    }
-
-                    sortedProductList = changedProductList.concat(unchangedProductList);
-                }
 
                 for (var product of sortedProductList) {
                     var tr = document.createElement('tr');
@@ -445,38 +450,48 @@
 
                     var a = document.createElement('a');
                     a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${product.id}`);
-                    a.innerHTML = product.title.length > 64 ? `${product.title.substr(0, 60)}···` : product.title;
+                    a.setAttribute('target', '_blank');
+
+                    if (product.title.length > 64) {
+                        var titleSplit = product.title.split(' ');
+                        a.innerHTML += titleSplit.slice(0, Math.ceil(titleSplit.length / 2) - 1).join(' ');
+                        a.innerHTML += '<br>';
+                        a.innerHTML += titleSplit.slice(Math.ceil(titleSplit.length / 2)).join(' ');
+                    }
+                    else {
+                        a.innerHTML = product.title;
+                    }
 
                     var th2 = document.createElement('th');
                     th2.appendChild(a);
 
                     var th3 = document.createElement('th');
-                    th3.innerHTML = product.price;
+                    th3.innerHTML = `${product.price.toLocaleString('ko-KR')}원`;
 
                     var th4 = document.createElement('th');
                     th4.innerHTML = product.isSoldOut ? '품절' : '판매중';
 
-                    if (!isNaN(compareSelect.value)) {
-                        var compareProduct = compareProductList.find(element => element.id == product.id);
+                    if (oldProductList.length > 0 & newProductList.length > 0) {
+                        var oldProduct = oldProductList.find(element => element.id == product.id);
 
-                        if (compareProduct == undefined) {
+                        if (oldProduct == undefined) {
                             product.isNew = true;
-                            compareProduct = product;
+                            oldProduct = product;
                         }
                         else {
                             product.isNew = false;
                         }
 
-                        if (product.price != compareProduct.price) {
-                            th3.innerHTML = `${compareProduct.price}<br>→ ${th3.innerHTML}`;
+                        if (product.price != oldProduct.price) {
+                            th3.innerHTML = `${oldProduct.price.toLocaleString('ko-KR')}원 <br>→ ${th3.innerHTML}`;
                         }
 
                         if (product.isNew) {
                             th4.innerHTML = `신규(${th4.innerHTML})`;
                         }
                         else {
-                            if (product.isSoldOut != compareProduct.isSoldOut) {
-                                th4.innerHTML = `${compareProduct.isSoldOut ? '품절' : '판매중'}<br>→ ${th4.innerHTML}`;
+                            if (product.isSoldOut != oldProduct.isSoldOut) {
+                                th4.innerHTML = `${oldProduct.isSoldOut ? '품절' : '판매중'} <br>→ ${th4.innerHTML}`;
                             }
                         }
                     }
@@ -495,6 +510,34 @@
 
                     resultTable.appendChild(tr);
                 }
+            }
+
+            function ExportToExcel(type, fn, dl) {
+                var wb = XLSX.utils.table_to_book(resultTable, { sheet: '{store_title}' });
+                var dateList = [];
+
+                if (oldProductList.length > 0) {
+                    dateList.push(new Date(Number(oldSelect.value)).toLocaleString('ko-KR'));
+                }
+
+                if (newProductList.length > 0) {
+                    dateList.push(new Date(Number(newSelect.value)).toLocaleString('ko-KR'));
+                }
+
+                var filename = dateList.join(' → ');
+
+                for (var row = 1; row <= newProductList.length; row++) {
+                    var sheet = wb.Sheets['{store_title}'];
+
+                    var idCell = sheet[`A${row + 1}`];
+                    var titleCell = sheet[`B${row + 1}`];
+
+                    titleCell.f = `=HYPERLINK("https://smartstore.naver.com/${storeUrl}/products/${idCell.v}", "${titleCell.v}")`;
+                }
+
+                return dl ?
+                    XLSX.write(wb, { bookType: type, bookSST: true, type: 'base64' }) :
+                    XLSX.writeFile(wb, fn || (`{store_title} ${filename}.xlsx`));
             }
         </script>
         <script
