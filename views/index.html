@@ -26,29 +26,37 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
 
   <title>STORE MANAGER</title>
+  <link rel="icon" type="image/x-icon" href="/images/n09.png">
 </head>
 
 <body>
-  <div id="search-div" class="container d-flex align-items-center justify-content-center">
-    <div class="w-40">
-      <h5 id="url-validator" class="text-center">스토어 주소를 입력해주세요</h5>
-      <div class="input-group rounded px-3 py-2">
-        <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none;"
-          placeholder="스토어 URL" aria-label="스토어 URL" aria-describedby="search-addon"
-          value="https://smartstore.naver.com/" spellcheck="false" />
-        </input>
-        <button id="search-button" class="btn btn-primary fas fa-search" disabled></input>
+  <div id="search-div" class="container d-flex align-items-center justify-content-center"
+    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+    <div>
+      <div class="text-center">
+        <a href="http://n09company.com" target="_blank"><img src="/images/n09.png" alt="n09" width="138" height="163"
+            style="margin: 120px 0px;"></a>
       </div>
-
+      <div class="input-group rounded p-2">
+        <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none;"
+          placeholder="스토어 이름 또는 URL" aria-describedby="search-addon" spellcheck="false" />
+        </input>
+        <button id="search-button" class="btn btn-primary fas fa-search"></input>
+      </div>
       <form action="">
-        <h6 class="text-center p-3">스토어의 주소는 <span
-            style="color:#0275d8;">https://smartstore.naver.com/스토어-고유-URL</span>입니다.<br>
-          스토어 고유 URL은 <span style="font-weight:bold;">영문 소문자, 숫자, 특수문자(-,_)</span>로 구성될 수 있습니다.
+        <h6 class="text-center p-2" style="line-height: 130%">스마트스토어 이름을 검색해보세요 ─ 이름으로 검색되지 않는다면 주소도 괜찮아요!
         </h6>
       </form>
-      <div style="max-width: 530px; height: auto;">
-        <h6 class="text-lg-start px-3" id="most-visited" hidden></h6>
-      </div>
+      <p style="text-align: center; line-height: 140%; font-size: 14px; margin: 110px 0px">해당 서비스는 ㈜엔공구의 자회사 공구형에서
+        개발합니다.<br>현재 베타 서비스
+        단계이며 무료로 이용하실 수
+        있습니다.<br>후원금은 서비스
+        운영을 위한 서버 유지 비용에 사용됩니다.<br><br>
+        <b>공구형 고객센터</b> 010-3924-8171<br><b>후원 계좌</b> 광주은행 1121-022-248925 (최만수)<br><br>
+        <b>상호명</b> 공구형 &nbsp; <b>사업자 번호</b> 226-28-19779 <br> <b>주소</b> 광주광역시 광산구
+        하남산단 6번로 57 (지식동 908호)
+      </p>
+      <p style="text-align: center; font-size: 14px;">Copyrightⓒ2022 N09 All Rights Reserved.</p>
     </div>
   </div>
   <script>
@@ -58,58 +66,29 @@
     const urlValidator = document.getElementById('url-validator');
     const mostVisited = document.getElementById('most-visited');
 
-    var mostVisitedJson = '{most_visited_json}';
-    var mostVisitedList = JSON.parse(mostVisitedJson);
-
-    if (mostVisitedList.length > 0) {
-      mostVisited.hidden = false;
-      mostVisited.innerHTML = '자주 방문한 스토어:&nbsp;&nbsp;'
-
-      mostVisitedList.sort((a, b) => { return b.count - a.count });
-
-      for (var store of mostVisitedList) {
-        mostVisited.innerHTML += `<a href="/${store.storeUrl}">${store.storeTitle}</a>&nbsp;&nbsp;`;
-
-        if (mostVisited.textContent.length > 128) {
-          break;
-        }
-      }
-    }
-    else {
-      mostVisited.textContent += '아직 방문한 스토어가 없거나 쿠키를 사용하지 않습니다.'
+    var failed = {
+      title: '이런!',
+      icon: 'error',
+      confirmButtonText: '어떻게 된거죠?',
+      cancelButtonText: '알겠어요',
+      showCancelButton: true,
+      heightAuto: false,
     }
 
-    searchInput.addEventListener('input', (event) => {
-      searchButton.disabled = true;
-
-      if (searchInput.value.length == 0) {
-        urlValidator.textContent = '스토어 주소를 입력해주세요';
+    function showError(res, error) {
+      if (res.isConfirmed) {
+        swal.fire({
+          title: '원인',
+          html: error,
+          confirmButtonText: '알겠어요',
+          showCancelButton: false,
+          heightAuto: false,
+        });
       }
-      else {
-        if (searchInput.value.startsWith('https://smartstore.naver.com/')) {
-          storeUrl = searchInput.value.split('https://smartstore.naver.com/')[1];
-
-          if (storeUrl.length == 0) {
-            urlValidator.textContent = '스토어 고유 URL을 붙여주세요';
-          }
-          else {
-            if (new RegExp('^[a-z0-9_-]+$').test(storeUrl)) {
-              urlValidator.textContent = '좋네요!';
-              searchButton.disabled = false;
-            }
-            else {
-              urlValidator.textContent = `잘못된 스토어 고유 URL이에요 → ${storeUrl}`;
-            }
-          }
-        }
-        else {
-          urlValidator.textContent = '스토어 주소 형식이 아니에요';
-        }
-      }
-    });
+    }
 
     searchInput.addEventListener('keyup', function (event) {
-      if (event.code == 'Enter' && !searchButton.disabled) {
+      if (event.code == 'Enter') {
         search();
       }
     });
@@ -119,6 +98,8 @@
     });
 
     function search() {
+      console.log(searchInput.value)
+
       swal.fire({
         title: '잠시만요!',
         text: '스토어에 접속하는 중이에요.',
@@ -134,7 +115,7 @@
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ store_url: storeUrl })
+        body: JSON.stringify({ query: searchInput.value }),
       })
         .then(async (res) => {
           var json = await res.json();
@@ -154,33 +135,19 @@
                 var form = document.createElement('form');
                 form.style.visibility = 'hidden';
                 form.method = 'GET';
-                form.action = storeUrl;
+                form.action = json.store_url;
                 document.body.appendChild(form);
                 form.submit();
               }
             });
           }
           else {
-            swal.fire({
-              title: '이런!',
-              html: '입력하신 주소로 스토어를 찾지 못했어요.<br>스토어 주소를 다시 한 번 확인해주세요.',
-              icon: 'error',
-              confirmButtonText: '어떻게 된거죠?',
-              cancelButtonText: '알겠어요',
-              showCancelButton: true,
-              heightAuto: false,
-            }).then((res) => {
-              if (res.isConfirmed) {
-                swal.fire({
-                  title: '원인',
-                  html: json.error,
-                  confirmButtonText: '알겠어요',
-                  showCancelButton: false,
-                  heightAuto: false,
-                });
-              }
-            });
+            failed.html = '스토어를 검색했지만 찾지 못했어요.<br>검색어를 다시 한 번 확인해주세요.';
+            swal.fire(failed).then((res) => showError(res, json.error));
           }
+        }).catch((error) => {
+          failed.html = '스토어를 검색하지 못했어요.';
+          swal.fire(failed).then((res) => showError(res, error));
         });
     }
   </script>
