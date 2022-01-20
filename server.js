@@ -18,7 +18,6 @@ const app = express();
 
 var router = express.Router();
 
-app.use('/images', express.static('images'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
