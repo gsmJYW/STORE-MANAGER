@@ -10,7 +10,6 @@ const db = getFirestore();
 
 const _ = require('underscore');
 const fs = require('fs');
-const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const https = require('https');
 const parser = require('node-html-parser');
@@ -19,13 +18,67 @@ const app = express();
 
 var router = express.Router();
 
-app.use('/', router);
-app.use(express.static('public'));
-app.use(cookieParser());
+app.use('/images', express.static('images'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
+
+function searchNaver(query) {
+  return new Promise((resolve, reject) => {
+    https.get(`https://search.naver.com/search.naver?query=${query}+스마트스토어`, (resp) => {
+      var data = '';
+
+      resp.on('error', (error) => reject(error));
+      resp.on('data', (chunk) => data += chunk);
+      resp.on('end', () => {
+        var document = parser.parse(data);
+        var linkElements = document.querySelectorAll('.txt.elss');
+
+        for (var linkElement of linkElements) {
+          var url = linkElement.innerText.split('›');
+
+          var baseUrl = url[0];
+          var endpoint = url[1];
+
+          if (baseUrl == 'smartstore.naver.com') {
+            resolve(endpoint);
+          }
+        }
+        reject('검색된 스토어가 없습니다.');
+      });
+    }).on('error', (error) => reject(error));
+  });
+}
+
+function searchStore(storeUrl) {
+  return new Promise((resolve, reject) => {
+    https.get(storeUrl, (res) => {
+      var data = '';
+
+      res.on('error', (error) => {
+        reject(error);
+      });
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        var document = parser.parse(data);
+
+        var titleElements = document.getElementsByTagName('title');
+        var errorElement = document.querySelector('._141KVzmWyN');
+
+        if (titleElements.length > 0) {
+          var storeTitle = titleElements[0].text;
+
+          if (errorElement != undefined) {
+            reject(errorElement.innerHTML);
+          }
+          resolve(storeTitle);
+        }
+        reject('스마트스토어 주소가 아닙니다.');
+      });
+    }).on('error', (error) => reject(error));
+  });
+}
 
 function getProductAmount(storeUrl) {
   return new Promise((resolve, reject) => {
@@ -56,10 +109,10 @@ function getProductList(storeUrl, productAmount) {
       https.get(`https://smartstore.naver.com/${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
         var data = '';
 
+        res.on('error', (error) => reject(error));
         res.on('data', (chunk) => {
           data += chunk;
         });
-        res.on('error', (error) => reject(error));
         res.on('end', () => {
           var document = parser.parse(data);
 
@@ -101,147 +154,107 @@ function getProductList(storeUrl, productAmount) {
   });
 }
 
-app.get('/', async (req, res) => {
-  var mostVisited = [];
-
-  for (const [key, value] of Object.entries(req.cookies)) {
-    var storeUrl = '';
-    var count = 0;
-
-    if (new RegExp('^[a-z0-9_-]+$').test(key)) {
-      storeUrl = key;
-    }
-    else {
-      continue;
-    }
-
-    if (!isNaN(value)) {
-      count = parseInt(value);
-    }
-    else {
-      continue;
-    }
-
-    var querySnapshot = await db
-      .collection('smartstore')
-      .doc(storeUrl)
-      .get();
-
-    var storeTitle = querySnapshot.get('storeTitle');
-
-    if (!querySnapshot.exists) {
-      continue;
-    }
-
-    mostVisited.push({ storeUrl: storeUrl, storeTitle: storeTitle, count: count });
-  }
-
-  fs.readFile(__dirname + '/views/index.html', (error, data) => {
-    var htmlString = data.toString();
-    htmlString = htmlString.replaceAll('{most_visited_json}', JSON.stringify(mostVisited));
-    res.send(htmlString);
-  });
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/views/index.html');
 });
 
-app.post('/searchStore', (req, res) => {
-  var storeUrl = req.body.store_url;
+app.post('/searchStore', async (req, res) => {
+  var query = req.body.query;
+  var storeUrl = '';
 
-  https.get(`https://smartstore.naver.com/${storeUrl}`, (resp) => {
-    var data = '';
+  if (query.includes('smartstore.naver.com')) {
+    storeUrl = query;
 
-    resp.on('error', (error) => {
+    if (storeUrl.startsWith('http://')) {
+      storeUrl = storeUrl.replace('http://', 'https://');
+    }
+
+    if (!storeUrl.startsWith('https://')) {
+      storeUrl = 'https://' + storeUrl;
+    }
+  }
+  else {
+    try {
+      var endpoint = await searchNaver(query);
+      storeUrl = `https://smartstore.naver.com/${endpoint}`;
+    }
+    catch (error) {
       res.json({
         result: 'error',
-        error: error.message
+        error: error.message == undefined ? error : error.message,
       });
+      return;
+    }
+  }
+
+  try {
+    var storeTitle = await searchStore(storeUrl);
+
+    endpoint = storeUrl.slice(storeUrl.indexOf('smartstore.naver.com') + 21);
+    if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
+      endpoint.slice(0, new RegExp('[^a-z0-9_-]+').exec(endpoint).index);
+    }
+
+    var doc = db
+      .collection('smartstore')
+      .doc(endpoint)
+
+    doc.set({ storeTitle: storeTitle });
+
+    res.json({
+      result: 'OK',
+      store_url: endpoint,
+      store_title: storeTitle
     });
-    resp.on('data', (chunk) => data += chunk);
-    resp.on('end', () => {
-      var document = parser.parse(data);
-
-      var titleElements = document.getElementsByTagName('title');
-      var errorElement = document.querySelector('._141KVzmWyN');
-
-      if (titleElements.length > 0) {
-        var storeTitle = titleElements[0].text;
-
-        if (errorElement != undefined) {
-          res.json({ result: 'error', error: errorElement.innerHTML });
-          return;
-        }
-
-        var doc = db
-          .collection('smartstore')
-          .doc(storeUrl)
-
-        doc.set({ storeTitle: storeTitle });
-        res.json({ result: 'OK', store_title: storeTitle });
-      }
-    });
-  }).on('error', (error) => {
+  }
+  catch (error) {
     res.json({
       result: 'error',
-      error: error.message
+      error: error.message == undefined ? error : error.message,
     });
-  });
+  }
 });
 
 app.get('/:store_url', async (req, res) => {
   var storeUrl = req.params.store_url;
 
-  var count = 0;
-  if (req.cookies[storeUrl]) {
-    count = parseInt(req.cookies[storeUrl]);
+  if (!new RegExp('^[a-z0-9_-]+$').test(storeUrl)) {
+    res.sendFile(__dirname + '/views/storeNotFound.html');
+    return;
   }
-  count++;
-  res.cookie(storeUrl, count);
 
   var querySnapshot = await db
     .collection('smartstore')
     .doc(storeUrl)
     .get();
 
-  var storeTitle = querySnapshot.get('storeTitle');
+  var storeTitle = '';
 
-  if (!querySnapshot.exists) {
-    https.get(`https://smartstore.naver.com/${storeUrl}`, (resp) => {
-      var data = '';
-
-      resp.on('error', (error) => res.sendFile(__dirname + '/views/storeNotFound.html'));
-      resp.on('data', (chunk) => data += chunk);
-      resp.on('end', () => {
-        var document = parser.parse(data);
-
-        var titleElements = document.getElementsByTagName('title');
-        var errorElement = document.querySelector('._141KVzmWyN');
-
-        if (titleElements.length > 0) {
-          storeTitle = titleElements[0].text;
-
-          if (errorElement != undefined) {
-            res.sendFile(__dirname + '/views/storeNotFound.html');
-            return;
-          }
-
-          var doc = db
-            .collection('smartstore')
-            .doc(storeUrl)
-
-          doc.set({ storeTitle: storeTitle });
-          return;
-        }
-        res.sendFile(__dirname + '/views/storeNotFound.html')
-      });
-    }).on('error', (error) => res.sendFile(__dirname + '/views/storeNotFound.html'));
+  if (querySnapshot.exists) {
+    storeTitle = querySnapshot.get('storeTitle');
   }
   else {
-    fs.readFile(__dirname + '/views/store.html', (error, data) => {
-      var htmlString = data.toString();
-      htmlString = htmlString.replaceAll('{store_url}', storeUrl);
-      htmlString = htmlString.replaceAll('{store_title}', storeTitle);
-      res.send(htmlString);
-    });
+    try {
+      storeTitle = await searchStore(`https://smartstore.naver.com/${storeUrl}`);
+
+      var doc = db
+        .collection('smartstore')
+        .doc(storeUrl)
+
+      doc.set({ storeTitle: storeTitle });
+    }
+    catch (error) {
+      res.sendFile(__dirname + '/views/storeNotFound.html');
+      return;
+    }
   }
+
+  fs.readFile(__dirname + '/views/store.html', (error, data) => {
+    var htmlString = data.toString();
+    htmlString = htmlString.replaceAll('{store_url}', storeUrl);
+    htmlString = htmlString.replaceAll('{store_title}', storeTitle);
+    res.send(htmlString);
+  });
 });
 
 app.post('/:store_url/historyList', async (req, res) => {
@@ -259,7 +272,7 @@ app.post('/:store_url/historyList', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message,
+      error: error,
     });
   }
 
@@ -290,7 +303,7 @@ app.post('/:store_url/update', (req, res) => {
       if (productListReject != undefined) {
         res.json({
           result: '제품 정보를 가져오는데 실패 하였습니다.',
-          error: error.message,
+          error: error,
         })
         return;
       }
@@ -330,7 +343,7 @@ app.post('/:store_url/:history', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message,
+      error: error,
     });
   }
 
