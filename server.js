@@ -336,6 +336,7 @@ app.post('/:store_url/:history', async (req, res) => {
       .collection('smartstore')
       .doc(storeUrl)
       .collection(history)
+      .orderBy('id', 'desc')
       .get();
   }
   catch (error) {
@@ -359,7 +360,7 @@ app.post('/:store_url/:history', async (req, res) => {
 
   res.json({
     result: 'OK',
-    history: docList.reverse(),
+    history: docList,
   });
 })
 
