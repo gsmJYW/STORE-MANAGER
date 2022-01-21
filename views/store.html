@@ -401,7 +401,7 @@
                             table.push(row);
 
                             if (recentProductId > product.id) {
-                                row.status = `판매중단<br>→ ${product.isSoldOut ? '품절' : '판매중'}`;
+                                row.status = `판매중단 <br> → ${product.isSoldOut ? '품절' : '판매중'}`;
                             }
 
                             continue;
@@ -411,14 +411,14 @@
                         }
 
                         if (oldProduct.price != product.price) {
-                            row.price = `${oldProduct.price}원<br>→ `;
+                            row.price = `${oldProduct.price}원 <br> → `;
                             row.changed = true;
                         }
 
                         row.price += `${product.price.toLocaleString('ko-KR')}원`
 
                         if (oldProduct.isSoldOut != product.isSoldOut) {
-                            row.status = `${oldProduct.isSoldOut ? '품절' : '판매중'}<br>→ `;
+                            row.status = `${oldProduct.isSoldOut ? '품절' : '판매중'} <br> → `;
                             row.changed = true;
                         }
 
@@ -431,7 +431,7 @@
                             id: deletedProduct.id,
                             title: deletedProduct.title,
                             price: `${deletedProduct.price.toLocaleString('ko-KR')}원`,
-                            status: `${deletedProduct.isSoldOut ? '품절' : '판매중'}<br>→ 판매중단`,
+                            status: `${deletedProduct.isSoldOut ? '품절' : '판매중'} <br> → 판매중단`,
                             popularityIndex: deletedProduct.popularityIndex,
                             changed: true,
                         };
