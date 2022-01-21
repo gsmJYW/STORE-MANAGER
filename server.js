@@ -287,45 +287,37 @@ app.post('/:store_url/historyList', async (req, res) => {
   });
 })
 
-app.post('/:store_url/update', (req, res) => {
+app.post('/:store_url/update', async (req, res) => {
   var storeUrl = req.params.store_url;
 
-  getProductAmount(storeUrl).then((productAmount, productAmountReject) => {
-    if (productAmountReject != undefined) {
-      res.json({
-        result: 'error',
-        error: '전체 제품 개수를 가져오는데 실패 하였습니다.',
-      })
-      return;
+  try {
+    var productAmount = await getProductAmount(storeUrl);
+    var productList = await getProductList(storeUrl, productAmount)
+
+    var now = new Date();
+
+    for (var product of productList) {
+      var doc = db
+        .collection('smartstore')
+        .doc(storeUrl)
+        .collection(now.getTime().toString())
+        .doc(product.id.toString());
+
+      doc.set(product);
     }
-    getProductList(storeUrl, productAmount).then((productList, productListReject) => {
-      if (productListReject != undefined) {
-        res.json({
-          result: '제품 정보를 가져오는데 실패 하였습니다.',
-          error: error,
-        })
-        return;
-      }
 
-      var now = new Date();
-
-      for (var product of productList) {
-        const docRef = db
-          .collection('smartstore')
-          .doc(storeUrl)
-          .collection(now.getTime().toString())
-          .doc(product.id.toString());
-
-        docRef.set(product);
-      }
-
-      res.json({
-        result: 'OK',
-        date: Number(now),
-        productList: productList,
-      });
-    }).catch((error) => res.json({ result: 'error', error: error }));
-  }).catch((error) => res.json({ result: 'error', error: error }));
+    res.json({
+      result: 'OK',
+      date: Number(now),
+      productList: productList,
+    });
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    })
+  }
 });
 
 app.post('/:store_url/:history', async (req, res) => {
