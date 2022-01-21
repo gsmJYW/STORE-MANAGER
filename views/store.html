@@ -375,6 +375,7 @@
 
                 var table = [];
                 var deletedProductList = [...oldProductList];
+                var productList = newProductList.length > 0 ? newProductList : oldProductList;
 
                 var recentProductId = -1;
 
@@ -439,7 +440,7 @@
                     }
                 }
                 else {
-                    for (var product of oldProductList.length > 0 ? oldProductList : newProductList) {
+                    for (var product of productList) {
                         var row = {
                             id: product.id,
                             title: product.title,
@@ -452,7 +453,7 @@
                     }
                 }
 
-                productAmount.textContent += `${newProductList.length.toLocaleString('ko-KR')}개`;
+                productAmount.textContent += `${productList.length.toLocaleString('ko-KR')}개`;
 
                 if (byRecent.checked) {
                     table.sort((a, b) => b.id - a.id);
@@ -462,8 +463,8 @@
                 }
 
                 if (oldProductList.length > 0 & newProductList.length > 0) {
-                    var sub = newProductList.length - oldProductList.length + deletedProductList.length;
-                    productAmount.innerHTML += `(<span style="color: green">+${sub.toLocaleString('ko-KR')}</span> <span style="color: red">-${deletedProductList.length.toLocaleString('ko-KR')}</span>)`;
+                    var newProductAmount = newProductList.length - oldProductList.length + deletedProductList.length;
+                    productAmount.innerHTML += `(<span style="color: green">+${newProductAmount.toLocaleString('ko-KR')}</span> <span style="color: red">-${deletedProductList.length.toLocaleString('ko-KR')}</span>)`;
 
                     if (highlightChanges.checked) {
                         table.sort((a, b) => b.changed - a.changed);
