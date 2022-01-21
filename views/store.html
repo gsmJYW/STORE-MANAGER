@@ -67,7 +67,7 @@
             <span style="margin: auto;">또는</span>
             <button id="update-button" type="button" class="btn btn-primary" style="margin: auto;">업데이트</button>
         </div>
-        <div class="container" id="result" style="width: 90%" hidden>
+        <div class="container" id="result" style="width: 1120px" hidden>
             <p>&nbsp;</p>
             <div id="sort-form">
                 <div class="form-check form-check-inline" style="padding-top: 4px;">
@@ -109,7 +109,6 @@
         </div>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
-        <!-- <script src="xlsx.min.js"></script> -->
         <script>
             const storeUrl = '{store_url}';
 
@@ -143,10 +142,8 @@
             }
 
             var historyList = [];
-
             var oldProductList = [];
             var newProductList = [];
-
             var sortedProductList = [];
 
             var oldSelect = document.getElementById('old-select');
@@ -160,7 +157,7 @@
             var byRecent = document.getElementById('by-recent');
             var productAmount = document.getElementById('product-amount');
 
-            loading.html = '제품 기록을 불러오는 중이에요.';
+            loading.html = '제품 기록들 목록을 불러오는 중이에요.';
             swal.fire(loading);
 
             function getOption(date) {
@@ -219,7 +216,7 @@
                         updateTable();
                     }
 
-                    loading.html = '제품 기록을 불러오는 중이에요.';
+                    loading.html = '제품 기록을 불러오는 중이에요.<br>제품이 많을 수록 오래 걸려요!';
                     swal.fire(loading);
 
                     function showOldSelectError(error) {
@@ -263,7 +260,7 @@
                         updateTable();
                     }
 
-                    loading.html = '제품 기록을 불러오는 중이에요.';
+                    loading.html = '제품 기록을 불러오는 중이에요.<br>제품이 많을 수록 오래 걸려요!';
                     swal.fire(loading);
 
                     function showNewSelectError(error) {
@@ -295,7 +292,7 @@
                 });
 
                 updateButton.addEventListener('click', () => {
-                    loading.html = '업데이트는 살짝 오래 걸려요!';
+                    loading.html = '새로운 제품 기록을 쓰는 중이에요.<br>제품이 많을 수록 오래 걸려요!';
                     swal.fire(loading);
 
                     failed.html = '업데이트에 실패 하였어요.<br>다시 시도해주세요.';
@@ -352,9 +349,6 @@
                             else {
                                 newSelect.value = newSelectValue;
                             }
-
-                            console.log(oldProductList);
-                            console.log(newProductList);
                         });
                     }).catch((error) => {
                         swal.fire(failed).then((res) => showError(res, json.error));
@@ -372,143 +366,166 @@
                 resultTable.innerHTML = '';
                 productAmount.textContent = '제품 수량: ';
 
-                var sortMethod = function () { };
-
-                if (byRecent.checked) {
-                    sortMethod = function (a, b) { return b.id - a.id };
-                }
-                else if (byPopularity.checked) {
-                    sortMethod = function (a, b) { return a.popularityIndex - b.popularityIndex };
-                }
-
-                if (newProductList.length > 0) {
-                    sortedProductList = [...newProductList].sort(sortMethod);
-                }
-                else if (oldProductList.length > 0) {
-                    sortedProductList = [...oldProductList].sort(sortMethod);
-                }
-                else {
+                if (newProductList.length == 0 && oldProductList.length == 0) {
                     result.hidden = true;
                     return;
                 }
 
                 result.hidden = false;
 
+                var table = [];
+                var deletedProductList = [...oldProductList];
+
+                var recentProductId = -1;
+
                 if (oldProductList.length > 0 & newProductList.length > 0) {
+                    console.log(newProductList);
                     productAmount.textContent += `${oldProductList.length.toLocaleString('ko-KR')}개 → `;
 
-                    if (highlightChanges.checked) {
-                        var unchangedProductList = [];
-                        var changedProductList = [];
+                    for (var product of newProductList) {
+                        var oldProduct = deletedProductList.find((element) => element.id == product.id);
+                        deletedProductList = deletedProductList.filter((element) => element.id != product.id);
 
-                        for (var product of sortedProductList) {
-                            var oldProduct = oldProductList.find(element => element.id == product.id);
+                        var row = {
+                            id: product.id,
+                            title: product.title,
+                            price: '',
+                            status: '',
+                            popularityIndex: product.popularityIndex,
+                            changed: false,
+                        };
 
-                            if (oldProduct == undefined) {
-                                changedProductList.push(product);
+                        if (oldProduct == undefined) {
+                            row.price = `${product.price.toLocaleString('ko-KR')}원`;
+                            row.status = `신규(${product.isSoldOut ? '품절' : '판매중'})`;
+                            row.changed = true;
+                            table.push(row);
+
+                            if (recentProductId > product.id) {
+                                row.status = `판매중단<br>→ ${product.isSoldOut ? '품절' : '판매중'}`;
                             }
-                            else {
-                                if (product.price == oldProduct.price & product.isSoldOut == oldProduct.isSoldOut) {
-                                    unchangedProductList.push(product);
-                                }
-                                else {
-                                    changedProductList.push(product);
-                                }
-                            }
+
+                            continue;
                         }
-                        sortedProductList = changedProductList.concat(unchangedProductList);
+                        else if (recentProductId == -1) {
+                            recentProductId = product.id;
+                        }
+
+                        if (oldProduct.price != product.price) {
+                            row.price = `${oldProduct.price}원<br>→ `;
+                            row.changed = true;
+                        }
+
+                        row.price += `${product.price.toLocaleString('ko-KR')}원`
+
+                        if (oldProduct.isSoldOut != product.isSoldOut) {
+                            row.status = `${oldProduct.isSoldOut ? '품절' : '판매중'}<br>→ `;
+                            row.changed = true;
+                        }
+
+                        row.status += product.isSoldOut ? '품절' : '판매중';
+                        table.push(row);
+                    }
+
+                    for (var deletedProduct of deletedProductList) {
+                        var row = {
+                            id: deletedProduct.id,
+                            title: deletedProduct.title,
+                            price: `${deletedProduct.price.toLocaleString('ko-KR')}원`,
+                            status: `${deletedProduct.isSoldOut ? '품절' : '판매중'}<br>→ 판매중단`,
+                            popularityIndex: deletedProduct.popularityIndex,
+                            changed: true,
+                        };
+                        table.push(row);
+                    }
+                }
+                else {
+                    for (var product of oldProductList.length > 0 ? oldProductList : newProductList) {
+                        var row = {
+                            id: product.id,
+                            title: product.title,
+                            price: `${product.price.toLocaleString('ko-KR')}원`,
+                            status: product.isSoldOut ? '품절' : '판매중',
+                            popularityIndex: product.popularityIndex,
+                            changed: true,
+                        };
+                        table.push(row);
                     }
                 }
 
-                productAmount.textContent += `${sortedProductList.length.toLocaleString('ko-KR')}개`;
+                productAmount.textContent += `${newProductList.length.toLocaleString('ko-KR')}개`;
+
+                if (byRecent.checked) {
+                    table.sort((a, b) => b.id - a.id);
+                }
+                else if (byPopularity.checked) {
+                    table.sort((a, b) => a.popularityIndex - b.popularityIndex);
+                }
+
+                if (oldProductList.length > 0 & newProductList.length > 0) {
+                    var sub = newProductList.length - oldProductList.length + deletedProductList.length;
+                    productAmount.innerHTML += `(<span style="color: green">+${sub.toLocaleString('ko-KR')}</span> <span style="color: red">-${deletedProductList.length.toLocaleString('ko-KR')}</span>)`;
+
+                    if (highlightChanges.checked) {
+                        table.sort((a, b) => b.changed - a.changed);
+                    }
+                }
 
                 var tr = document.createElement('tr');
+                resultTable.appendChild(tr);
 
                 var th1 = document.createElement('th');
                 th1.innerHTML = '상품 코드';
-                tr.appendChild(th1);
 
                 var th2 = document.createElement('th');
                 th2.innerHTML = '상품명';
-                tr.appendChild(th2);
 
                 var th3 = document.createElement('th');
                 th3.innerHTML = '가격';
-                tr.appendChild(th3);
 
                 var th4 = document.createElement('th');
                 th4.innerHTML = '상태';
-                tr.appendChild(th4);
 
-                resultTable.appendChild(tr);
+                for (var th of [th1, th2, th3, th4]) {
+                    th.setAttribute('style', 'font-weight: 600');
+                    tr.appendChild(th);
+                }
 
-                for (var product of sortedProductList) {
+                for (var row of table) {
                     var tr = document.createElement('tr');
+                    resultTable.appendChild(tr);
 
                     var th1 = document.createElement('th');
-                    th1.innerHTML = product.id;
+                    th1.innerHTML = row.id
 
                     var a = document.createElement('a');
-                    a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${product.id}`);
+
+                    a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${row.id}`);
                     a.setAttribute('target', '_blank');
 
-                    if (product.title.length > 64) {
-                        var titleSplit = product.title.split(' ');
+                    if (row.title.length > 48) {
+                        var titleSplit = row.title.split(' ');
                         a.innerHTML += titleSplit.slice(0, Math.ceil(titleSplit.length / 2) - 1).join(' ');
                         a.innerHTML += '<br>';
                         a.innerHTML += titleSplit.slice(Math.ceil(titleSplit.length / 2)).join(' ');
                     }
                     else {
-                        a.innerHTML = product.title;
+                        a.innerHTML = row.title;
                     }
 
                     var th2 = document.createElement('th');
                     th2.appendChild(a);
 
                     var th3 = document.createElement('th');
-                    th3.innerHTML = `${product.price.toLocaleString('ko-KR')}원`;
+                    th3.innerHTML = row.price;
 
                     var th4 = document.createElement('th');
-                    th4.innerHTML = product.isSoldOut ? '품절' : '판매중';
+                    th4.innerHTML = row.status;
 
-                    if (oldProductList.length > 0 & newProductList.length > 0) {
-                        var oldProduct = oldProductList.find(element => element.id == product.id);
-
-                        if (oldProduct == undefined) {
-                            product.isNew = true;
-                            oldProduct = product;
-                        }
-                        else {
-                            product.isNew = false;
-                        }
-
-                        if (product.price != oldProduct.price) {
-                            th3.innerHTML = `${oldProduct.price.toLocaleString('ko-KR')}원 <br>→ ${th3.innerHTML}`;
-                        }
-
-                        if (product.isNew) {
-                            th4.innerHTML = `신규(${th4.innerHTML})`;
-                        }
-                        else {
-                            if (product.isSoldOut != oldProduct.isSoldOut) {
-                                th4.innerHTML = `${oldProduct.isSoldOut ? '품절' : '판매중'} <br>→ ${th4.innerHTML}`;
-                            }
-                        }
+                    for (var th of [th1, th2, th3, th4]) {
+                        th.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th);
                     }
-
-                    th1.setAttribute('style', 'font-weight: 400');
-                    tr.appendChild(th1);
-
-                    th2.setAttribute('style', 'font-weight: 400');
-                    tr.appendChild(th2);
-
-                    th3.setAttribute('style', 'font-weight: 400');
-                    tr.appendChild(th3);
-
-                    th4.setAttribute('style', 'font-weight: 400');
-                    tr.appendChild(th4);
-
-                    resultTable.appendChild(tr);
                 }
             }
 
