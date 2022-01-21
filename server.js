@@ -249,6 +249,13 @@ app.get('/:store_url', async (req, res) => {
   }
 
   fs.readFile(__dirname + '/views/store.html', (error, data) => {
+    if (error != null) {
+      res.json({
+        result: 'error',
+        error: error,
+      });
+    }
+
     var htmlString = data.toString();
     htmlString = htmlString.replaceAll('{store_url}', storeUrl);
     htmlString = htmlString.replaceAll('{store_title}', storeTitle);
