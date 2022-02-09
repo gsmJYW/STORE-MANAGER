@@ -16,8 +16,6 @@ const parser = require('node-html-parser');
 const express = require('express');
 const app = express();
 
-var router = express.Router();
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
@@ -124,27 +122,33 @@ function getProductList(storeUrl, productAmount) {
           var productIndex = 0;
 
           for (var productIndex = 0; productIndex < idElements.length; productIndex++) {
-            var page = pageElements.find(element => element.getAttribute('aria-current') == 'true');
+            try {
+              var page = pageElements.find(element => element.getAttribute('aria-current') == 'true');
 
-            var product = {
-              id: parseInt(idElements[productIndex].getAttribute('href').split('/').pop()),
-              popularityIndex: (parseInt(page.text) - 1) * 80 + productIndex,
-              title: titleElements[productIndex].text.trim(),
-              price: parseInt(priceElements[productIndex].text.replace(',', '')),
-              isSoldOut: false,
-            };
+              var product = {
+                id: parseInt(idElements[productIndex].getAttribute('href').split('/').pop()),
+                popularityIndex: (parseInt(page.text) - 1) * 80 + productIndex,
+                title: titleElements[productIndex].text.trim(),
+                price: parseInt(priceElements[productIndex].text.replace(',', '')),
+                isSoldOut: false,
+              };
 
-            for (var childNode of soldOutElements[productIndex].childNodes) {
-              if (childNode.toString().includes('_1eB0tn9wSc')) {
-                product.isSoldOut = true;
+              for (var childNode of soldOutElements[productIndex].childNodes) {
+                if (childNode.toString().includes('_1eB0tn9wSc')) {
+                  product.isSoldOut = true;
+                }
+              }
+
+              productList.push(product);
+
+              if (productList.length >= productAmount) {
+                resolve(productList);
+                break;
               }
             }
-
-            productList.push(product);
-
-            if (productList.length >= productAmount) {
-              resolve(productList);
-              break;
+	    catch (error) {
+              productAmount--;
+              continue;
             }
           }
         });
@@ -153,7 +157,7 @@ function getProductList(storeUrl, productAmount) {
   });
 }
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
 
