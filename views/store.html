@@ -35,6 +35,10 @@
         tr:nth-child(even) {
             background-color: #f2f2f2
         }
+
+        .swal-option {
+            display: grid !important;
+        }
     </style>
 
     <link rel="stylesheet"
@@ -55,6 +59,8 @@
             </form>
             <span style="margin: 0px 0px 0px 8px"></span>
             <h2 style="font-weight: 600;">{store_title}</h2>
+            <i id="bookmark" class="far fa-star fa-lg" style="color: orange; margin: 8px 0px 0px 8px;" onclick="toggleBookmark();"></i>
+            <span style="margin: 6px 0px 0px 3px">즐겨찾기</span>
         </div>
         <div class="d-flex p-2 border" style="width: 680px; margin: auto;">
             <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin:auto;">
@@ -90,7 +96,7 @@
                     <div class="p-1"></div>
                     <div class="pb-2">
                         <button id="update-button" type="button" class="btn btn-primary"
-                            style="margin: auto; padding: 4px 10px; font-size: 14px;" onclick="ExportToExcel();">
+                            style="margin: auto; padding: 4px 10px; font-size: 14px;" onclick="exportExcel();">
                             엑셀 파일 (.xlsx)&nbsp;
                             <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
                                 viewBox="0 0 16 16" width="16" height="16">
@@ -158,6 +164,7 @@
             var newProductList = [];
             var sortedProductList = [];
 
+            var bookmark = document.getElementById('bookmark');
             var oldSelect = document.getElementById('old-select');
             var newSelect = document.getElementById('new-select');
             var updateButton = document.getElementById('update-button');
@@ -171,6 +178,107 @@
 
             loading.html = '제품 기록들 목록을 불러오는 중이에요.';
             swal.fire(loading);
+
+            if (document.cookie.trim().length > 0) {
+                var bookmarks = [];
+
+                for (var splitCookies of document.cookie.split(/; */))
+                {
+                    var splitCookie = splitCookies.split('=');
+                    var cookie = JSON.parse(splitCookie[1]);
+                    cookie.url = splitCookie[0];
+                    bookmarks.push(cookie);
+                }
+
+                bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
+            }
+            
+            function bookmarkOn() {
+                bookmark.classList.remove('far');
+                bookmark.classList.add('fas');
+            }
+
+            function bookmarkOff() {
+                bookmark.classList.remove('fas');
+                bookmark.classList.add('far');
+            }
+
+            function toggleBookmark() {
+                if (isBookmarked) {
+                    bookmarkOff();
+                    bookmarkCount--;
+                    document.cookie = `${storeUrl}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+ 
+                    isBookmarked = false;
+                }
+                else {
+                    if (bookmarkCount >= 10) {
+                        swal.fire({
+                            title: '잠시만요!',
+                            html: '즐겨찾기는 10개까지 등록할 수 있어요!<br>즐겨찾기 하나를 해제하고 등록 하시겠어요?',
+                            showCancelButton: true,
+                            confirmButtonText: '즐겨찾기 선택',
+                            cancelButtonText: '안 돼요!',
+                            heightAuto: false,
+                        }).then((res) => {
+                            if (res.isConfirmed) {
+                                const inputOptions = new Promise((resolve) => {
+                                    var options = {};
+
+                                    for (var bookmark of bookmarks) {
+                                        options[bookmark.url] = bookmark.title;
+                                    }
+
+                                    setTimeout(() => {
+                                        resolve(options);
+                                    }, 1000)
+                                });
+
+                                const { value: color } = Swal.fire({
+                                    title: '해제할 즐겨찾기',
+                                    input: 'radio',
+                                    customClass: { input: 'swal-option' },
+                                    inputOptions: inputOptions,
+                                    showCancelButton: true,
+                                    confirmButtonText: '선택',
+                                    cancelButtonText: '안 돼요!',
+                                    inputValidator: (value) => {
+                                        if (value) {
+                                            bookmarkOn();
+                                            var now = new Date();
+                                            document.cookie = `${value}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                                            document.cookie = `${storeUrl}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};`;
+
+                                            isBookmarked = true;
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    else {
+                        bookmarkOn();
+                        bookmarkCount++;
+                        var now = new Date();
+                        document.cookie = `${storeUrl}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};`;
+
+                        isBookmarked = true;
+                    }
+                }
+            }
+
+            var isBookmarked = false;
+            var bookmarkCount = 0;
+
+            for (var splitCookies of document.cookie.split(/; */))
+            {
+                bookmarkCount++;
+                var splitCookie = splitCookies.split('=');
+                if (splitCookie[0] == storeUrl) {
+                    isBookmarked = true;
+                    bookmarkOn();
+                }
+            }
 
             function getOption(date) {
                 var date = new Date(date);
@@ -541,7 +649,7 @@
                 }
             }
 
-            function ExportToExcel(type, fn, dl) {
+            function exportExcel(type, fn, dl) {
                 var wb = XLSX.utils.table_to_book(resultTable, { sheet: '{store_title}' });
                 var dateList = [];
 

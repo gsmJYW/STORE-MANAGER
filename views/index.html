@@ -38,22 +38,22 @@
             style="margin: 120px 0px;"></a>
       </div>
       <div class="input-group rounded p-2">
-        <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none;"
+        <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none; width: 520px;"
           placeholder="스토어 이름 또는 URL" aria-describedby="search-addon" spellcheck="false" />
         </input>
         <button id="search-button" class="btn btn-primary fas fa-search"></input>
       </div>
       <form action="">
-        <h6 id="search-helper" class="text-center px-2" style="line-height: 130%">스마트스토어 이름을 검색해보세요 ─ 이름으로 검색되지 않는다면 주소도 괜찮아요!
+        <h6 id="search-helper" class="text-center px-2" style="line-height: 130%;">스마트스토어 이름을 검색해보세요 ─ 이름으로 검색되지 않는다면 주소도 괜찮아요!<br>&nbsp;
         </h6>
       </form>
-      <p style="text-align: center; line-height: 150%; font-size: 14px; margin: 85px 0px">해당 서비스는 ㈜엔공구의 자회사 공구형에서
+      <p style="text-align: center; line-height: 150%; font-size: 14px; margin: 66px 0px 84px 0px">해당 서비스는 ㈜엔공구의 자회사 공구형에서
         개발합니다.<br>현재 베타 서비스
         단계이며 무료로 이용하실 수
         있습니다.<br>후원금은 서비스
         운영을 위한 서버 유지 비용에 사용됩니다.
       </p>
-      <p style="text-align: center; line-height: 150%; font-size: 14px; margin: 85px 0px">
+      <p style="text-align: center; line-height: 150%; font-size: 14px; margin: 84px 0px">
         <b>공구형 고객센터</b> 010-3924-8171<br><b>후원 계좌</b> 광주은행 1121-022-248925 (최만수)<br><br>
         <b>상호명</b> 공구형 &nbsp; <b>사업자 번호</b> 226-28-19779 <br> <b>주소</b> 광주광역시 광산구
         하남산단 6번로 57 (지식동 908호)
@@ -80,6 +80,57 @@
     const searchButton = document.getElementById('search-button');
     const urlValidator = document.getElementById('url-validator');
     const mostVisited = document.getElementById('most-visited');
+
+    if (document.cookie.trim().length > 0) {
+      var bookmarks = [];
+      var isThereNewLine = false;
+
+      for (var splitCookies of document.cookie.split(/; */))
+      {
+        var splitCookie = splitCookies.split('=');
+        var cookie = JSON.parse(splitCookie[1]);
+        cookie.url = splitCookie[0];
+        bookmarks.push(cookie);
+      }
+
+      bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
+      
+      if (bookmarks.length > 0) {
+        searchHelper.innerHTML = '';
+      }
+
+      var firstBookmark = true;
+
+      for (var bookmark of bookmarks) {
+        if (!firstBookmark) {
+          var span = document.createElement('span');
+          span.innerHTML = '&nbsp&nbsp;';
+          searchHelper.appendChild(span);
+        }
+
+        firstBookmark = false;
+
+        var a = document.createElement('a');
+        a.innerHTML = bookmark.title;
+        a.setAttribute('href', `/${bookmark.url}`);
+        searchHelper.appendChild(a);
+
+        if (searchHelper.offsetWidth > 577) {
+          var br = document.createElement('br');
+          searchHelper.insertBefore(br, a);
+          isThereNewLine = true;
+        }
+      }
+
+      if (!isThereNewLine) {
+        var br = document.createElement('br');
+        searchHelper.appendChild(br);
+
+        var span = document.createElement('span');
+        span.innerHTML = '&nbsp;';
+        searchHelper.appendChild(span);
+      }
+    }
 
     var failed = {
       title: '이런!',

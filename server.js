@@ -11,11 +11,13 @@ const db = getFirestore();
 const _ = require('underscore');
 const fs = require('fs');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const https = require('https');
 const parser = require('node-html-parser');
 const express = require('express');
 const app = express();
 
+app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
@@ -146,7 +148,7 @@ function getProductList(storeUrl, productAmount) {
                 break;
               }
             }
-	    catch (error) {
+            catch (error) {
               productAmount--;
               continue;
             }
@@ -220,6 +222,7 @@ app.post('/searchStore', async (req, res) => {
 
 app.get('/:store_url', async (req, res) => {
   var storeUrl = req.params.store_url;
+  var now = new Date();
 
   if (!new RegExp('^[a-z0-9_-]+$').test(storeUrl)) {
     res.sendFile(__dirname + '/views/storeNotFound.html');
