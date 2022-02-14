@@ -38,13 +38,13 @@
             style="margin: 120px 0px;"></a>
       </div>
       <div class="input-group rounded p-2">
-        <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none; width: 520px;"
+        <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none; width: 518px;"
           placeholder="스토어 이름 또는 URL" aria-describedby="search-addon" spellcheck="false" />
         </input>
         <button id="search-button" class="btn btn-primary fas fa-search"></input>
       </div>
       <form action="">
-        <h6 id="search-helper" class="text-center px-2" style="line-height: 130%;">스마트스토어 이름을 검색해보세요 ─ 이름으로 검색되지 않는다면 주소도 괜찮아요!<br>&nbsp;
+        <h6 id="search-helper" class="text-center px-2" style="line-height: 130%;"><br>&nbsp;
         </h6>
       </form>
       <p style="text-align: center; line-height: 150%; font-size: 14px; margin: 66px 0px 84px 0px">해당 서비스는 ㈜엔공구의 자회사 공구형에서
@@ -81,9 +81,10 @@
     const urlValidator = document.getElementById('url-validator');
     const mostVisited = document.getElementById('most-visited');
 
+    var isThereBoomark = false;
+
     if (document.cookie.trim().length > 0) {
       var bookmarks = [];
-      var isThereNewLine = false;
 
       for (var splitCookies of document.cookie.split(/; */))
       {
@@ -94,28 +95,28 @@
       }
 
       bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
-      
+
       if (bookmarks.length > 0) {
         searchHelper.innerHTML = '';
       }
-
-      var firstBookmark = true;
+      
+      var isThereNewLine = false;
 
       for (var bookmark of bookmarks) {
-        if (!firstBookmark) {
+        if (isThereBoomark) {
           var span = document.createElement('span');
           span.innerHTML = '&nbsp&nbsp;';
           searchHelper.appendChild(span);
         }
 
-        firstBookmark = false;
+        isThereBoomark = true;
 
         var a = document.createElement('a');
         a.innerHTML = bookmark.title;
         a.setAttribute('href', `/${bookmark.url}`);
         searchHelper.appendChild(a);
 
-        if (searchHelper.offsetWidth > 577) {
+        if (searchHelper.offsetWidth > 575) {
           var br = document.createElement('br');
           searchHelper.insertBefore(br, a);
           isThereNewLine = true;
@@ -130,6 +131,38 @@
         span.innerHTML = '&nbsp;';
         searchHelper.appendChild(span);
       }
+    }
+
+    if (!isThereBoomark) {
+      searchHelper.innerHTML = '매번 검색하기 귀찮으시죠? 클릭 한 번으로 스토어에 접속해보세요! ';
+
+      var howToBookmark = document.createElement('button');
+      howToBookmark.type = "button";
+      howToBookmark.style = 'background:none; border:none; margin:0; padding:0; color: #0066CC;';
+      howToBookmark.innerHTML = '즐겨찾기 사용법';
+      howToBookmark.setAttribute('onclick', 'showHowToBookmark();');
+      searchHelper.appendChild(howToBookmark);
+
+      searchHelper.innerHTML += '<br>&nbsp;'
+    }
+
+    function showHowToBookmark() {
+      var html = '<div class="text-center"><img src="https://imgur.com/zbj1mBU.png" width="454" height="47"></div>';
+      html += '<div class="text-center" style="margin: 8px 0px;"><img src="https://imgur.com/x13joXj.png" width="454" height="81"></div>';
+      html += '<div style="text-align: left; line-height: 130%;"><br>';
+      html += '1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>';
+      html += '2. 스토어 이름 옆 노란색 별 아이콘을 클릭해주세요.<br>';
+      html += '3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>';
+      html += '즐겨찾기는 최대 10개까지만 등록할 수 있어요.<br>';
+      html += '그 이상 등록하려 하실 경우 삭제할 즐겨찾기 선택창이 떠요.<br><br>';
+      html += '즐겨찾기는 쿠키를 통해 저장해요.<br>'
+      html += '브라우저에서 쿠키를 삭제하시면 즐겨찾기도 삭제되어요.</div>';
+
+      swal.fire({
+        title: '즐겨찾기 A to Z',
+        html: html,
+        confirmButtonText: '알겠어요',
+      });
     }
 
     var failed = {
@@ -164,6 +197,17 @@
     });
 
     function search() {
+      if (searchInput.value.trim().length == 0) {
+        swal.fire({
+          title: '잠시만요!',
+          text: '검색창이 너무 허전해요.',
+          confirmButtonText: '알겠어요',
+          heightAuto: false,
+        });
+
+        return;  
+      }
+
       swal.fire({
         title: '잠시만요!',
         text: '스토어에 접속하는 중이에요.',
@@ -206,7 +250,7 @@
             });
           }
           else {
-            failed.html = '스토어를 검색했지만 찾지 못했어요.<br>검색어를 다시 한 번 확인해주세요.';
+            failed.html = '<div style="line-height: 130%;">스토어를 검색했지만 찾지 못했어요.<br>검색어를 다시 한 번 확인해주세요.</div>';
             swal.fire(failed).then((res) => showError(res, json.error));
           }
         }).catch((error) => {

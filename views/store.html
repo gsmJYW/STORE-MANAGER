@@ -215,7 +215,7 @@
                     if (bookmarkCount >= 10) {
                         swal.fire({
                             title: '잠시만요!',
-                            html: '즐겨찾기는 10개까지 등록할 수 있어요!<br>즐겨찾기 하나를 해제하고 등록 하시겠어요?',
+                            html: '<div style="line-height: 130%;">즐겨찾기는 10개까지 등록할 수 있어요!<br>즐겨찾기 하나를 해제하고 등록 하시겠어요?</div>',
                             showCancelButton: true,
                             confirmButtonText: '즐겨찾기 선택',
                             cancelButtonText: '안 돼요!',
@@ -299,7 +299,7 @@
                 var json = await res.json();
 
                 if (json.result != 'OK') {
-                    failed.html = '제품 기록을 불러오지 못했어요.<br>새로고침을 시도해주세요.';
+                    failed.html = '<div style="line-height: 130%;">제품 기록을 불러오지 못했어요.<br>새로고침을 시도해주세요.</div>';
                     swal.fire(failed).then((res) => showError(res, json.error));
                     return;
                 }
@@ -317,7 +317,7 @@
                 if (historyList.length == 0) {
                     swal.fire({
                         title: '처음이세요?',
-                        html: '아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!',
+                        html: '<div style="line-height: 130%;">아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!</div>',
                         confirmButtonText: '알겠어요',
                         showCancelButton: false,
                     });
@@ -336,14 +336,14 @@
                         updateTable();
                     }
 
-                    loading.html = '제품 기록을 불러오는 중이에요.<br>제품이 많을 수록 오래 걸려요!';
+                    loading.html = '<div style="line-height: 130%;">제품 기록을 불러오는 중이에요.<br>제품이 많을 수록 오래 걸려요!</div>';
                     swal.fire(loading);
 
                     function showOldSelectError(error) {
                         oldProductList = [];
                         oldSelect.selectedIndex = 0;
 
-                        failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
+                        failed.html = '<div style="line-height: 130%;">제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.</div>';
                         swal.fire(failed).then((res) => showError(res, error));
                     }
 
@@ -380,14 +380,14 @@
                         updateTable();
                     }
 
-                    loading.html = '제품 기록을 불러오는 중이에요.<br>제품이 많을 수록 오래 걸려요!';
+                    loading.html = '<div style="line-height: 130%;">제품 기록을 불러오는 중이에요.<br>제품이 많을 수록 오래 걸려요!</div>';
                     swal.fire(loading);
 
                     function showNewSelectError(error) {
                         newProductList = [];
                         newSelect.selectedIndex = 0;
 
-                        failed.html = '제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.';
+                        failed.html = '<div style="line-height: 130%;">제품 기록을 불러오지 못했어요.<br>다시 시도해주세요.</div>';
                         swal.fire(failed).then((res) => showError(res, error));
                     }
 
@@ -412,10 +412,10 @@
                 });
 
                 updateButton.addEventListener('click', () => {
-                    loading.html = '새로운 제품 기록을 쓰는 중이에요.<br>제품이 많을 수록 오래 걸려요!';
+                    loading.html = '<div style="text-align: left; line-height: 150%;">새로운 제품 기록을 쓰는 중이에요.<br>제품이 많을 수록 오래 걸려요!</div>';
                     swal.fire(loading);
 
-                    failed.html = '업데이트에 실패 하였어요.<br>다시 시도해주세요.';
+                    failed.html = '<div style="line-height: 130%;">업데이트에 실패 하였어요.<br>다시 시도해주세요.</div>';
 
                     fetch(`/${storeUrl}/update`, {
                         method: 'POST',
