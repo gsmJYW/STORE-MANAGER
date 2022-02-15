@@ -12,12 +12,21 @@
       font-family: 'Jeju Gothic', serif;
     }
 
+    .container {
+      height: 100%;
+    }
+
     body {
+      padding: 25px;
+      background-color: white;
+      color: black;
+      font-size: 25px;
       height: 100vh;
     }
 
-    .container {
-      height: 100%;
+    .dark-mode {
+      background-color: black;
+      color: white;
     }
   </style>
 
@@ -26,15 +35,32 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
 
   <title>STORE MANAGER</title>
-  <link rel="icon" type="image/x-icon" href="https://imgur.com/GqSHXlr.png">
+  <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
 </head>
 
 <body>
+  <div class="form-check form-check-inline" style="padding: 0px;">
+    <div class="d-flex" style="margin: auto;">
+      <button type="button" onclick="showInfo();" style="background: none; padding: 0px; border: none;">
+        <i id="info-icon" class="fa fa-info-circle" style="font-size: 30px; margin: auto;"></i>
+      </button>
+      <span style="margin: 4px 0px 0px 6px;">처음이세요?</span>
+    </div>
+  </div>
+  <div class="d-flex" style="float: right; margin: auto;">
+    <span style="margin: auto; padding-bottom: 7px;">다크 모드</span>
+    <div class="p-1"></div>
+    <div class="pb-2">
+      <div class="form-check form-switch">
+        <input id ="dark-mode" class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
+      </div>
+    </div>
+  </div>
   <div id="search-div" class="container d-flex align-items-center justify-content-center"
     style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
     <div>
       <div class="text-center">
-        <a href="http://n09company.com" target="_blank"><img src="https://imgur.com/GqSHXlr.png" width="138" height="163"
+        <a href="http://n09company.com" target="_blank"><img src="https://imgur.com/YPhrrAJ.png" width="160" height="160"
             style="margin: 120px 0px;"></a>
       </div>
       <div class="input-group rounded p-2">
@@ -44,21 +70,23 @@
         <button id="search-button" class="btn btn-primary fas fa-search"></input>
       </div>
       <form action="">
-        <h6 id="search-helper" class="text-center px-2" style="line-height: 130%;"><br>&nbsp;
-        </h6>
+        <h6 id="search-helper" class="text-center px-2" style="line-height: 130%; font-weight: 100;"><br>&nbsp;</h6>
       </form>
-      <p style="text-align: center; line-height: 150%; font-size: 14px; margin: 66px 0px 84px 0px">해당 서비스는 ㈜엔공구의 자회사 공구형에서
+      <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 66px 0px 77px 0px">해당 서비스는 ㈜엔공구의 자회사 공구형에서
         개발합니다.<br>현재 베타 서비스
         단계이며 무료로 이용하실 수
         있습니다.<br>후원금은 서비스
         운영을 위한 서버 유지 비용에 사용됩니다.
       </p>
-      <p style="text-align: center; line-height: 150%; font-size: 14px; margin: 84px 0px">
+      <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 77px 0px">
         <b>공구형 고객센터</b> 010-3924-8171<br><b>후원 계좌</b> 광주은행 1121-022-248925 (최만수)<br><br>
         <b>상호명</b> 공구형 &nbsp; <b>사업자 번호</b> 226-28-19779 <br> <b>주소</b> 광주광역시 광산구
         하남산단 6번로 57 (지식동 908호)
       </p>
-      <p style="text-align: center; font-size: 14px;">Copyrightⓒ2022 N09 All Rights Reserved.</p>
+      <div class="text-center">
+        <a href="https://09bro.net" target="_blank"><img src="https://imgur.com/7HP4qOb.png" width="72" height="24" style="margin: 0px 8px;"></a>
+        <a href="https://play.google.com/store/apps/details?id=com.n09.fanorama" target="_blank"><img src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto;"></a>
+      </div>
       <div hidden>
         <!-- Start: Copyright 2022 TraceMyIP.org Service Code (024312-02072022)- DO NOT MODIFY //-->
         <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
@@ -73,15 +101,18 @@
       </div>
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
   <script>
-    const searchDiv = document.getElementById('search-div');
-    const searchInput = document.getElementById('search-input');
-    const searchHelper = document.getElementById('search-helper');
-    const searchButton = document.getElementById('search-button');
-    const urlValidator = document.getElementById('url-validator');
-    const mostVisited = document.getElementById('most-visited');
-
     var isThereBoomark = false;
+
+    var darkMode = document.getElementById('dark-mode');
+    var searchDiv = document.getElementById('search-div');
+    var searchInput = document.getElementById('search-input');
+    var searchHelper = document.getElementById('search-helper');
+    var searchButton = document.getElementById('search-button');
+    var urlValidator = document.getElementById('url-validator');
+    var mostVisited = document.getElementById('most-visited');
 
     if (document.cookie.trim().length > 0) {
       var bookmarks = [];
@@ -90,8 +121,15 @@
       {
         var splitCookie = splitCookies.split('=');
         var cookie = JSON.parse(splitCookie[1]);
-        cookie.url = splitCookie[0];
-        bookmarks.push(cookie);
+
+        if (splitCookie[0] == '$dark_mode') {
+          darkMode.checked = true;
+          document.body.classList.toggle('dark-mode');
+        }
+        else {
+          cookie.url = splitCookie[0];
+          bookmarks.push(cookie);
+        }
       }
 
       bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
@@ -147,16 +185,17 @@
     }
 
     function showHowToBookmark() {
-      var html = '<div class="text-center"><img src="https://imgur.com/zbj1mBU.png" width="454" height="47"></div>';
-      html += '<div class="text-center" style="margin: 8px 0px;"><img src="https://imgur.com/x13joXj.png" width="454" height="81"></div>';
-      html += '<div style="text-align: left; line-height: 130%;"><br>';
+      html = '<div style="text-align: left; line-height: 130%;">';
+      html += '<div class="text-center"><img src="https://imgur.com/zbj1mBU.png" width="454" height="47"></div>';
+      html += '<div class="text-center" style="margin: 8px 0px;"><img src="https://imgur.com/x13joXj.png" width="454" height="81"></div><br>';
       html += '1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>';
-      html += '2. 스토어 이름 옆 노란색 별 아이콘을 클릭해주세요.<br>';
+      html += '2. 스토어 이름 옆 노란 별 아이콘을 클릭해주세요.<br>';
       html += '3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>';
-      html += '즐겨찾기는 최대 10개까지만 등록할 수 있어요.<br>';
-      html += '그 이상 등록하려 하실 경우 삭제할 즐겨찾기 선택창이 떠요.<br><br>';
-      html += '즐겨찾기는 쿠키를 통해 저장해요.<br>'
-      html += '브라우저에서 쿠키를 삭제하시면 즐겨찾기도 삭제되어요.</div>';
+      html += '<div class="text-center"><img src="https://imgur.com/YtMW1un.png" width="454" height="67"></div><br>'
+      html += '즐겨찾기는 최대 10개까지만 등록하실 수 있어요.<br>';
+      html += '그 이상 등록하려 하셔도 삭제할 즐겨찾기 선택창이 떠요.<br><br>';
+      html += '즐겨찾기는 브라우저에 쿠키를 통해 저장해요.<br>'
+      html += '쿠키를 삭제하시면 즐겨찾기도 삭제돼요.</div>';
 
       swal.fire({
         title: '즐겨찾기 A to Z',
@@ -174,6 +213,60 @@
       heightAuto: false,
     }
 
+    function showInfo() {
+      var html = '<div style="line-height: 130%;"><br>';
+      html += '<b>STORE MANAGER</b>입니다.<br>'
+      html += '온라인 스토어의 판매 기록을 수집하실 수 있게 도와드려요!<br>';
+      html += '클릭 몇 번으로 수천수만 제품의 변화를 기록해 보세요!</div>';
+      
+      swal.fire({
+        title: '어서오세요!',
+        html: html,
+        confirmButtonText: '어떻게요?',
+      }).then(() => {
+        html = '<div style="line-height: 130%;"><br>';
+        html += '검색창에 스토어의 이름을 치세요, 완벽하게 안 쓰셔도 돼요!<br>';
+        html += '<div class="text-center"><img src="https://imgur.com/zbj1mBU.png" width="454" height="47"></div><br>';
+        html += '이름으로 검색이 안 되시나요? 주소로 검색하셔도 괜찮아요!<br>';
+        html += '<div class="text-center"><img src="https://imgur.com/n6njz6V.png" width="454" height="47"></div><br>';
+        html += '현재 지원하는 스토어: <b>NAVER 스마트스토어</b></div>';
+        
+        swal.fire({
+          title: '어떻게요?',
+          html: html,
+          confirmButtonText: '그래서요?',
+        }).then(() => {
+          html = '<div style="line-height: 160%;">';
+          html += '성공적으로 스토어에 접속한 결과예요.';
+          html += '<div class="text-center"><img src="https://imgur.com/x13joXj.png" width="454" height="81"></div><br>';
+          html += '<button type="button" class="btn btn-primary" style="font-size: 14px; padding: 4px 8px; margin: 3px 0px 0px 0px;">업데이트</button> 버튼을 누르면 제품 정보를 수집해요.<br>';
+          html += '수집된 제품 정보는 다음과 같이 일자로 구분하여 저장돼요.<br><br>';
+          html += '<div class="text-center"><img src="https://imgur.com/yC6YGm5.png" width="454" height="110"></div><br>';
+          html += '단순 확인을 원하시면 아무쪽에서나 선택하세요.<br>'
+          html += '두 데이터를 비교하고 싶으시면 왼쪽은 과거 시점,<br>오른쪽은 왼쪽보다 최근 시점을 선택해주세요.<br>'
+
+          swal.fire({
+            title: '그래서요?',
+            html: html,
+            confirmButtonText: '결과는요?',
+          }).then(() => {
+            html = '<div style="line-height: 160%;">';
+            html += '데이터를 선택하시면 다음과 같이 표시돼요.<br>'
+            html += '정렬 기준을 선택하시거나 다운로드 받으실 수도 있어요!<br><br>'
+            html += '<div class="text-center" style="margin: 8px 0px;"><img src="https://imgur.com/q1ZDJpG.png" width="454" height="322"></div><br>';
+            html += '데이터 관리에 대해서는 걱정하지 마세요,<br>';
+            html += '전부 저희 서버에 저장되니까요!<br>';
+
+            swal.fire({
+              title: '결과는요?',
+              html: html,
+              confirmButtonText: '멋지네요!',
+            });
+          });
+        });
+      });
+    }
+
     function showError(res, error) {
       if (res.isConfirmed) {
         swal.fire({
@@ -185,6 +278,17 @@
         });
       }
     }
+
+    darkMode.addEventListener('change', function(event) {
+      document.body.classList.toggle('dark-mode');
+
+      if (darkMode.checked) {
+        document.cookie = '$dark_mode=true';
+      }
+      else {
+        document.cookie = `$dark_mode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      }
+    });
 
     searchInput.addEventListener('keyup', function (event) {
       if (event.code == 'Enter') {
@@ -259,9 +363,6 @@
         });
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
