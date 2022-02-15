@@ -12,14 +12,6 @@
             font-family: 'Jeju Gothic', serif;
         }
 
-        body {
-            height: 100vh;
-        }
-
-        .container {
-            height: 100%;
-        }
-
         table {
             border-spacing: 0;
             width: 100%;
@@ -38,6 +30,30 @@
 
         .swal-option {
             display: grid !important;
+        }
+
+        .container {
+            height: 100%;
+        }
+
+        body {
+            background-color: white;
+            color: black;
+            font-size: 25px;
+            height: 100vh;
+        }
+
+        .dark-mode {
+            background-color: black;
+            color: white;
+        }
+
+        .dark-mode-i {
+            color: white;
+        }
+
+        .dark-mode-tr:nth-child(even) {
+            background-color: #1a1a1a
         }
     </style>
 
@@ -113,7 +129,7 @@
             </div>
             <table id="result-table"></table>
         </div>
-	<div hidden>
+	    <div hidden>
         <!-- Start: Copyright 2022 TraceMyIP.org Service Code (024312-02072022)- DO NOT MODIFY //-->
           <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
             <script type="text/javascript" src="//s3.tracemyip.org/tracker/lgUrl.php?stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
@@ -127,10 +143,11 @@
         </div>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
         <script>
-            const storeUrl = '{store_url}';
+            var storeUrl = '{store_url}';
 
-            const loading = {
+            var loading = {
                 title: '잠시만요!',
                 showCancelButton: false,
                 showConfirmButton: false,
@@ -138,7 +155,7 @@
                 heightAuto: false,
             };
 
-            const failed = {
+            var failed = {
                 title: '이런!',
                 icon: 'error',
                 confirmButtonText: '어떻게 된거죠?',
@@ -164,6 +181,7 @@
             var newProductList = [];
             var sortedProductList = [];
 
+            var homeIcon = document.getElementById('home-icon');
             var bookmark = document.getElementById('bookmark');
             var oldSelect = document.getElementById('old-select');
             var newSelect = document.getElementById('new-select');
@@ -186,8 +204,15 @@
                 {
                     var splitCookie = splitCookies.split('=');
                     var cookie = JSON.parse(splitCookie[1]);
-                    cookie.url = splitCookie[0];
-                    bookmarks.push(cookie);
+
+                    if (splitCookie[0] == '$dark_mode') {
+                        document.body.classList.toggle('dark-mode');
+                        homeIcon.classList.toggle('dark-mode-i');
+                    }
+                    else {
+                        cookie.url = splitCookie[0];
+                        bookmarks.push(cookie);
+                    }
                 }
 
                 bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
@@ -222,7 +247,7 @@
                             heightAuto: false,
                         }).then((res) => {
                             if (res.isConfirmed) {
-                                const inputOptions = new Promise((resolve) => {
+                                var inputOptions = new Promise((resolve) => {
                                     var options = {};
 
                                     for (var bookmark of bookmarks) {
@@ -234,7 +259,7 @@
                                     }, 1000)
                                 });
 
-                                const { value: color } = Swal.fire({
+                                var { value: color } = Swal.fire({
                                     title: '해제할 즐겨찾기',
                                     input: 'radio',
                                     customClass: { input: 'swal-option' },
@@ -613,6 +638,11 @@
 
                 for (var row of table) {
                     var tr = document.createElement('tr');
+
+                    if (document.body.classList.contains('dark-mode')) {
+                        tr.classList.toggle('dark-mode-tr');
+                    }
+
                     resultTable.appendChild(tr);
 
                     var th1 = document.createElement('th');
@@ -677,8 +707,6 @@
                     XLSX.writeFile(wb, fn || (`{store_title} ${filename}.xlsx`));
             }
         </script>
-        <script
-            src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
