@@ -1,16 +1,37 @@
-const { initializeApp, cert } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
-const serviceAccount = require('./firebase-adminsdk.json');
 
-initializeApp({ credential: cert(serviceAccount) });
-const db = getFirestore();
+import { initializeApp } from 'firebase/app';
 
-const fs = require('fs');
-const bodyParser = require('body-parser');
-const https = require('https');
-const parser = require('node-html-parser');
-const express = require('express');
+import dateFormat from 'dateformat';
+import fs from 'fs';
+import bodyParser from 'body-parser';
+import https from 'https';
+import parser from 'node-html-parser';
+import express from 'express';
+import mysql from 'mysql2/promise';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+initializeApp({
+  apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+  authDomain: "store-manager-5d527.firebaseapp.com",
+  projectId: "store-manager-5d527",
+  storageBucket: "store-manager-5d527.appspot.com",
+  messagingSenderId: "36522862962",
+  appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+  measurementId: "G-37DECVWLYX"
+});
+
+const pool = mysql.createPool({
+  host: '34.64.248.145',
+  user: 'root',
+  password: 'gaesugack7328',
+  database: 'storeManager',
+  connectionLimit: 100,
+});
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -50,6 +71,8 @@ app.post('/smartstore/search', async (req, res) => {
     }
   }
 
+  let conn;
+
   try {
     let storeTitle = await searchStore(storeUrl);
 
@@ -58,11 +81,8 @@ app.post('/smartstore/search', async (req, res) => {
       endpoint.slice(0, new RegExp('[^a-z0-9_-]+').exec(endpoint).index);
     }
 
-    let doc = db
-      .collection('smartstore')
-      .doc(endpoint)
-
-    doc.set({ storeTitle: storeTitle });
+    conn = await pool.getConnection();
+    await conn.query(`REPLACE INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')`);
 
     res.json({
       result: 'OK',
@@ -76,40 +96,40 @@ app.post('/smartstore/search', async (req, res) => {
       error: error.message == undefined ? error : error.message,
     });
   }
+  finally {
+    conn.release();
+  }
 });
 
 app.get('/smartstore/:store_url', async (req, res) => {
-  let storeUrl = req.params.store_url;
+  let endpoint = req.params.store_url;
 
-  if (!new RegExp('^[a-z0-9_-]+$').test(storeUrl)) {
+  if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
     res.sendFile(__dirname + '/views/storeNotFound.html');
     return;
   }
 
-  let querySnapshot = await db
-    .collection('smartstore')
-    .doc(storeUrl)
-    .get();
-
+  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
   let storeTitle;
+  let conn;
 
-  if (querySnapshot.exists) {
-    storeTitle = querySnapshot.get('storeTitle');
+  try {
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`);
+
+    if (result[0].length > 0) {
+      storeTitle = result[0][0].title;
+    }
+    else {
+      storeTitle = await searchStore(storeUrl);
+      await conn.query(`REPLACE INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')`);
+    }
   }
-  else {
-    try {
-      storeTitle = await searchStore(`https://smartstore.naver.com/${storeUrl}`);
-
-      let doc = db
-        .collection('smartstore')
-        .doc(storeUrl)
-
-      doc.set({ storeTitle: storeTitle });
-    }
-    catch (error) {
-      res.sendFile(__dirname + '/views/storeNotFound.html');
-      return;
-    }
+  catch (error) {
+    res.sendFile(__dirname + '/views/storeNotFound.html');
+  }
+  finally {
+    conn.release();
   }
 
   fs.readFile(__dirname + '/views/store.html', (error, data) => {
@@ -122,34 +142,49 @@ app.get('/smartstore/:store_url', async (req, res) => {
     }
 
     let htmlString = data.toString();
-    htmlString = htmlString.replaceAll('{store_url}', storeUrl);
+    htmlString = htmlString.replaceAll('{store_url}', endpoint);
     htmlString = htmlString.replaceAll('{store_title}', storeTitle);
     res.send(htmlString);
   });
 });
 
 app.post('/smartstore/:store_url/update', async (req, res) => {
-  let storeUrl = req.params.store_url;
+  let endpoint = req.params.store_url;
+  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
+  let conn;
 
   try {
-    let productAmount = await getProductAmount(storeUrl);
-    let productList = await getProductList(storeUrl, productAmount)
-
     let now = new Date();
+    let time = dateFormat(now, 'yyyymmddHHMM');
+
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+    if (result[0].length > 0) {
+      res.json({
+        result: 'OK',
+        time: time,
+        productList: productList,
+      });
+    }
+
+    let productAmount = await getProductAmount(endpoint);
+    let productList = await getProductList(endpoint, productAmount)
+
+    let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES ';
 
     for (let product of productList) {
-      let doc = db
-        .collection('smartstore')
-        .doc(storeUrl)
-        .collection(now.getTime().toString())
-        .doc(product.id.toString());
-
-      doc.set(product);
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '');
+      query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `;
     }
+
+    query = query.substring(0, query.length - 2);
+    await conn.query(query);
+    await conn.query(`REPLACE INTO history (storeUrl, time, user) VALUES ('${storeUrl}', ${time}, 'test')`);
 
     res.json({
       result: 'OK',
-      date: Number(now),
+      time: time,
       productList: productList,
     });
   }
@@ -159,53 +194,29 @@ app.post('/smartstore/:store_url/update', async (req, res) => {
       error: error.message == undefined ? error : error.message,
     });
   }
+  finally {
+    conn.release();
+  }
 });
 
-app.post('/smartstore/:store_url/historyList', async (req, res) => {
-  let storeUrl = req.params.store_url;
-
-  let colRefList;
-  let historyList = [];
+app.post('/smartstore/:store_url/history', async (req, res) => {
+  let endpoint = req.params.store_url;
+  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
 
   try {
-    colRefList = await db
-      .collection('smartstore')
-      .doc(storeUrl)
-      .listCollections();
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message == undefined ? error : error.message,
-    });
-    return;
-  }
+    let conn = await pool.getConnection();
+    let result = await conn.query(`SELECT time FROM history WHERE storeUrl = '${storeUrl}' GROUP BY time`);
 
-  for (let colRef of colRefList) {
-    if (!isNaN(colRef.id)) {
-      historyList.push(Number(colRef.id));
+    let history = [];
+
+    for (let row of result[0]) {
+      history.push(row.time);
     }
-  }
 
-  res.json({
-    result: 'OK',
-    historyList: historyList,
-  });
-});
-
-app.post('/smartstore/:store_url/:history', async (req, res) => {
-  let storeUrl = req.params.store_url;
-  let history = req.params.history;
-
-  let querySnapshot;
-
-  try {
-    querySnapshot = await db
-      .collection('smartstore')
-      .doc(storeUrl)
-      .collection(history)
-      .orderBy('id', 'desc')
-      .get();
+    res.json({
+      result: 'OK',
+      history: history,
+    });
   }
   catch (error) {
     res.json({
@@ -214,23 +225,33 @@ app.post('/smartstore/:store_url/:history', async (req, res) => {
     });
     return;
   }
+});
 
-  let docList = [];
+app.post('/smartstore/:store_url/:time', async (req, res) => {
+  let time = req.params.time;
+  let endpoint = req.params.store_url;
+  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
 
-  for (let doc of querySnapshot.docs) {
-    docList.push({
-      id: doc.get('id'),
-      title: doc.get('title'),
-      price: doc.get('price'),
-      isSoldOut: doc.get('isSoldOut'),
-      popularityIndex: doc.get('popularityIndex'),
+  let conn;
+
+  try {
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+    res.json({
+      result: 'OK',
+      productList: result[0],
     });
   }
-
-  res.json({
-    result: 'OK',
-    history: docList,
-  });
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
 });
 
 function searchNaver(query) {
@@ -289,9 +310,9 @@ function searchStore(storeUrl) {
   });
 }
 
-function getProductAmount(storeUrl) {
+function getProductAmount(endpoint) {
   return new Promise((resolve, reject) => {
-    https.get(`https://smartstore.naver.com/${storeUrl}/category/ALL`, (res) => {
+    https.get(`https://smartstore.naver.com/${endpoint}/category/ALL`, (res) => {
       let data = '';
 
       res.on('error', (error) => reject(error));
@@ -310,12 +331,12 @@ function getProductAmount(storeUrl) {
   });
 }
 
-function getProductList(storeUrl, productAmount) {
+function getProductList(endpoint, productAmount) {
   return new Promise((resolve, reject) => {
     let productList = [];
 
     for (let page = 0; page < Math.ceil(productAmount / 80); page++) {
-      https.get(`https://smartstore.naver.com/${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
+      https.get(`https://smartstore.naver.com/${endpoint}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
         let data = '';
 
         res.on('error', (error) => reject(error));
@@ -354,7 +375,7 @@ function getProductList(storeUrl, productAmount) {
               continue;
             }
             finally {
-              productAmount--; 
+              productAmount--;
             }
 
             if (productAmount <= 0) {
