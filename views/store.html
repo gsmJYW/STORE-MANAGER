@@ -42,19 +42,6 @@
             font-size: 25px;
             height: 100vh;
         }
-
-        .dark-mode {
-            background-color: black;
-            color: white;
-        }
-
-        .dark-mode-i {
-            color: white;
-        }
-
-        .dark-mode-tr:nth-child(even) {
-            background-color: #1a1a1a
-        }
     </style>
 
     <link rel="stylesheet"
@@ -163,6 +150,8 @@
                 }
             }
 
+            let table = [];
+            let loadingTable = [];
             let historyList = [];
             let oldProductList = [];
             let newProductList = [];
@@ -195,13 +184,9 @@
 
                 for (let splitCookies of document.cookie.split(/; */)) {
                     let splitCookie = splitCookies.split('=');
-                    let cookie = JSON.parse(splitCookie[1]);
 
-                    if (splitCookie[0] == '$dark_mode') {
-                        document.body.classList.toggle('dark-mode');
-                        homeIcon.classList.toggle('dark-mode-i');
-                    }
-                    else {
+                    if (new RegExp('^[a-z0-9_-]+$').test(splitCookie[0])) {
+                        let cookie = JSON.parse(splitCookie[1]);
                         cookie.url = splitCookie[0];
                         bookmarks.push(cookie);
                     }
@@ -299,16 +284,13 @@
                 }
             }
 
-            function getOption(dateNumber) {
-                let date = new Date(dateNumber);
-
-                let text = date.toLocaleString('ko-KR');
-                let value = Number(date);
-
+            function getOption(value) {
+                let text = value.toString();
+                text = `${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}:${text.slice(10, 12)}`;
                 return new Option(text, value);
             }
 
-            fetch(`/smartstore/${storeUrl}/historyList`, {
+            fetch(`/smartstore/${storeUrl}/history`, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -335,7 +317,7 @@
                     return;
                 }
 
-                historyList = json.historyList;
+                historyList = json.history;
                 historyList.sort((a, b) => b - a);
 
                 for (let history of historyList) {
@@ -415,7 +397,7 @@
                             return;
                         }
 
-                        oldProductList = json.history;
+                        oldProductList = json.productList;
                         updateTable(oldProductList, newProductList);
                         swal.close();
                     }).catch((error) => showOldSelectError(error));
@@ -482,13 +464,23 @@
                             return;
                         }
 
-                        newProductList = json.history;
+                        newProductList = json.productList;
                         updateTable(oldProductList, newProductList);
                         swal.close();
                     }).catch((error) => showNewSelectError(error));
                 });
 
                 updateButton.addEventListener('click', () => {
+                    // if (historyList.includes(time)) {
+                    //     swal.fire({
+                    //         title: '잠시만요!',
+                    //         text: '업데이트는 1분마다 하실 수 있어요.',
+                    //         confirmButtonText: '알겠어요',
+                    //         heightAuto: false,
+                    //     });
+                    //     return;
+                    // }
+
                     swal.fire({
                         title: '잠시만요!',
                         html: `
@@ -530,8 +522,8 @@
                             return;
                         }
 
-                        let updateDate = json.date;
-                        historyList.unshift(updateDate);
+                        let time = json.time;
+                        historyList.unshift(time);
 
                         swal.fire({
                             title: '업데이트 성공!',
@@ -561,7 +553,7 @@
                             oldSelect.value = oldSelectValue;
 
                             if (res.isConfirmed) {
-                                newSelect.value = updateDate;
+                                newSelect.value = time;
                                 newProductList = json.productList;
                                 updateTable(oldProductList, newProductList);
                             }
@@ -618,7 +610,7 @@
 
                 result.hidden = false;
 
-                let table = [];
+                table = [];
                 let deletedProductList = [...oldProductList];
                 let productList = newProductList.length > 0 ? newProductList : oldProductList;
 
@@ -709,16 +701,7 @@
 
                 if (oldProductList.length > 0 & newProductList.length > 0) {
                     let newProductAmount = newProductList.length - oldProductList.length + deletedProductList.length;
-                    productAmount.innerHTML += `
-                        (
-                        <span style="color: green">
-                            +${newProductAmount.toLocaleString('ko-KR')}
-                        </span>
-                        <span style="color: red">
-                            -${deletedProductList.length.toLocaleString('ko-KR')}
-                        </span>
-                        )
-                    `;
+                    productAmount.innerHTML += `(<span style="color: green">+${newProductAmount}</span><span style="color: red"> -${deletedProductList.length}</span>)`;
 
                     if (highlightChanges.checked) {
                         table.sort((a, b) => b.changed - a.changed);
@@ -745,13 +728,10 @@
                     tr.appendChild(th);
                 }
 
-                for (let row of table) {
+                loadingTable = table.slice(50);
+
+                for (let row of table.slice(0, 50)) {
                     let tr = document.createElement('tr');
-
-                    if (document.body.classList.contains('dark-mode')) {
-                        tr.classList.toggle('dark-mode-tr');
-                    }
-
                     resultTable.appendChild(tr);
 
                     let th1 = document.createElement('th');
@@ -788,28 +768,83 @@
                 }
             }
 
+            function loadTable() {
+                if (loadingTable.length > 0) {
+                    loadingTable = loadingTable.slice(50);
+                }
+                else {
+                    return;
+                }
+
+                for (let row of loadingTable.slice(0, 50)) {
+                    let tr = document.createElement('tr');
+                    resultTable.appendChild(tr);
+
+                    let th1 = document.createElement('th');
+                    th1.innerHTML = row.id
+
+                    let a = document.createElement('a');
+
+                    a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${row.id}`);
+                    a.setAttribute('target', '_blank');
+
+                    if (row.title.length > 48) {
+                        let titleSplit = row.title.split(' ');
+                        a.innerHTML += titleSplit.slice(0, Math.ceil(titleSplit.length / 2) - 1).join(' ');
+                        a.innerHTML += '<br>';
+                        a.innerHTML += titleSplit.slice(Math.ceil(titleSplit.length / 2)).join(' ');
+                    }
+                    else {
+                        a.innerHTML = row.title;
+                    }
+
+                    let th2 = document.createElement('th');
+                    th2.appendChild(a);
+
+                    let th3 = document.createElement('th');
+                    th3.innerHTML = row.price;
+
+                    let th4 = document.createElement('th');
+                    th4.innerHTML = row.status;
+
+                    for (let th of [th1, th2, th3, th4]) {
+                        th.setAttribute('style', 'font-weight: 400');
+                        tr.appendChild(th);
+                    }
+                }
+            }
+
+            window.onscroll = (e) => {
+                if ((window.innerHeight + window.scrollY) >= document.body.scrollHeight) {
+                    loadTable();
+                }
+            };
+
             function exportExcel(type, fn, dl) {
-                let wb = XLSX.utils.table_to_book(resultTable, { sheet: '{store_title}' });
+                let ws = XLSX.utils.json_to_sheet(table);
                 let dateList = [];
 
                 if (oldProductList.length > 0) {
-                    dateList.push(new Date(Number(oldSelect.value)).toLocaleString('ko-KR'));
+                    let text = oldSelect.value.toString();
+                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}：${text.slice(10, 12)}`);
                 }
 
                 if (newProductList.length > 0) {
-                    dateList.push(new Date(Number(newSelect.value)).toLocaleString('ko-KR'));
+                    let text = newSelect.value.toString();
+                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}：${text.slice(10, 12)}`);
                 }
 
                 let filename = dateList.join(' → ');
 
-                for (let row = 1; row <= newProductList.length; row++) {
-                    let sheet = wb.Sheets['{store_title}'];
-
-                    let idCell = sheet[`A${row + 1}`];
-                    let titleCell = sheet[`B${row + 1}`];
+                for (let row = 0; row < table.length; row++) {
+                    let idCell = ws[`A${row + 1}`];
+                    let titleCell = ws[`B${row + 1}`];
 
                     titleCell.f = `=HYPERLINK("https://smartstore.naver.com/${storeUrl}/products/${idCell.v}", "${titleCell.v}")`;
                 }
+
+                let wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, '{store_title}');
 
                 return dl ?
                     XLSX.write(wb, { bookType: type, bookSST: true, type: 'base64' }) :
