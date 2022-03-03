@@ -25,6 +25,11 @@ initializeApp({
   measurementId: "G-37DECVWLYX"
 });
 
+const credentials = {
+  key: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.key.pem'),
+  cert: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.crt.pem'),
+};
+
 const pool = mysql.createPool({
   host: '34.64.248.145',
   user: 'root',
@@ -388,4 +393,4 @@ function getProductList(endpoint, productAmount) {
   });
 }
 
-app.listen(80);
+https.createServer(credentials, app).listen(443);
