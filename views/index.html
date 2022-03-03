@@ -105,237 +105,238 @@
   </div>
   <div class="d-flex" style="float: right; margin: auto;">
     <div class="dropdown">
-    <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
-    <script type="module">
-      import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js';
-      import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
+      <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
+      <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
 
-      initializeApp({
-        apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
-        authDomain: "store-manager-5d527.firebaseapp.com",
-        projectId: "store-manager-5d527",
-        storageBucket: "store-manager-5d527.appspot.com",
-        messagingSenderId: "36522862962",
-        appId: "1:36522862962:web:8a9e9b88373a19add095eb",
-        measurementId: "G-37DECVWLYX"
-      });
+        initializeApp({
+          apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+          authDomain: "store-manager-5d527.firebaseapp.com",
+          projectId: "store-manager-5d527",
+          storageBucket: "store-manager-5d527.appspot.com",
+          messagingSenderId: "36522862962",
+          appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+          measurementId: "G-37DECVWLYX"
+        });
 
-      const auth = getAuth();
+        const auth = getAuth();
 
-      function onSignIn(googleUser) {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          unsubscribe();
-          if (!isUserEqual(googleUser, firebaseUser)) {
-            const credential = GoogleAuthProvider.credential(
-              googleUser.getAuthResponse().id_token);
+        function onSignIn(googleUser) {
+          const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            unsubscribe();
+            if (!isUserEqual(googleUser, firebaseUser)) {
+              const credential = GoogleAuthProvider.credential(
+                googleUser.getAuthResponse().id_token);
 
-            signInWithCredential(auth, credential).then(() => {
-              let form = document.createElement('form');
-              form.style.visibility = 'hidden';
-              form.method = 'GET';
-              form.action = '/';
-              document.body.appendChild(form);
-              form.submit();
-            }).catch((error) => {
-              const errorCode = error.code;
-              const errorMessage = error.message;
-              const email = error.email;
-              const credential = GoogleAuthProvider.credentialFromError(error);
+              signInWithCredential(auth, credential).then(() => {
+                let form = document.createElement('form');
+                form.style.visibility = 'hidden';
+                form.method = 'GET';
+                form.action = '/';
+                document.body.appendChild(form);
+                form.submit();
+              }).catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                const email = error.email;
+                const credential = GoogleAuthProvider.credentialFromError(error);
 
-              swal.fire({
-                title: '이런!',
-                html: `
+                swal.fire({
+                  title: '이런!',
+                  html: `
                   <div style="line-height: 130%;">
                       로그인에 실패 하셨어요.<br>
                       다시 시도해주세요.
                   </div>
                 `,
-                icon: 'error',
-                confirmButtonText: '어떻게 된거죠?',
-                cancelButtonText: '알겠어요',
-                showCancelButton: true,
-                heightAuto: false,
-              }).then((res) => showError(res, error.message));
-            });
-          } else {
+                  icon: 'error',
+                  confirmButtonText: '어떻게 된거죠?',
+                  cancelButtonText: '알겠어요',
+                  showCancelButton: true,
+                  heightAuto: false,
+                }).then((res) => showError(res, error.message));
+              });
+            } else {
 
-          }
-        });
-      }
+            }
+          });
+        }
 
-      function onSignOut() {
-        signOut(auth).then(() => {
-          let form = document.createElement('form');
-          form.style.visibility = 'hidden';
-          form.method = 'GET';
-          form.action = '/';
-          document.body.appendChild(form);
-          form.submit();
-        }).catch((error) => {
-          swal.fire({
-            title: '이런!',
-            html: `
+        function onSignOut() {
+          signOut(auth).then(() => {
+            let form = document.createElement('form');
+            form.style.visibility = 'hidden';
+            form.method = 'GET';
+            form.action = '/';
+            document.body.appendChild(form);
+            form.submit();
+          }).catch((error) => {
+            swal.fire({
+              title: '이런!',
+              html: `
               <div style="line-height: 130%;">
                   로그아웃에 실패 하셨어요.<br>
                   다시 시도해주세요.
               </div>
             `,
-            icon: 'error',
-            confirmButtonText: '어떻게 된거죠?',
-            cancelButtonText: '알겠어요',
-            showCancelButton: true,
-            heightAuto: false,
-          }).then((res) => showError(res, error));
-        });
-      }
+              icon: 'error',
+              confirmButtonText: '어떻게 된거죠?',
+              cancelButtonText: '알겠어요',
+              showCancelButton: true,
+              heightAuto: false,
+            }).then((res) => showError(res, error));
+          });
+        }
 
-      function isUserEqual(googleUser, firebaseUser) {
-        if (firebaseUser) {
-          const providerData = firebaseUser.providerData;
-          for (let i = 0; i < providerData.length; i++) {
-            if (providerData[i].providerId === GoogleAuthProvider.PROVIDER_ID &&
-              providerData[i].uid === googleUser.getBasicProfile().getId()) {
-              return true;
+        function isUserEqual(googleUser, firebaseUser) {
+          if (firebaseUser) {
+            const providerData = firebaseUser.providerData;
+            for (let i = 0; i < providerData.length; i++) {
+              if (providerData[i].providerId === GoogleAuthProvider.PROVIDER_ID &&
+                providerData[i].uid === googleUser.getBasicProfile().getId()) {
+                return true;
+              }
             }
           }
+          return false;
         }
-        return false;
-      }
 
-      window.onSignIn = onSignIn;
-      window.onSignOut = onSignOut;
-    </script>
-  </div>
-  <div id="search-div" class="container d-flex align-items-center justify-content-center"
-    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-    <div>
-      <div class="text-center">
-        <a href="http://n09company.com" target="_blank"><img src="https://imgur.com/YPhrrAJ.png" width="160"
-            height="160" style="margin: 120px 0px;"></a>
-      </div>
-      <div class="input-group rounded p-2">
-        <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none; width: 518px;"
-          placeholder="스토어 이름 또는 URL" aria-describedby="search-addon" spellcheck="false" />
-        </input>
-        <button id="search-button" class="btn btn-primary fas fa-search"></input>
-      </div>
-      <form action="">
-        <h6 id="search-helper" class="text-center px-2" style="line-height: 130%; font-weight: 100;"><br>&nbsp;</h6>
-      </form>
-      <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 66px 0px 77px 0px">해당
-        서비스는 ㈜엔공구의 자회사 공구형에서
-        개발합니다.<br>현재 베타 서비스
-        단계이며 무료로 이용하실 수
-        있습니다.<br>후원금은 서비스
-        운영을 위한 서버 유지 비용에 사용됩니다.
-      </p>
-      <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 77px 0px">
-        <b>공구형 고객센터</b> 010-3924-8171<br><b>후원 계좌</b> 광주은행 1121-022-248925 (최만수)<br><br>
-        <b>상호명</b> 공구형 &nbsp; <b>사업자 번호</b> 226-28-19779 <br> <b>주소</b> 광주광역시 광산구
-        하남산단 6번로 57 (지식동 908호)
-      </p>
-      <div class="text-center">
-        <a href="https://09bro.net" target="_blank"><img src="https://imgur.com/7HP4qOb.png" width="72" height="24"
-            style="margin: 0px 8px;"></a>
-        <a href="https://play.google.com/store/apps/details?id=com.n09.fanorama" target="_blank"><img
-            src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto;"></a>
-      </div>
-      <div hidden>
-        <!-- Start: Copyright 2022 TraceMyIP.org Service Code (024312-02072022)- DO NOT MODIFY //-->
-        <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
-          <script type="text/javascript"
-            src="//s3.tracemyip.org/tracker/lgUrl.php?stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
-          <noscript>
-            <a href="https://www.tracemyip.org/website-visitors-alerts.htm">
-              <img src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/" alt="Web site email alerts"
-                style="border:0px;">
-            </a>
-          </noscript>
+        window.onSignIn = onSignIn;
+        window.onSignOut = onSignOut;
+      </script>
+    </div>
+    <div id="search-div" class="container d-flex align-items-center justify-content-center"
+      style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+      <div>
+        <div class="text-center">
+          <a href="http://n09company.com" target="_blank"><img src="https://imgur.com/YPhrrAJ.png" width="160"
+              height="160" style="margin: 120px 0px;"></a>
         </div>
-        <!-- End: TraceMyIP.org Service Code //-->
+        <div class="input-group rounded p-2">
+          <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none; width: 518px;"
+            placeholder="스토어 이름 또는 URL" aria-describedby="search-addon" spellcheck="false" />
+          </input>
+          <button id="search-button" class="btn btn-primary fas fa-search"></input>
+        </div>
+        <form action="">
+          <h6 id="search-helper" class="text-center px-2" style="line-height: 130%; font-weight: 100;"><br>&nbsp;</h6>
+        </form>
+        <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 66px 0px 77px 0px">
+          해당
+          서비스는 ㈜엔공구의 자회사 공구형에서
+          개발합니다.<br>현재 베타 서비스
+          단계이며 무료로 이용하실 수
+          있습니다.<br>후원금은 서비스
+          운영을 위한 서버 유지 비용에 사용됩니다.
+        </p>
+        <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 77px 0px">
+          <b>공구형 고객센터</b> 010-3924-8171<br><b>후원 계좌</b> 광주은행 1121-022-248925 (최만수)<br><br>
+          <b>상호명</b> 공구형 &nbsp; <b>사업자 번호</b> 226-28-19779 <br> <b>주소</b> 광주광역시 광산구
+          하남산단 6번로 57 (지식동 908호)
+        </p>
+        <div class="text-center">
+          <a href="https://09bro.net" target="_blank"><img src="https://imgur.com/7HP4qOb.png" width="72" height="24"
+              style="margin: 0px 8px;"></a>
+          <a href="https://play.google.com/store/apps/details?id=com.n09.fanorama" target="_blank"><img
+              src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto;"></a>
+        </div>
+        <div hidden>
+          <!-- Start: Copyright 2022 TraceMyIP.org Service Code (024312-02072022)- DO NOT MODIFY //-->
+          <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
+            <script type="text/javascript"
+              src="//s3.tracemyip.org/tracker/lgUrl.php?stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
+            <noscript>
+              <a href="https://www.tracemyip.org/website-visitors-alerts.htm">
+                <img src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/" alt="Web site email alerts"
+                  style="border:0px;">
+              </a>
+            </noscript>
+          </div>
+          <!-- End: TraceMyIP.org Service Code //-->
+        </div>
       </div>
     </div>
-  </div>
-  <script>
-    const infoIcon = document.getElementById('info-icon');
-    const searchDiv = document.getElementById('search-div');
-    const searchInput = document.getElementById('search-input');
-    const searchHelper = document.getElementById('search-helper');
-    const searchButton = document.getElementById('search-button');
-    const urlValidator = document.getElementById('url-validator');
-    const mostVisited = document.getElementById('most-visited');
+    <script>
+      const infoIcon = document.getElementById('info-icon');
+      const searchDiv = document.getElementById('search-div');
+      const searchInput = document.getElementById('search-input');
+      const searchHelper = document.getElementById('search-helper');
+      const searchButton = document.getElementById('search-button');
+      const urlValidator = document.getElementById('url-validator');
+      const mostVisited = document.getElementById('most-visited');
 
-    let isThereBoomark = false;
+      let isThereBoomark = false;
 
-    if (document.cookie.trim().length > 0) {
-      let bookmarks = [];
+      if (document.cookie.trim().length > 0) {
+        let bookmarks = [];
 
-      for (let splitCookies of document.cookie.split(/; */)) {
-        let splitCookie = splitCookies.split('=');
+        for (let splitCookies of document.cookie.split(/; */)) {
+          let splitCookie = splitCookies.split('=');
 
-        if (new RegExp('^[a-z0-9_-]+$').test(splitCookie[0])) {
-          let cookie = JSON.parse(splitCookie[1]);
-          cookie.url = splitCookie[0];
-          bookmarks.push(cookie);
+          if (new RegExp('^[a-z0-9_-]+$').test(splitCookie[0])) {
+            let cookie = JSON.parse(splitCookie[1]);
+            cookie.url = splitCookie[0];
+            bookmarks.push(cookie);
+          }
         }
-      }
 
-      bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
+        bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
 
-      if (bookmarks.length > 0) {
-        searchHelper.innerHTML = '';
-      }
+        if (bookmarks.length > 0) {
+          searchHelper.innerHTML = '';
+        }
 
-      let isThereNewLine = false;
+        let isThereNewLine = false;
 
-      for (let bookmark of bookmarks) {
-        if (isThereBoomark) {
+        for (let bookmark of bookmarks) {
+          if (isThereBoomark) {
+            let span = document.createElement('span');
+            span.innerHTML = '&nbsp&nbsp;';
+            searchHelper.appendChild(span);
+          }
+
+          isThereBoomark = true;
+
+          let a = document.createElement('a');
+          a.innerHTML = bookmark.title;
+          a.setAttribute('href', `/smartstore/${bookmark.url}`);
+          searchHelper.appendChild(a);
+
+          if (searchHelper.offsetWidth > 575) {
+            let br = document.createElement('br');
+            searchHelper.insertBefore(br, a);
+            isThereNewLine = true;
+          }
+        }
+
+        if (!isThereNewLine) {
+          let br = document.createElement('br');
+          searchHelper.appendChild(br);
+
           let span = document.createElement('span');
-          span.innerHTML = '&nbsp&nbsp;';
+          span.innerHTML = '&nbsp;';
           searchHelper.appendChild(span);
         }
-
-        isThereBoomark = true;
-
-        let a = document.createElement('a');
-        a.innerHTML = bookmark.title;
-        a.setAttribute('href', `/smartstore/${bookmark.url}`);
-        searchHelper.appendChild(a);
-
-        if (searchHelper.offsetWidth > 575) {
-          let br = document.createElement('br');
-          searchHelper.insertBefore(br, a);
-          isThereNewLine = true;
-        }
       }
 
-      if (!isThereNewLine) {
-        let br = document.createElement('br');
-        searchHelper.appendChild(br);
+      if (!isThereBoomark) {
+        searchHelper.innerHTML = '매번 검색하기 귀찮으시죠? 클릭 한 번으로 스토어에 접속해보세요! ';
 
-        let span = document.createElement('span');
-        span.innerHTML = '&nbsp;';
-        searchHelper.appendChild(span);
+        let howToBookmark = document.createElement('button');
+        howToBookmark.type = "button";
+        howToBookmark.style = 'background:none; border:none; margin:0; padding:0; color: #0066CC;';
+        howToBookmark.innerHTML = '즐겨찾기 사용법';
+        howToBookmark.setAttribute('onclick', 'showHowToBookmark();');
+        searchHelper.appendChild(howToBookmark);
+
+        searchHelper.innerHTML += '<br>&nbsp;'
       }
-    }
 
-    if (!isThereBoomark) {
-      searchHelper.innerHTML = '매번 검색하기 귀찮으시죠? 클릭 한 번으로 스토어에 접속해보세요! ';
-
-      let howToBookmark = document.createElement('button');
-      howToBookmark.type = "button";
-      howToBookmark.style = 'background:none; border:none; margin:0; padding:0; color: #0066CC;';
-      howToBookmark.innerHTML = '즐겨찾기 사용법';
-      howToBookmark.setAttribute('onclick', 'showHowToBookmark();');
-      searchHelper.appendChild(howToBookmark);
-
-      searchHelper.innerHTML += '<br>&nbsp;'
-    }
-
-    function showHowToBookmark() {
-      swal.fire({
-        title: '즐겨찾기 A to Z',
-        html: `<div style="text-align: left; line-height: 130%;">
+      function showHowToBookmark() {
+        swal.fire({
+          title: '즐겨찾기 A to Z',
+          html: `<div style="text-align: left; line-height: 130%;">
           <div class="text-center">
             <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
           </div>
@@ -352,12 +353,12 @@
             쿠키를 삭제하시면 즐겨찾기도 삭제돼요.
           </div>
         `,
-        confirmButtonText: '알겠어요',
-      });
-    }
+          confirmButtonText: '알겠어요',
+        });
+      }
 
-    function showInfo() {
-      let html = `
+      function showInfo() {
+        let html = `
         <div style="line-height: 130%;"><br>
           <b>STORE MANAGER</b>입니다.<br>
           온라인 스토어의 판매 기록을 수집하실 수 있게 도와드려요!<br>
@@ -365,15 +366,15 @@
         </div>
       `;
 
-      swal.fire({
-        title: '어서오세요!',
-        html: html,
-        confirmButtonText: '어떻게요?',
-      }).then(() => {
-
         swal.fire({
-          title: '어떻게요?',
-          html: `
+          title: '어서오세요!',
+          html: html,
+          confirmButtonText: '어떻게요?',
+        }).then(() => {
+
+          swal.fire({
+            title: '어떻게요?',
+            html: `
             <div style="line-height: 130%;"><br>
               검색창에 스토어의 이름을 치세요, 완벽하게 안 쓰셔도 돼요!<br>
               <div class="text-center">
@@ -386,11 +387,11 @@
               현재 지원하는 스토어: <b>NAVER 스마트스토어</b>
             </div>
           `,
-          confirmButtonText: '그래서요?',
-        }).then(() => {
-          swal.fire({
-            title: '그래서요?',
-            html: `
+            confirmButtonText: '그래서요?',
+          }).then(() => {
+            swal.fire({
+              title: '그래서요?',
+              html: `
               <div style="line-height: 160%;">
                 성공적으로 스토어에 접속한 결과예요.
                 <div class="text-center">
@@ -409,11 +410,11 @@
                 오른쪽은 왼쪽보다 최근 시점을 선택해주세요.<br>
               </div>
             `,
-            confirmButtonText: '결과는요?',
-          }).then(() => {
-            swal.fire({
-              title: '결과는요?',
-              html: `
+              confirmButtonText: '결과는요?',
+            }).then(() => {
+              swal.fire({
+                title: '결과는요?',
+                html: `
                 <div style="line-height: 160%;">
                   데이터를 선택하시면 다음과 같이 표시돼요.<br>
                   정렬 기준을 선택하시거나 다운로드 받으실 수도 있어요!<br><br>
@@ -424,116 +425,116 @@
                   전부 저희 서버에 저장되니까요!<br>
                 </div>
               `,
-              confirmButtonText: '멋지네요!',
+                confirmButtonText: '멋지네요!',
+              });
             });
           });
         });
-      });
-    }
-
-    function showError(res, error) {
-      if (res.isConfirmed) {
-        swal.fire({
-          title: '원인',
-          html: error,
-          confirmButtonText: '알겠어요',
-          showCancelButton: false,
-          heightAuto: false,
-        });
-      }
-    }
-
-    searchInput.addEventListener('keyup', function (event) {
-      if (event.code == 'Enter') {
-        search();
-      }
-    });
-
-    searchButton.addEventListener('click', function (event) {
-      search();
-    });
-
-    function search() {
-      if (searchInput.value.trim().length == 0) {
-        swal.fire({
-          title: '잠시만요!',
-          text: '검색창이 너무 허전해요.',
-          confirmButtonText: '알겠어요',
-          heightAuto: false,
-        });
-
-        return;
       }
 
-      swal.fire({
-        title: '잠시만요!',
-        text: '스토어에 접속하는 중이에요.',
-        showCancelButton: false,
-        showConfirmButton: false,
-        allowOutsideClick: false,
-        heightAuto: false,
-      });
-
-      fetch('/smartstore/search', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ query: searchInput.value }),
-      }).then(async (res) => {
-        let json = await res.json();
-        swal.close();
-
-        if (json.result == 'OK') {
+      function showError(res, error) {
+        if (res.isConfirmed) {
           swal.fire({
-            title: '스토어 발견!',
-            html: `'${json.store_title}' 스토어로 진행 하시겠어요?`,
-            icon: 'success',
-            confirmButtonText: '네',
-            cancelButtonText: '이게 아닌데!',
-            showCancelButton: true,
+            title: '원인',
+            html: error,
+            confirmButtonText: '알겠어요',
+            showCancelButton: false,
             heightAuto: false,
-          }).then((res) => {
-            if (res.isConfirmed) {
-              let form = document.createElement('form');
-              form.style.visibility = 'hidden';
-              form.method = 'GET';
-              form.action = `/smartstore/${json.store_url}`;
-              document.body.appendChild(form);
-              form.submit();
-            }
           });
         }
-        else {
+      }
+
+      searchInput.addEventListener('keyup', (e) => {
+        if (e.code == 'Enter') {
+          search();
+        }
+      });
+
+      searchButton.addEventListener('click', () => {
+        search();
+      });
+
+      function search() {
+        if (searchInput.value.trim().length == 0) {
           swal.fire({
-            title: '이런!',
-            html: `
+            title: '잠시만요!',
+            text: '검색창이 너무 허전해요.',
+            confirmButtonText: '알겠어요',
+            heightAuto: false,
+          });
+
+          return;
+        }
+
+        swal.fire({
+          title: '잠시만요!',
+          text: '스토어에 접속하는 중이에요.',
+          showCancelButton: false,
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          heightAuto: false,
+        });
+
+        fetch('/smartstore/search', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ query: searchInput.value }),
+        }).then(async (res) => {
+          let json = await res.json();
+          swal.close();
+
+          if (json.result == 'OK') {
+            swal.fire({
+              title: '스토어 발견!',
+              html: `'${json.store_title}' 스토어로 진행 하시겠어요?`,
+              icon: 'success',
+              confirmButtonText: '네',
+              cancelButtonText: '이게 아닌데!',
+              showCancelButton: true,
+              heightAuto: false,
+            }).then((res) => {
+              if (res.isConfirmed) {
+                let form = document.createElement('form');
+                form.style.visibility = 'hidden';
+                form.method = 'GET';
+                form.action = `/smartstore/${json.store_url}`;
+                document.body.appendChild(form);
+                form.submit();
+              }
+            });
+          }
+          else {
+            swal.fire({
+              title: '이런!',
+              html: `
                 <div style="line-height: 130%;">
                   스토어를 검색했지만 찾지 못했어요.<br>
                   검색어를 다시 한 번 확인해주세요.
                 </div>
               `,
+              icon: 'error',
+              confirmButtonText: '어떻게 된거죠?',
+              cancelButtonText: '알겠어요',
+              showCancelButton: true,
+              heightAuto: false,
+            }).then((res) => showError(res, json.error));
+          }
+        }).catch((error) => {
+          swal.fire({
+            title: '이런!',
+            html: '스토어를 검색하지 못했어요.',
             icon: 'error',
             confirmButtonText: '어떻게 된거죠?',
             cancelButtonText: '알겠어요',
             showCancelButton: true,
             heightAuto: false,
-          }).then((res) => showError(res, json.error));
-        }
-      }).catch((error) => {
-        swal.fire({
-          title: '이런!',
-          html: '스토어를 검색하지 못했어요.',
-          icon: 'error',
-          confirmButtonText: '어떻게 된거죠?',
-          cancelButtonText: '알겠어요',
-          showCancelButton: true,
-          heightAuto: false,
-        }).then((res) => showError(res, error));
-      });
-    }
-  </script>
+          }).then((res) => showError(res, error));
+        });
+      }
+    </script>
 </body>
 
 </html>
