@@ -44,11 +44,17 @@
         }
     </style>
 
+    <title>STORE MANAGER - {store_title}</title>
+
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
 
-    <title>STORE MANAGER - {store_title}</title>
+    <meta name="google-signin-client_id"
+        content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
+    <meta name="google-signin-cookiepolicy" content="single_host_origin">
+    <meta name="google-signin-scope" content="profile email">
+
 </head>
 
 <body>
@@ -62,8 +68,7 @@
             </form>
             <span style="margin: 0px 0px 0px 8px"></span>
             <h2 style="font-weight: 600;">{store_title}</h2>
-            <i id="bookmark" class="far fa-star fa-lg" style="color: orange; margin: 8px 0px 0px 8px;"
-                onclick="toggleBookmark();"></i>
+            <i id="bookmark" class="far fa-star fa-lg" style="color: orange; margin: 8px 0px 0px 8px;"></i>
             <span style="margin: 6px 0px 0px 3px">즐겨찾기</span>
         </div>
         <div class="d-flex p-2 border" style="width: 680px; margin: auto;">
@@ -99,8 +104,8 @@
                     <span id="product-amount" style="margin: auto; padding-bottom: 7px;"></span>
                     <div class="p-1"></div>
                     <div class="pb-2">
-                        <button id="update-button" type="button" class="btn btn-primary"
-                            style="margin: auto; padding: 4px 10px; font-size: 14px;" onclick="exportExcel();">
+                        <button id="excel-export-button" type="button" class="btn btn-primary"
+                            style="margin: auto; padding: 4px 10px; font-size: 14px;">
                             엑셀 파일 (.xlsx)&nbsp;
                             <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
                                 viewBox="0 0 16 16" width="16" height="16">
@@ -133,10 +138,50 @@
         </div>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
-        <script>
+        <script type="module">
+            import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js';
+            import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
+
+            initializeApp({
+                apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+                authDomain: "store-manager-5d527.firebaseapp.com",
+                projectId: "store-manager-5d527",
+                storageBucket: "store-manager-5d527.appspot.com",
+                messagingSenderId: "36522862962",
+                appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+                measurementId: "G-37DECVWLYX"
+            });
+
+            const auth = getAuth();
+            let uid;
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    uid = user.uid;
+                } else {
+                    swal.fire({
+                        title: '잠시만요!',
+                        html: '이용하기 전에 로그인 해주세요!',
+                        confirmButtonText: '메인으로',
+                        allowOutsideClick: false,
+                        showCancelButton: false,
+                        heightAuto: false,
+                    }).then((res) => {
+                        let form = document.createElement('form');
+                        form.style.visibility = 'hidden';
+                        form.method = 'GET';
+                        form.action = '/';
+                        document.body.appendChild(form);
+                        form.submit();
+                    });
+                }
+            });
+
             const storeUrl = '{store_url}';
+            const endpoint = storeUrl.split('/').pop();
 
             function showError(res, error) {
                 if (res.isConfirmed) {
@@ -169,6 +214,7 @@
             const byPopularity = document.getElementById('by-popularity');
             const byRecent = document.getElementById('by-recent');
             const productAmount = document.getElementById('product-amount');
+            const excelExportButton = document.getElementById('excel-export-button');
 
             swal.fire({
                 title: '잠시만요!',
@@ -211,17 +257,17 @@
             for (let splitCookies of document.cookie.split(/; */)) {
                 bookmarkCount++;
                 let splitCookie = splitCookies.split('=');
-                if (splitCookie[0] == storeUrl) {
+                if (splitCookie[0] == endpoint) {
                     isBookmarked = true;
                     bookmarkOn();
                 }
             }
 
-            function toggleBookmark() {
+            bookmark.addEventListener('click', () => {
                 if (isBookmarked) {
                     bookmarkOff();
                     bookmarkCount--;
-                    document.cookie = `${storeUrl}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                    document.cookie = `${endpoint}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 
                     isBookmarked = false;
                 }
@@ -265,7 +311,7 @@
                                         if (value) {
                                             bookmarkOn();
                                             document.cookie = `${value}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                                            document.cookie = `${storeUrl}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};path=/`;
+                                            document.cookie = `${endpoint}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};path=/`;
 
                                             isBookmarked = true;
                                         }
@@ -277,12 +323,12 @@
                     else {
                         bookmarkOn();
                         bookmarkCount++;
-                        document.cookie = `${storeUrl}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};path=/`;
+                        document.cookie = `${endpoint}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};path=/`;
 
                         isBookmarked = true;
                     }
                 }
-            }
+            });
 
             function getOption(value) {
                 let text = value.toString();
@@ -290,12 +336,13 @@
                 return new Option(text, value);
             }
 
-            fetch(`/smartstore/${storeUrl}/history`, {
+            fetch(`/history`, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
+                body: JSON.stringify({ store_url: storeUrl }),
             }).then(async (res) => {
                 let json = await res.json();
 
@@ -336,7 +383,7 @@
                     });
                 }
 
-                oldSelect.addEventListener('change', (event) => {
+                oldSelect.addEventListener('change', () => {
                     if (oldSelect.value == 0) {
                         oldProductList = [];
                         updateTable(newProductList = newProductList);
@@ -383,12 +430,16 @@
                         }).then((res) => showError(res, error));
                     }
 
-                    fetch(`/smartstore/${storeUrl}/${oldSelect.value}`, {
+                    fetch(`/productList`, {
                         method: 'POST',
                         headers: {
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'
                         },
+                        body: JSON.stringify({
+                            store_url: storeUrl,
+                            time: oldSelect.value,
+                        }),
                     }).then(async (res) => {
                         let json = await res.json();
 
@@ -403,7 +454,7 @@
                     }).catch((error) => showOldSelectError(error));
                 });
 
-                newSelect.addEventListener('change', (event) => {
+                newSelect.addEventListener('change', () => {
                     if (newSelect.value == 0) {
                         newProductList = [];
                         updateTable(oldProductList = oldProductList);
@@ -450,12 +501,16 @@
                         }).then((res) => showError(res, error));
                     }
 
-                    fetch(`/smartstore/${storeUrl}/${newSelect.value}`, {
+                    fetch(`/productList`, {
                         method: 'POST',
                         headers: {
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'
                         },
+                        body: JSON.stringify({
+                            store_url: storeUrl,
+                            time: newSelect.value,
+                        }),
                     }).then(async (res) => {
                         let json = await res.json();
 
@@ -471,16 +526,6 @@
                 });
 
                 updateButton.addEventListener('click', () => {
-                    // if (historyList.includes(time)) {
-                    //     swal.fire({
-                    //         title: '잠시만요!',
-                    //         text: '업데이트는 1분마다 하실 수 있어요.',
-                    //         confirmButtonText: '알겠어요',
-                    //         heightAuto: false,
-                    //     });
-                    //     return;
-                    // }
-
                     swal.fire({
                         title: '잠시만요!',
                         html: `
@@ -495,12 +540,16 @@
                         heightAuto: false,
                     });
 
-                    fetch(`/smartstore/${storeUrl}/update`, {
+                    fetch(`/smartstore/update`, {
                         method: 'POST',
                         headers: {
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'
                         },
+                        body: JSON.stringify({
+                            store_url: storeUrl,
+                            uid: uid,
+                        }),
                     }).then(async (res) => {
                         let json = await res.json()
 
@@ -523,6 +572,22 @@
                         }
 
                         let time = json.time;
+
+                        if (historyList.includes(time)) {
+                            swal.fire({
+                                title: '잠시만요!',
+                                html: `
+                                    <div style="line-height: 130%;">
+                                        이미 업데이트 되어있어요.<br>
+                                        업데이트는 1분마다 하실 수 있어요.
+                                    </div>
+                                `,
+                                confirmButtonText: '알겠어요',
+                                heightAuto: false,
+                            });
+                            return;
+                        }
+
                         historyList.unshift(time);
 
                         swal.fire({
@@ -739,7 +804,7 @@
 
                     let a = document.createElement('a');
 
-                    a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${row.id}`);
+                    a.setAttribute('href', `${storeUrl}/products/${row.id}`);
                     a.setAttribute('target', '_blank');
 
                     if (row.title.length > 48) {
@@ -785,7 +850,7 @@
 
                     let a = document.createElement('a');
 
-                    a.setAttribute('href', `https://smartstore.naver.com/${storeUrl}/products/${row.id}`);
+                    a.setAttribute('href', `${storeUrl}/products/${row.id}`);
                     a.setAttribute('target', '_blank');
 
                     if (row.title.length > 48) {
@@ -820,18 +885,18 @@
                 }
             };
 
-            function exportExcel(type, fn, dl) {
+            excelExportButton.addEventListener('click', () => {
                 let ws = XLSX.utils.json_to_sheet(table);
                 let dateList = [];
 
                 if (oldProductList.length > 0) {
                     let text = oldSelect.value.toString();
-                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}：${text.slice(10, 12)}`);
+                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`);
                 }
 
                 if (newProductList.length > 0) {
                     let text = newSelect.value.toString();
-                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}：${text.slice(10, 12)}`);
+                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`);
                 }
 
                 let filename = dateList.join(' → ');
@@ -840,15 +905,19 @@
                     let idCell = ws[`A${row + 1}`];
                     let titleCell = ws[`B${row + 1}`];
 
-                    titleCell.f = `=HYPERLINK("https://smartstore.naver.com/${storeUrl}/products/${idCell.v}", "${titleCell.v}")`;
+                    titleCell.f = `=HYPERLINK("${storeUrl}/products/${idCell.v}", "${titleCell.v}")`;
                 }
 
                 let wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, '{store_title}');
+                XLSX.writeFile(wb, `{store_title} ${filename}.xlsx`);
+            });
 
-                return dl ?
-                    XLSX.write(wb, { bookType: type, bookSST: true, type: 'base64' }) :
-                    XLSX.writeFile(wb, fn || (`{store_title} ${filename}.xlsx`));
+            function s2ab(s) {
+                var buf = new ArrayBuffer(s.length);
+                var view = new Uint8Array(buf);
+                for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                return buf;
             }
         </script>
 </body>
