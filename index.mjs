@@ -79,7 +79,7 @@ app.post('/smartstore/search', async (req, res) => {
   let conn;
 
   try {
-    let storeTitle = await searchStore(storeUrl);
+    let storeTitle = await searchSmartstore(storeUrl);
 
     endpoint = storeUrl.slice(storeUrl.indexOf('smartstore.naver.com') + 21);
     if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
@@ -106,107 +106,8 @@ app.post('/smartstore/search', async (req, res) => {
   }
 });
 
-app.get('/smartstore/:store_url', async (req, res) => {
-  let endpoint = req.params.store_url;
-
-  if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
-    res.sendFile(__dirname + '/views/storeNotFound.html');
-    return;
-  }
-
-  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
-  let storeTitle;
-  let conn;
-
-  try {
-    conn = await pool.getConnection();
-    let result = await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`);
-
-    if (result[0].length > 0) {
-      storeTitle = result[0][0].title;
-    }
-    else {
-      storeTitle = await searchStore(storeUrl);
-      await conn.query(`REPLACE INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')`);
-    }
-  }
-  catch (error) {
-    res.sendFile(__dirname + '/views/storeNotFound.html');
-  }
-  finally {
-    conn.release();
-  }
-
-  fs.readFile(__dirname + '/views/store.html', (error, data) => {
-    if (error != null) {
-      res.json({
-        result: 'error',
-        error: error.message == undefined ? error : error.message,
-      });
-      return;
-    }
-
-    let htmlString = data.toString();
-    htmlString = htmlString.replaceAll('{store_url}', endpoint);
-    htmlString = htmlString.replaceAll('{store_title}', storeTitle);
-    res.send(htmlString);
-  });
-});
-
-app.post('/smartstore/:store_url/update', async (req, res) => {
-  let endpoint = req.params.store_url;
-  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
-  let conn;
-
-  try {
-    let now = new Date();
-    let time = dateFormat(now, 'yyyymmddHHMM');
-
-    conn = await pool.getConnection();
-    let result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
-
-    if (result[0].length > 0) {
-      res.json({
-        result: 'OK',
-        time: time,
-        productList: productList,
-      });
-    }
-
-    let productAmount = await getProductAmount(endpoint);
-    let productList = await getProductList(endpoint, productAmount)
-
-    let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES ';
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '');
-      query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `;
-    }
-
-    query = query.substring(0, query.length - 2);
-    await conn.query(query);
-    await conn.query(`REPLACE INTO history (storeUrl, time, user) VALUES ('${storeUrl}', ${time}, 'test')`);
-
-    res.json({
-      result: 'OK',
-      time: time,
-      productList: productList,
-    });
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message == undefined ? error : error.message,
-    });
-  }
-  finally {
-    conn.release();
-  }
-});
-
-app.post('/smartstore/:store_url/history', async (req, res) => {
-  let endpoint = req.params.store_url;
-  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
+app.post('/history', async (req, res) => {
+  let storeUrl = req.body.store_url;
 
   try {
     let conn = await pool.getConnection();
@@ -232,11 +133,9 @@ app.post('/smartstore/:store_url/history', async (req, res) => {
   }
 });
 
-app.post('/smartstore/:store_url/:time', async (req, res) => {
-  let time = req.params.time;
-  let endpoint = req.params.store_url;
-  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
-
+app.post('/productList', async (req, res) => {
+  let storeUrl = req.body.store_url;
+  let time = req.body.time;
   let conn;
 
   try {
@@ -247,6 +146,245 @@ app.post('/smartstore/:store_url/:time', async (req, res) => {
       result: 'OK',
       productList: result[0],
     });
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
+});
+
+app.get('/smartstore/:endpoint', async (req, res) => {
+  let endpoint = req.params.endpoint;
+  let storeUrl = `https://smartstore.naver.com/${endpoint}`;
+
+  if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
+    res.sendFile(__dirname + '/views/storeNotFound.html');
+    return;
+  }
+
+  let storeTitle;
+  let conn;
+
+  try {
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`);
+
+    if (result[0].length > 0) {
+      storeTitle = result[0][0].title;
+    }
+    else {
+      storeTitle = await searchSmartstore(storeUrl);
+      await conn.query(`REPLACE INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')`);
+    }
+  }
+  catch (error) {
+    res.sendFile(__dirname + '/views/storeNotFound.html');
+  }
+  finally {
+    conn.release();
+  }
+
+  fs.readFile(__dirname + '/views/store.html', (error, data) => {
+    if (error != null) {
+      res.json({
+        result: 'error',
+        error: error.message == undefined ? error : error.message,
+      });
+      return;
+    }
+
+    let htmlString = data.toString();
+    htmlString = htmlString.replaceAll('{store_url}', storeUrl);
+    htmlString = htmlString.replaceAll('{store_title}', storeTitle);
+    res.send(htmlString);
+  });
+});
+
+app.post('/smartstore/update', async (req, res) => {
+  let storeUrl = req.body.store_url;
+  let uid = req.body.uid;
+  let conn;
+
+  try {
+    let now = new Date();
+    let time = parseInt(dateFormat(now, 'yyyymmddHHMM'));
+
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+    if (result[0].length > 0) {
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+      res.json({
+        result: 'OK',
+        time: time,
+        productList: result[0],
+      });
+    }
+    else {
+      let productAmount = await getSmartstoreProductAmount(storeUrl);
+      let productList = await getSmartstoreProductList(storeUrl, productAmount)
+
+      let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES ';
+
+      for (let product of productList) {
+        let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '');
+        query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `;
+      }
+
+      query = query.substring(0, query.length - 2);
+      await conn.query(query);
+      await conn.query(`REPLACE INTO history (storeUrl, time, uid) VALUES ('${storeUrl}', ${time}, '${uid}')`);
+
+      res.json({
+        result: 'OK',
+        time: time,
+        productList: productList,
+      });
+    }
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
+});
+
+app.get('/hyundai/auton', async (req, res) => {
+  res.sendFile(__dirname + '/views/carLifeMall.html');
+});
+
+app.post('/hyundai/auton/update', async (req, res) => {
+  let storeUrl = 'https://hyundai.auton.kr';
+  let uid = req.body.uid;
+  let conn;
+
+  try {
+    let now = new Date();
+    let time = parseInt(dateFormat(now, 'yyyymmddHHMM'));
+
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+    if (result[0].length > 0) {
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+      res.json({
+        result: 'OK',
+        time: time,
+        productList: result[0],
+      });
+    }
+    else {
+      let categoryIdList = [];
+
+      while (categoryIdList <= 0) {
+        categoryIdList = await getCarLifeMallCategoryIdList();
+      }
+
+      let categoryList = await getCarLifeMallCategoryList(categoryIdList);
+
+      while (true) {
+        let tempCategoryIdList = [];
+
+        for (let index = categoryList.length - 1; index >= 0; index--) {
+          let category = categoryList[index];
+
+          if (isNaN(category.productAmount)) {
+            tempCategoryIdList.push(category.id);
+          }
+        }
+
+        if (tempCategoryIdList.length > 0) {
+          let tempCategoryList = await getCarLifeMallCategoryList(tempCategoryIdList);
+
+          for (let tempCategory of tempCategoryList) {
+            for (let category of categoryList) {
+              if (category.id == tempCategory.id) {
+                category.productAmount = tempCategory.productAmount;
+              }
+            }
+          }
+        }
+        else {
+          break;
+        }
+      }
+
+      let pageList = [];
+
+      for (let category of categoryList) {
+        for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
+          pageList.push({
+            categoryId: category.id,
+            num: page,
+          });
+        }
+      }
+
+      pageList = await getCarLifeMallProductList(pageList);
+
+      while (true) {
+        let tempPageList = [];
+
+        for (let page of pageList) {
+          if (page.productList.length <= 0) {
+            tempPageList.push(page);
+          }
+        }
+
+        if (tempPageList.length > 0) {
+          tempPageList = await getCarLifeMallProductList(tempPageList);
+
+          for (let tempPage of tempPageList) {
+            for (let page of pageList) {
+              if (tempPage.categoryId == page.categoryId && tempPage.num == page.num) {
+                page.productList = tempPage.productList;
+              }
+            }
+          }
+        }
+        else {
+          break;
+        }
+      }
+
+      let productList = [];
+
+      for (let page of pageList) {
+        for (let product of page.productList) {
+          if (productList.filter((tempProduct) => tempProduct.id == product.id).length <= 0) {
+            productList.push(product);
+          }
+        }
+      }
+
+      let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES ';
+
+      for (let product of productList) {
+        let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '');
+        query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `;
+      }
+
+      query = query.substring(0, query.length - 2);
+      await conn.query(query);
+      await conn.query(`REPLACE INTO history (storeUrl, time, uid) VALUES ('${storeUrl}', ${time}, '${uid}')`);
+
+      res.json({
+        result: 'OK',
+        time: time,
+        productList: productList,
+      });
+    }
   }
   catch (error) {
     res.json({
@@ -286,7 +424,7 @@ function searchNaver(query) {
   });
 }
 
-function searchStore(storeUrl) {
+function searchSmartstore(storeUrl) {
   return new Promise((resolve, reject) => {
     https.get(storeUrl, (res) => {
       let data = '';
@@ -315,9 +453,9 @@ function searchStore(storeUrl) {
   });
 }
 
-function getProductAmount(endpoint) {
+function getSmartstoreProductAmount(storeUrl) {
   return new Promise((resolve, reject) => {
-    https.get(`https://smartstore.naver.com/${endpoint}/category/ALL`, (res) => {
+    https.get(`${storeUrl}/category/ALL`, (res) => {
       let data = '';
 
       res.on('error', (error) => reject(error));
@@ -336,12 +474,12 @@ function getProductAmount(endpoint) {
   });
 }
 
-function getProductList(endpoint, productAmount) {
+function getSmartstoreProductList(storeUrl, productAmount) {
   return new Promise((resolve, reject) => {
     let productList = [];
 
     for (let page = 0; page < Math.ceil(productAmount / 80); page++) {
-      https.get(`https://smartstore.naver.com/${endpoint}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
+      https.get(`${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
         let data = '';
 
         res.on('error', (error) => reject(error));
@@ -386,6 +524,152 @@ function getProductList(endpoint, productAmount) {
             if (productAmount <= 0) {
               resolve(productList);
             }
+          }
+        });
+      }).on('error', (error) => reject(error));
+    }
+  });
+}
+
+function getCarLifeMallCategoryIdList() {
+  return new Promise((resolve, reject) => {
+    https.get('https://hyundai.auton.kr/product/category/category_main?pcid=3478&rootid=3439', (res) => {
+      let data = '';
+
+      res.on('error', (error) => reject(error));
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        let document = parser.parse(data);
+        let links = document.getElementsByTagName('a');
+
+        let catergoryIdList = [];
+
+        for (let link of links) {
+          let href = link.getAttribute('href');
+
+          if (href == undefined) {
+            continue;
+          }
+
+          if (href.includes('Redirect')) {
+            href = href.slice(href.indexOf('Redirect') + 9);
+            let pcid = href.slice(0, href.indexOf(','));
+
+            if (!isNaN(pcid)) {
+              let catergoryId = parseInt(pcid);
+
+              if (!catergoryIdList.includes(catergoryId)) {
+                catergoryIdList.push(catergoryId);
+              }
+            }
+          }
+        }
+        resolve(catergoryIdList);
+      });
+    }).on('error', (error) => reject(error));
+  });
+}
+
+function getCarLifeMallCategoryList(categoryIdList) {
+  return new Promise((resolve, reject) => {
+    let categoryList = [];
+
+    for (let categoryId of categoryIdList) {
+      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${categoryId}&rootid=3439`, (res) => {
+        let data = '';
+
+        res.on('error', (error) => reject(error));
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          let document = parser.parse(data);
+          let flex = document.querySelector('.list_top_wrap');
+
+          try {
+            let flexText = flex.innerText.trim();
+            let productAmount = parseInt(flexText.slice(3, flexText.indexOf('개')));
+
+            categoryList.push({
+              id: categoryId,
+              productAmount: productAmount,
+            });
+          }
+          catch {
+            categoryList.push({
+              id: categoryId,
+              productAmount: NaN,
+            });
+          }
+          finally {
+            if (categoryList.length >= categoryIdList.length) {
+              resolve(categoryList);
+            }
+          }
+        });
+      }).on('error', (error) => reject(error));
+    }
+  });
+}
+
+function getCarLifeMallProductList(pageList) {
+  return new Promise((resolve, reject) => {
+    let pages = 0;
+
+    for (let page of pageList) {
+      let productList = [];
+
+      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${page.categoryId}&rootid=3439&page=${page.num}&recodeCount=100&search.orderBy=sellCount&search.order=desc`, (res) => {
+        let data = '';
+
+        res.on('error', (error) => reject(error));
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          let document = parser.parse(data);
+
+          let idElements = document.getElementsByTagName('a');
+          let titleElements = document.querySelectorAll('.title');
+          let priceElements = document.querySelectorAll('.sell_price');
+
+          let idList = [];
+
+          for (let idElement of idElements) {
+            let href = idElement.getAttribute('href');
+
+            if (href == undefined) {
+              continue;
+            }
+
+            if (href.includes('ProductDetail')) {
+              href = href.slice(href.indexOf('ProductDetail') + 14);
+              href = href.slice(0, href.indexOf(','));
+
+              if (!isNaN(href)) {
+                idList.push(parseInt(href));
+              }
+            }
+          }
+
+          for (let productIndex = 0; productIndex < idList.length; productIndex++) {
+            let product = {
+              id: idList[productIndex],
+              title: titleElements[productIndex].innerText.trim(),
+              price: parseInt(priceElements[productIndex].innerText.replace(/[^\d.]/g, '')),
+              popularityIndex: 0,
+              isSoldOut: false,
+            };
+            productList.push(product);
+          }
+
+          page.productList = productList;
+          pages++;
+
+          if (pages >= pageList.length) {
+            resolve(pageList);
           }
         });
       }).on('error', (error) => reject(error));
