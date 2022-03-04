@@ -58,7 +58,8 @@
 
     .dropdown-content a {
       color: black;
-      padding: 7px 14px;
+      padding: 6px 14px;
+      font-size: 14px;
       text-decoration: none;
       display: block;
     }
@@ -105,7 +106,12 @@
   </div>
   <div class="d-flex" style="float: right; margin: auto;">
     <div class="dropdown">
-      <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
+      <div id="signin-button" class="g-signin2" style="pointer-events: none" data-onsuccess="onSignIn"></div>
+      <div id="user-menu" class="dropdown-content" hidden>
+        <a id="email" class="dropdown-item disabled"></a>
+        <div class="dropdown-divider" style="margin: 0px;"></div>
+        <a class="selectable dropdown-item" onclick="onSignOut();">로그아웃</a>
+      </div>
       <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js';
         import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
@@ -121,6 +127,26 @@
         });
 
         const auth = getAuth();
+        const signinButton = document.getElementById('signin-button');
+        const userMenu = document.getElementById('user-menu');
+        const email = document.getElementById('email');
+
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            let connectedSpan = document.evaluate('/html/body/div[2]/div[1]/div/div/div/span/span[2]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            let buttonWrapper = document.querySelector('.abcRioButton.abcRioButtonLightBlue');
+
+            if (connectedSpan != undefined && buttonWrapper != undefined) {
+              connectedSpan.innerText = `${user.displayName} ▼`;
+              userMenu.hidden = false;
+              buttonWrapper.style = 'min-width: 120px; height: 36px;';
+              email.innerText = user.email;
+            }
+          }
+          else {
+            signinButton.style = '';
+          }
+        })
 
         function onSignIn(googleUser) {
           const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -242,18 +268,15 @@
               src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto;"></a>
         </div>
         <div hidden>
-          <!-- Start: Copyright 2022 TraceMyIP.org Service Code (024312-02072022)- DO NOT MODIFY //-->
+          <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
           <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
             <script type="text/javascript"
-              src="//s3.tracemyip.org/tracker/lgUrl.php?stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
-            <noscript>
-              <a href="https://www.tracemyip.org/website-visitors-alerts.htm">
-                <img src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/" alt="Web site email alerts"
-                  style="border:0px;">
-              </a>
-            </noscript>
-          </div>
-          <!-- End: TraceMyIP.org Service Code //-->
+              src="//s3.tracemyip.org/tracker/lgUrl.php?random='+Math.random()+'&amp;stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
+            <noscript><a
+                href="https://www.tracemyip.org/tools/website-visitors-counter-traffic-tracker-statistics/"><img
+                  src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/" alt="Web Site Hits Ipv4 Tracer"
+                  style="border:0px;"></a></noscript>
+          </div> <!-- End: TraceMyIP.org Service Code //-->
         </div>
       </div>
     </div>
