@@ -106,15 +106,13 @@
   </div>
   <div class="d-flex" style="float: right; margin: auto;">
     <div class="dropdown">
-      <div id="signin-button" class="g-signin2" style="pointer-events: none" data-onsuccess="onSignIn"></div>
+      <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
       <div id="user-menu" class="dropdown-content" hidden>
         <a id="email" class="dropdown-item disabled"></a>
-        <div class="dropdown-divider" style="margin: 0px;"></div>
-        <a class="selectable dropdown-item" onclick="onSignOut();">로그아웃</a>
       </div>
       <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js';
-        import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
 
         initializeApp({
           apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
@@ -142,9 +140,6 @@
               buttonWrapper.style = 'min-width: 120px; height: 36px;';
               email.innerText = user.email;
             }
-          }
-          else {
-            signinButton.style = '';
           }
         })
 
@@ -189,32 +184,6 @@
           });
         }
 
-        function onSignOut() {
-          signOut(auth).then(() => {
-            let form = document.createElement('form');
-            form.style.visibility = 'hidden';
-            form.method = 'GET';
-            form.action = '/';
-            document.body.appendChild(form);
-            form.submit();
-          }).catch((error) => {
-            swal.fire({
-              title: '이런!',
-              html: `
-              <div style="line-height: 130%;">
-                  로그아웃에 실패 하셨어요.<br>
-                  다시 시도해주세요.
-              </div>
-            `,
-              icon: 'error',
-              confirmButtonText: '어떻게 된거죠?',
-              cancelButtonText: '알겠어요',
-              showCancelButton: true,
-              heightAuto: false,
-            }).then((res) => showError(res, error));
-          });
-        }
-
         function isUserEqual(googleUser, firebaseUser) {
           if (firebaseUser) {
             const providerData = firebaseUser.providerData;
@@ -229,7 +198,6 @@
         }
 
         window.onSignIn = onSignIn;
-        window.onSignOut = onSignOut;
       </script>
     </div>
     <div id="search-div" class="container d-flex align-items-center justify-content-center"
