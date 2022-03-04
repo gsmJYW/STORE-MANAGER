@@ -87,6 +87,10 @@
             <p>&nbsp;</p>
             <div id="sort-form">
                 <div class="form-check form-check-inline" style="padding-top: 4px;">
+                    <input class="form-check-input" type="checkbox" id="load-all" value="load-all">
+                    <label class="form-check-label">전부 로딩하기</label>
+                </div>
+                <div class="form-check form-check-inline" style="padding-top: 4px;">
                     <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
                         checked="checked">
                     <label class="form-check-label">상태가 바뀐 제품을 위로</label>
@@ -124,18 +128,15 @@
             <table id="result-table"></table>
         </div>
         <div hidden>
-            <!-- Start: Copyright 2022 TraceMyIP.org Service Code (024312-02072022)- DO NOT MODIFY //-->
+            <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
             <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
                 <script type="text/javascript"
-                    src="//s3.tracemyip.org/tracker/lgUrl.php?stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
-                <noscript>
-                    <a href="https://www.tracemyip.org/website-visitors-alerts.htm">
-                        <img src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/"
-                            alt="Web site email alerts" style="border:0px;">
-                    </a>
-                </noscript>
-            </div>
-            <!-- End: TraceMyIP.org Service Code //-->
+                    src="//s3.tracemyip.org/tracker/lgUrl.php?random='+Math.random()+'&amp;stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
+                <noscript><a
+                        href="https://www.tracemyip.org/tools/website-visitors-counter-traffic-tracker-statistics/"><img
+                            src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/"
+                            alt="Web Site Hits Ipv4 Tracer" style="border:0px;"></a></noscript>
+            </div> <!-- End: TraceMyIP.org Service Code //-->
         </div>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
@@ -196,6 +197,8 @@
                 }
             }
 
+            let loadCount = 50;
+
             let table = [];
             let loadingTable = [];
             let historyList = [];
@@ -211,6 +214,7 @@
             const result = document.getElementById('result');
             const resultTable = document.getElementById('result-table');
             const sortForm = document.getElementById('sort-form');
+            const loadAll = document.getElementById('load-all');
             const highlightChanges = document.getElementById('highlight-changes');
             const byPopularity = document.getElementById('by-popularity');
             const byRecent = document.getElementById('by-recent');
@@ -794,9 +798,16 @@
                     tr.appendChild(th);
                 }
 
-                loadingTable = table.slice(50);
+                if (loadAll.checked) {
+                    loadCount = 2147483647;
+                }
+                else {
+                    loadCount = 50;
+                }
 
-                for (let row of table.slice(0, 50)) {
+                loadingTable = table.slice(loadCount);
+
+                for (let row of table.slice(0, loadCount)) {
                     let tr = document.createElement('tr');
                     resultTable.appendChild(tr);
 
@@ -836,13 +847,13 @@
 
             function loadTable() {
                 if (loadingTable.length > 0) {
-                    loadingTable = loadingTable.slice(50);
+                    loadingTable = loadingTable.slice(loadCount);
                 }
                 else {
                     return;
                 }
 
-                for (let row of loadingTable.slice(0, 50)) {
+                for (let row of loadingTable.slice(0, loadCount)) {
                     let tr = document.createElement('tr');
                     resultTable.appendChild(tr);
 
