@@ -11,6 +11,8 @@ import mysql from 'mysql2/promise';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+import NTPClient from '@destinationstransfers/ntp';
+
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -211,8 +213,8 @@ app.post('/smartstore/update', async (req, res) => {
   let conn;
 
   try {
-    let now = new Date();
-    let time = parseInt(dateFormat(now, 'yyyymmddHHMM'));
+    let now = await getKST();
+    let time = parseInt(dateFormat(now, 'yyyymmddHHMM', true));
 
     conn = await pool.getConnection();
     let result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
@@ -269,8 +271,8 @@ app.post('/hyundai/auton/update', async (req, res) => {
   let conn;
 
   try {
-    let now = new Date();
-    let time = parseInt(dateFormat(now, 'yyyymmddHHMM'));
+    let now = await getKST();
+    let time = parseInt(dateFormat(now, 'yyyymmddHHMM', true));
 
     conn = await pool.getConnection();
     let result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
@@ -396,6 +398,12 @@ app.post('/hyundai/auton/update', async (req, res) => {
     conn.release();
   }
 });
+
+async function getKST() {
+  let now = await NTPClient.getNetworkTime();
+  let kst = new Date(now.getTime() + 1000 * 60 * 60 * 9);
+  return kst;
+}
 
 function searchNaver(query) {
   return new Promise((resolve, reject) => {
