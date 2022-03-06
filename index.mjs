@@ -4,13 +4,13 @@ import { initializeApp } from 'firebase/app';
 import dateFormat from 'dateformat';
 import fs from 'fs';
 import bodyParser from 'body-parser';
+import http from 'http';
 import https from 'https';
 import parser from 'node-html-parser';
 import express from 'express';
 import mysql from 'mysql2/promise';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-
 import NTPClient from '@destinationstransfers/ntp';
 
 const app = express();
@@ -44,6 +44,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
+
+app.use((req, res, next) => {
+  let protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  if (protocol == 'https') {
+    next();
+  }
+  else {
+    res.redirect(`https://${req.hostname}${req.url}`);
+  }
+});
 
 app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
@@ -685,4 +695,5 @@ function getCarLifeMallProductList(pageList) {
   });
 }
 
+http.createServer(app).listen(80);
 https.createServer(credentials, app).listen(443);
