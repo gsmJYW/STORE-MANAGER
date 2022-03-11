@@ -1,6 +1,3 @@
-
-import { initializeApp } from 'firebase/app';
-
 import dateFormat from 'dateformat';
 import fs from 'fs';
 import bodyParser from 'body-parser';
@@ -17,15 +14,16 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-initializeApp({
-  apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
-  authDomain: "store-manager-5d527.firebaseapp.com",
-  projectId: "store-manager-5d527",
-  storageBucket: "store-manager-5d527.appspot.com",
-  messagingSenderId: "36522862962",
-  appId: "1:36522862962:web:8a9e9b88373a19add095eb",
-  measurementId: "G-37DECVWLYX"
+import admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import serviceAccount from './store-manager-5d527-firebase-adminsdk-2ovpp-f0b6ef3a8a.json';
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://store-manager-5d527-default-rtdb.asia-southeast1.firebasedatabase.app',
 });
+
+const auth = getAuth();
 
 const credentials = {
   key: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.key.pem'),
@@ -45,6 +43,8 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
+app.use('/', express.static('libs'));
+
 app.use((req, res, next) => {
   let protocol = req.headers['x-forwarded-proto'] || req.protocol;
   if (protocol == 'https') {
@@ -57,6 +57,211 @@ app.use((req, res, next) => {
 
 app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
+});
+
+app.post('/option', async (req, res) => {
+  let idToken = req.body.id_token;
+  let uid;
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken);
+    uid = decodedToken.uid;
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+    return;
+  }
+
+  let conn;
+
+  try {
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM \`option\` WHERE uid = '${uid}'`);
+    let option;
+
+    if (result[0].length > 0) {
+      option = result[0][0];
+    }
+    else {
+      option = 'default';
+    }
+
+    res.json({
+      result: 'OK',
+      option: option,
+    });
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
+});
+
+app.post('/option/update', async (req, res) => {
+  let idToken = req.body.id_token;
+  let loadAll = req.body.load_all;
+  let highlightChanges = req.body.highlight_changes;
+  let sortMethod = req.body.sort_method;
+  let uid;
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken);
+    uid = decodedToken.uid;
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+    return;
+  }
+
+  let conn;
+
+  try {
+    conn = await pool.getConnection();
+    await conn.query(`REPLACE INTO \`option\` (uid, loadAll, highlightChanges, sortMethod) VALUES ('${uid}', ${loadAll}, ${highlightChanges}, ${sortMethod})`)
+
+    res.json({ result: 'OK' });
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
+});
+
+app.post('/bookmarkList', async (req, res) => {
+  let idToken = req.body.id_token;
+  let storeUrl = req.body.store_url;
+  let uid;
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken);
+    uid = decodedToken.uid;
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+    return;
+  }
+
+  let conn;
+
+  try {
+    let query = `SELECT bookmark.storeUrl, store.title FROM bookmark INNER JOIN store WHERE uid = '${uid}' AND bookmark.storeUrl = store.url`;
+
+    if (storeUrl != undefined) {
+      query += ` AND storeUrl = '${storeUrl}'`;
+    }
+
+    conn = await pool.getConnection();
+    let result = await conn.query(query);
+
+    res.json({
+      result: 'OK',
+      bookmarkList: result[0],
+    });
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
+});
+
+app.post('/bookmark/update', async (req, res) => {
+  let idToken = req.body.id_token;
+  let storeUrl = req.body.store_url;
+  let uid;
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken);
+    uid = decodedToken.uid;
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+    return;
+  }
+
+  let conn;
+
+  try {
+    let query = `REPLACE INTO bookmark (uid, storeUrl) VALUES ('${uid}', '${storeUrl}')`;
+
+    conn = await pool.getConnection();
+    await conn.query(query);
+
+    res.json({ result: 'OK' });
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
+});
+
+app.post('/bookmark/delete', async (req, res) => {
+  let idToken = req.body.id_token;
+  let storeUrl = req.body.store_url;
+  let uid;
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken);
+    uid = decodedToken.uid;
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+    return;
+  }
+
+  let conn;
+
+  try {
+    let query = `DELETE FROM bookmark WHERE uid = '${uid}' AND storeUrl = '${storeUrl}'`;
+
+    conn = await pool.getConnection();
+    await conn.query(query);
+
+    res.json({ result: 'OK' });
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
 });
 
 app.post('/smartstore/search', async (req, res) => {
@@ -241,6 +446,64 @@ app.post('/smartstore/update', async (req, res) => {
     else {
       let productAmount = await getSmartstoreProductAmount(storeUrl);
       let productList = await getSmartstoreProductList(storeUrl, productAmount)
+
+      let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES ';
+
+      for (let product of productList) {
+        let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '');
+        query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `;
+      }
+
+      query = query.substring(0, query.length - 2);
+      await conn.query(query);
+      await conn.query(`REPLACE INTO history (storeUrl, time, uid) VALUES ('${storeUrl}', ${time}, '${uid}')`);
+
+      res.json({
+        result: 'OK',
+        time: time,
+        productList: productList,
+      });
+    }
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    });
+  }
+  finally {
+    conn.release();
+  }
+});
+
+app.get('/n09', async (req, res) => {
+  res.sendFile(__dirname + '/views/n09.html');
+});
+
+app.post('/n09/update', async (req, res) => {
+  let storeUrl = 'https://www.n09.co.kr';
+  let uid = req.body.uid;
+  let conn;
+
+  try {
+    let now = await getKST();
+    let time = parseInt(dateFormat(now, 'yyyymmddHHMM', true));
+
+    conn = await pool.getConnection();
+    let result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+    if (result[0].length > 0) {
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`);
+
+      res.json({
+        result: 'OK',
+        time: time,
+        productList: result[0],
+      });
+    }
+    else {
+      let productAmount = await getN09ProductAmount();
+      let productList = await getN09ProductList(productAmount)
 
       let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES ';
 
@@ -689,6 +952,92 @@ function getCarLifeMallProductList(pageList) {
           if (pages >= pageList.length) {
             resolve(pageList);
           }
+        });
+      }).on('error', (error) => reject(error));
+    }
+  });
+}
+
+function getN09ProductAmount() {
+  return new Promise((resolve, reject) => {
+    https.get('https://www.n09.co.kr/product/list.html?cate_no=844', (res) => {
+      let data = '';
+
+      res.on('error', (error) => reject(error));
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        let document = parser.parse(data);
+        let productAmountElement = document.querySelector('.prdCount');
+        let productAmountText = productAmountElement.innerText;
+        productAmountText = productAmountText.split(' : ')[1];
+        productAmountText = productAmountText.split('개')[0];
+        let productAmount = parseInt(productAmountText);
+        resolve(productAmount);
+      });
+    }).on('error', (error) => reject(error));
+  });
+}
+
+function getN09ProductList(productAmount) {
+  return new Promise((resolve, reject) => {
+    let pages = Math.ceil(productAmount / 112);
+    let productList = [];
+
+    for (let page = 1; page <= pages; page++) {
+      https.get(`https://www.n09.co.kr/product/list.html?cate_no=844&sort_method=6&page=${page}`, (res) => {
+        let data = '';
+
+        res.on('error', (error) => reject(error));
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          let document = parser.parse(data);
+          let li = document.querySelectorAll('.item.xans-record-');
+          let index = 0;
+
+          li.forEach((item, index) => {
+            let product = {
+              isSoldOut: false,
+              popularityIndex: (page - 1) * 112 + index,
+            };
+
+            let titleElement = item.getElementsByTagName('span')[4];
+            let linkElement = item.getElementsByTagName('a')[0];
+
+            product.title = titleElement.innerText.trim()
+
+            let link = linkElement.getAttribute('href');
+            link = link.split('=')[1];
+            link = link.split('&')[0];
+            product.id = parseInt(link);
+
+            let statusElements = item.getElementsByTagName('img');
+            for (let statusElement of statusElements) {
+              if (statusElement.getAttribute('alt').includes('품절')) {
+                product.isSoldOut = true;
+              }
+            }
+
+            let spanList = item.getElementsByTagName('span');
+            for (let span of spanList) {
+              if (span.innerText.endsWith('원')) {
+                product.price = parseInt(span.innerText.replace(/[^\d.]/g, ''));
+              }
+            }
+
+            if (product.price == undefined) {
+              product.price = 0;
+            }
+
+            productList.push(product);
+
+            if (--productAmount <= 0) {
+              resolve(productList);
+            }
+          });
         });
       }).on('error', (error) => reject(error));
     }
