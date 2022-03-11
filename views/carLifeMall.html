@@ -44,7 +44,7 @@
         }
     </style>
 
-    <title>STORE MANAGER</title>
+    <title>STORE MANAGER - 카라이프몰</title>
     <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
 
     <link rel="stylesheet"
@@ -55,7 +55,6 @@
         content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
     <meta name="google-signin-cookiepolicy" content="single_host_origin">
     <meta name="google-signin-scope" content="profile email">
-
 </head>
 
 <body>
@@ -63,7 +62,7 @@
         <p></p>
         <div class="d-flex" style="width: 680px; margin: auto;">
             <form action="/">
-                <button type="submit" style="background: none; padding: 0px; border: none;">
+                <button type="submit" style="background: none; padding: 0px; border: none; outline: none;">
                     <i id="home-icon" class="fa fa-home" style="font-size: 30px; margin: 1px 0px 0px 0px;"></i>
                 </button>
             </form>
@@ -92,6 +91,16 @@
                     <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
                         checked="checked">
                     <label class="form-check-label">상태가 바뀐 제품을 위로</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent"
+                        checked="checked">
+                    <label class="form-check-label">최신 순으로</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
+                        value="by-popularity">
+                    <label class="form-check-label">인기 순으로</label>
                 </div>
                 <div class="d-flex" style="float: right; margin: auto;">
                     <span id="product-amount" style="margin: auto; padding-bottom: 7px;"></span>
@@ -145,32 +154,78 @@
                 measurementId: "G-37DECVWLYX"
             });
 
+            const storeUrl = 'https://hyundai.auton.kr';
+            const endpoint = storeUrl.split('/').pop();
             const auth = getAuth();
-            let uid = '';
+            let idToken;
+            let uid;
 
-            onAuthStateChanged(auth, (user) => {
+            onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     uid = user.uid;
+                    idToken = await user.getIdToken();
+
+                    fetch('/option', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ id_token: idToken }),
+                    }).then(async (res) => {
+                        let json = await res.json();
+                        if (json.result == 'OK') {
+                            if (json.option != 'default') {
+                                if (json.option.loadAll == 1) {
+                                    loadAll.checked = true;
+                                }
+
+                                if (json.option.highlightChanges == 0) {
+                                    highlightChanges.checked = false;
+                                }
+
+                                if (json.option.sortMethod == 1) {
+                                    byPopularity.checked = true;
+                                }
+                            }
+                        }
+                        else {
+                            throw new Error(json.error);
+                        }
+                    }).catch((error) => {
+                        swal.fire({
+                            title: '이런!',
+                            html: `
+                                <div style="line-height: 130%;">
+                                    설정을 불러오는데 실패하였어요.<br>
+                                    다시 시도해주세요.
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: '어떻게 된거죠?',
+                            cancelButtonText: '알겠어요',
+                            showCancelButton: true,
+                            heightAuto: false,
+                        }).then((res) => showError(res, error.message));
+                    });
                 } else {
-                    // swal.fire({
-                    //     title: '잠시만요!',
-                    //     html: '이용하기 전에 로그인 해주세요!',
-                    //     confirmButtonText: '메인으로',
-                    //     allowOutsideClick: false,
-                    //     showCancelButton: false,
-                    //     heightAuto: false,
-                    // }).then((res) => {
-                    //     let form = document.createElement('form');
-                    //     form.style.visibility = 'hidden';
-                    //     form.method = 'GET';
-                    //     form.action = '/';
-                    //     document.body.appendChild(form);
-                    //     form.submit();
-                    // });
+                    swal.fire({
+                        title: '잠시만요!',
+                        html: '이용하기 전에 로그인 해주세요!',
+                        confirmButtonText: '메인으로',
+                        allowOutsideClick: false,
+                        showCancelButton: false,
+                        heightAuto: false,
+                    }).then((res) => {
+                        let form = document.createElement('form');
+                        form.style.visibility = 'hidden';
+                        form.method = 'GET';
+                        form.action = '/';
+                        document.body.appendChild(form);
+                        form.submit();
+                    });
                 }
             });
-
-            const storeUrl = 'https://hyundai.auton.kr';
 
             function showError(res, error) {
                 if (res.isConfirmed) {
@@ -194,7 +249,6 @@
             let sortedProductList = [];
 
             const homeIcon = document.getElementById('home-icon');
-            const bookmark = document.getElementById('bookmark');
             const oldSelect = document.getElementById('old-select');
             const newSelect = document.getElementById('new-select');
             const updateButton = document.getElementById('update-button');
@@ -203,6 +257,8 @@
             const sortForm = document.getElementById('sort-form');
             const loadAll = document.getElementById('load-all');
             const highlightChanges = document.getElementById('highlight-changes');
+            const byPopularity = document.getElementById('by-popularity');
+            const byRecent = document.getElementById('by-recent');
             const productAmount = document.getElementById('product-amount');
             const excelExportButton = document.getElementById('excel-export-button');
 
@@ -416,7 +472,7 @@
                         html: `
                             <div style="line-height: 130%;">
                                 새로운 제품 기록을 쓰는 중이에요.<br>
-                                몇 분 걸릴 수도 있어요!
+                                제품이 많을 수록 오래 걸려요!
                             </div>
                         `,
                         showCancelButton: false,
@@ -432,7 +488,6 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            store_url: storeUrl,
                             uid: uid,
                         }),
                     }).then(async (res) => {
@@ -525,7 +580,7 @@
                             cancelButtonText: '알겠어요',
                             showCancelButton: true,
                             heightAuto: false,
-                        }).then((res) => showError(res, error));
+                        }).then((res) => showError(res, error.message));
                     });
                 });
             }).catch((error) => {
@@ -542,7 +597,7 @@
                     cancelButtonText: '알겠어요',
                     showCancelButton: true,
                     heightAuto: false,
-                }).then((res) => showError(res, error));
+                }).then((res) => showError(res, error.message));
             });
 
             sortForm.addEventListener('input', () => {
@@ -559,8 +614,8 @@
                 }
 
                 result.hidden = false;
-                table = [];
 
+                table = [];
                 let deletedProductList = [...oldProductList];
                 let productList = newProductList.length > 0 ? newProductList : oldProductList;
 
@@ -641,7 +696,13 @@
                 }
 
                 productAmount.textContent += `${productList.length.toLocaleString('ko-KR')}개`;
-                table.sort((a, b) => b.id - a.id);
+
+                if (byRecent.checked) {
+                    table.sort((a, b) => b.id - a.id);
+                }
+                else if (byPopularity.checked) {
+                    table.sort((a, b) => a.popularityIndex - b.popularityIndex);
+                }
 
                 if (oldProductList.length > 0 & newProductList.length > 0) {
                     let newProductAmount = newProductList.length - oldProductList.length + deletedProductList.length;

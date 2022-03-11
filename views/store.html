@@ -44,7 +44,7 @@
         }
     </style>
 
-    <title>STORE MANAGER</title>
+    <title>STORE MANAGER - {store_title}</title>
     <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
 
     <link rel="stylesheet"
@@ -55,7 +55,6 @@
         content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
     <meta name="google-signin-cookiepolicy" content="single_host_origin">
     <meta name="google-signin-scope" content="profile email">
-
 </head>
 
 <body>
@@ -63,13 +62,16 @@
         <p></p>
         <div class="d-flex" style="width: 680px; margin: auto;">
             <form action="/">
-                <button type="submit" style="background: none; padding: 0px; border: none;">
+                <button type="submit" style="background: none; padding: 0px; border: none; outline: none;">
                     <i id="home-icon" class="fa fa-home" style="font-size: 30px; margin: 1px 0px 0px 0px;"></i>
                 </button>
             </form>
             <span style="margin: 0px 0px 0px 8px"></span>
             <h2 style="font-weight: 600;">{store_title}</h2>
-            <i id="bookmark" class="far fa-star fa-lg" style="color: orange; margin: 8px 0px 0px 8px;"></i>
+            <button id='bookmark-button' type="button"
+                style="background: none; padding: 0px; border: none; outline: none;">
+                <i id="bookmark" class="far fa-star fa-lg" style="color: orange; margin: 0px 0px 14px 8px;"></i>
+            </button>
             <span style="margin: 6px 0px 0px 3px">즐겨찾기</span>
         </div>
         <div class="d-flex p-2 border" style="width: 680px; margin: auto;">
@@ -157,12 +159,302 @@
                 measurementId: "G-37DECVWLYX"
             });
 
+            const storeUrl = '{store_url}';
+            const endpoint = storeUrl.split('/').pop();
+
+            let isBookmarked;
+            let bookmarkList;
+            let bookmarkCount;
+
+            function bookmarkOn() {
+                fetch('/bookmark/update', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id_token: idToken, store_url: storeUrl }),
+                }).then(async (res) => {
+                    let json = await res.json();
+
+                    if (json.result == 'OK') {
+                        bookmark.classList.remove('far');
+                        bookmark.classList.add('fas');
+                        isBookmarked = true;
+                        bookmarkCount++;
+                    }
+                    else {
+                        throw new Error(json.error);
+                    }
+                }).catch((error) => {
+                    swal.fire({
+                        title: '이런!',
+                        html: `
+                            <div style="line-height: 130%;">
+                                즐겨찾기를 등록하지 못했어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `,
+                        icon: 'error',
+                        confirmButtonText: '어떻게 된거죠?',
+                        cancelButtonText: '알겠어요',
+                        showCancelButton: true,
+                        heightAuto: false,
+                    }).then((res) => showError(res, json.error));
+                    return;
+                })
+            }
+
+            function bookmarkOff() {
+                fetch('/bookmark/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id_token: idToken, store_url: storeUrl }),
+                }).then(async (res) => {
+                    let json = await res.json();
+
+                    if (json.result == 'OK') {
+                        bookmark.classList.remove('fas');
+                        bookmark.classList.add('far');
+                        isBookmarked = false;
+                        bookmarkCount--;
+                    }
+                    else {
+                        throw new Error(json.error);
+                    }
+                }).catch((error) => {
+                    swal.fire({
+                        title: '이런!',
+                        html: `
+                            <div style="line-height: 130%;">
+                                즐겨찾기를 해제하지 못했어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `,
+                        icon: 'error',
+                        confirmButtonText: '어떻게 된거죠?',
+                        cancelButtonText: '알겠어요',
+                        showCancelButton: true,
+                        heightAuto: false,
+                    }).then((res) => showError(res, error.message));
+                    return;
+                });
+            }
+
             const auth = getAuth();
+            let idToken;
             let uid;
 
-            onAuthStateChanged(auth, (user) => {
+            onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     uid = user.uid;
+                    idToken = await user.getIdToken();
+
+                    fetch('/option', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ id_token: idToken }),
+                    }).then(async (res) => {
+                        let json = await res.json();
+                        if (json.result == 'OK') {
+                            if (json.option != 'default') {
+                                if (json.option.loadAll == 1) {
+                                    loadAll.checked = true;
+                                }
+
+                                if (json.option.highlightChanges == 0) {
+                                    highlightChanges.checked = false;
+                                }
+
+                                if (json.option.sortMethod == 1) {
+                                    byPopularity.checked = true;
+                                }
+                            }
+                        }
+                        else {
+                            throw new Error(json.error);
+                        }
+                    }).catch((error) => {
+                        swal.fire({
+                            title: '이런!',
+                            html: `
+                                <div style="line-height: 130%;">
+                                    설정을 불러오는데 실패하였어요.<br>
+                                    다시 시도해주세요.
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: '어떻게 된거죠?',
+                            cancelButtonText: '알겠어요',
+                            showCancelButton: true,
+                            heightAuto: false,
+                        }).then((res) => showError(res, error.message));
+                    });
+
+                    fetch('/bookmarkList', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ id_token: idToken }),
+                    }).then(async (res) => {
+                        let json = await res.json();
+                        if (json.result == 'OK') {
+                            bookmarkList = json.bookmarkList;
+                            bookmarkList.sort((a, b) => a.title - b.title);
+                            bookmarkCount = bookmarkList.length;
+                            isBookmarked = bookmarkList.filter((bookmark) => bookmark.storeUrl == storeUrl).length > 0;
+
+                            if (isBookmarked) {
+                                bookmark.classList.remove('far');
+                                bookmark.classList.add('fas');
+                            }
+
+                            bookmarkButton.addEventListener('click', () => {
+                                if (isBookmarked) {
+                                    bookmarkOff();
+                                }
+                                else {
+                                    if (bookmarkCount >= 10) {
+                                        swal.fire({
+                                            title: '잠시만요!',
+                                            html: `
+                                                <div style="line-height: 130%;">
+                                                    즐겨찾기는 10개까지 등록할 수 있어요!<br>
+                                                    즐겨찾기 하나를 해제하고 등록 하시겠어요?
+                                                </div>
+                                            `,
+                                            showCancelButton: true,
+                                            confirmButtonText: '즐겨찾기 선택',
+                                            cancelButtonText: '안 돼요!',
+                                            heightAuto: false,
+                                        }).then((res) => {
+                                            if (res.isConfirmed) {
+                                                fetch('/bookmarkList', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Accept': 'application/json',
+                                                        'Content-Type': 'application/json'
+                                                    },
+                                                    body: JSON.stringify({ id_token: idToken }),
+                                                }).then(async (res) => {
+                                                    let json = await res.json();
+                                                    bookmarkList = json.bookmarkList;
+
+                                                    if (json.result == 'OK') {
+                                                        let inputOptions = new Promise((resolve) => {
+                                                            let options = {};
+
+                                                            for (let bookmark of bookmarkList) {
+                                                                options[bookmark.storeUrl] = bookmark.title;
+                                                            }
+
+                                                            setTimeout(() => resolve(options), 1000)
+                                                        });
+
+                                                        let { value: color } = Swal.fire({
+                                                            title: '해제할 즐겨찾기',
+                                                            input: 'radio',
+                                                            customClass: { input: 'swal-option' },
+                                                            inputOptions: inputOptions,
+                                                            showCancelButton: true,
+                                                            confirmButtonText: '선택',
+                                                            cancelButtonText: '안 돼요!',
+                                                            inputValidator: (value) => {
+                                                                if (value) {
+                                                                    fetch('/bookmark/delete', {
+                                                                        method: 'POST',
+                                                                        headers: {
+                                                                            'Accept': 'application/json',
+                                                                            'Content-Type': 'application/json'
+                                                                        },
+                                                                        body: JSON.stringify({ id_token: idToken, store_url: value }),
+                                                                    }).then(async (res) => {
+                                                                        let json = await res.json();
+
+                                                                        if (json.result == 'OK') {
+                                                                            bookmarkOn();
+                                                                        }
+                                                                        else {
+                                                                            throw new Error(json.error);
+                                                                        }
+                                                                    }).catch((error) => {
+                                                                        swal.fire({
+                                                                            title: '이런!',
+                                                                            html: `
+                                                                                <div style="line-height: 130%;">
+                                                                                    즐겨찾기를 해제하지 못했어요.<br>
+                                                                                    다시 시도해주세요.
+                                                                                </div>
+                                                                            `,
+                                                                            icon: 'error',
+                                                                            confirmButtonText: '어떻게 된거죠?',
+                                                                            cancelButtonText: '알겠어요',
+                                                                            showCancelButton: true,
+                                                                            heightAuto: false,
+                                                                        }).then((res) => showError(res, json.error));
+                                                                        return;
+                                                                    });
+                                                                }
+                                                            }
+                                                        });
+                                                    }
+                                                    else {
+                                                        throw new Error(json.error);
+                                                    }
+                                                }).catch((error) => {
+                                                    swal.fire({
+                                                        title: '이런!',
+                                                        html: `
+                                                            <div style="line-height: 130%;">
+                                                                즐겨찾기를 불러오지 못했어요.<br>
+                                                                다시 시도해주세요.
+                                                            </div>
+                                                        `,
+                                                        icon: 'error',
+                                                        confirmButtonText: '어떻게 된거죠?',
+                                                        cancelButtonText: '알겠어요',
+                                                        showCancelButton: true,
+                                                        heightAuto: false,
+                                                    }).then((res) => showError(res, json.error));
+                                                    return;
+                                                })
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        bookmarkOn();
+                                    }
+                                }
+                            });
+                        }
+                        else {
+                            throw new Error(json.error);
+                        }
+                    }).catch((error) => {
+                        swal.fire({
+                            title: '이런!',
+                            html: `
+                                <div style="line-height: 130%;">
+                                즐겨찾기를 불러오는데 실패하였어요.<br>
+                                다시 시도해주세요.
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: '어떻게 된거죠?',
+                            cancelButtonText: '알겠어요',
+                            showCancelButton: true,
+                            heightAuto: false,
+                        }).then((res) => showError(res, error.message));
+                        return;
+                    });
                 } else {
                     swal.fire({
                         title: '잠시만요!',
@@ -181,9 +473,6 @@
                     });
                 }
             });
-
-            const storeUrl = '{store_url}';
-            const endpoint = storeUrl.split('/').pop();
 
             function showError(res, error) {
                 if (res.isConfirmed) {
@@ -207,7 +496,7 @@
             let sortedProductList = [];
 
             const homeIcon = document.getElementById('home-icon');
-            const bookmark = document.getElementById('bookmark');
+            const bookmarkButton = document.getElementById('bookmark-button');
             const oldSelect = document.getElementById('old-select');
             const newSelect = document.getElementById('new-select');
             const updateButton = document.getElementById('update-button');
@@ -228,111 +517,6 @@
                 showConfirmButton: false,
                 allowOutsideClick: false,
                 heightAuto: false,
-            });
-
-            if (document.cookie.trim().length > 0) {
-                let bookmarks = [];
-
-                for (let splitCookies of document.cookie.split(/; */)) {
-                    let splitCookie = splitCookies.split('=');
-
-                    if (new RegExp('^[a-z0-9_-]+$').test(splitCookie[0])) {
-                        let cookie = JSON.parse(splitCookie[1]);
-                        cookie.url = splitCookie[0];
-                        bookmarks.push(cookie);
-                    }
-                }
-
-                bookmarks.sort((a, b) => a.bookmarkTime - b.bookmarkTime);
-            }
-
-            function bookmarkOn() {
-                bookmark.classList.remove('far');
-                bookmark.classList.add('fas');
-            }
-
-            function bookmarkOff() {
-                bookmark.classList.remove('fas');
-                bookmark.classList.add('far');
-            }
-
-            let isBookmarked = false;
-            let bookmarkCount = 0;
-
-            for (let splitCookies of document.cookie.split(/; */)) {
-                bookmarkCount++;
-                let splitCookie = splitCookies.split('=');
-                if (splitCookie[0] == endpoint) {
-                    isBookmarked = true;
-                    bookmarkOn();
-                }
-            }
-
-            bookmark.addEventListener('click', () => {
-                if (isBookmarked) {
-                    bookmarkOff();
-                    bookmarkCount--;
-                    document.cookie = `${endpoint}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-
-                    isBookmarked = false;
-                }
-                else {
-                    let now = new Date();
-
-                    if (bookmarkCount >= 10) {
-                        swal.fire({
-                            title: '잠시만요!',
-                            html: `
-                                <div style="line-height: 130%;">
-                                    즐겨찾기는 10개까지 등록할 수 있어요!<br>
-                                    즐겨찾기 하나를 해제하고 등록 하시겠어요?
-                                </div>
-                            `,
-                            showCancelButton: true,
-                            confirmButtonText: '즐겨찾기 선택',
-                            cancelButtonText: '안 돼요!',
-                            heightAuto: false,
-                        }).then((res) => {
-                            if (res.isConfirmed) {
-                                let inputOptions = new Promise((resolve) => {
-                                    let options = {};
-
-                                    for (let bookmark of bookmarks) {
-                                        options[bookmark.url] = bookmark.title;
-                                    }
-
-                                    setTimeout(() => resolve(options), 1000)
-                                });
-
-                                let { value: color } = Swal.fire({
-                                    title: '해제할 즐겨찾기',
-                                    input: 'radio',
-                                    customClass: { input: 'swal-option' },
-                                    inputOptions: inputOptions,
-                                    showCancelButton: true,
-                                    confirmButtonText: '선택',
-                                    cancelButtonText: '안 돼요!',
-                                    inputValidator: (value) => {
-                                        if (value) {
-                                            bookmarkOn();
-                                            document.cookie = `${value}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                                            document.cookie = `${endpoint}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};path=/`;
-
-                                            isBookmarked = true;
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    }
-                    else {
-                        bookmarkOn();
-                        bookmarkCount++;
-                        document.cookie = `${endpoint}=${JSON.stringify({ title: '{store_title}', bookmarkTime: now.valueOf() })};path=/`;
-
-                        isBookmarked = true;
-                    }
-                }
             });
 
             function getOption(value) {
@@ -645,7 +829,7 @@
                             cancelButtonText: '알겠어요',
                             showCancelButton: true,
                             heightAuto: false,
-                        }).then((res) => showError(res, error));
+                        }).then((res) => showError(res, error.message));
                     });
                 });
             }).catch((error) => {
@@ -662,7 +846,7 @@
                     cancelButtonText: '알겠어요',
                     showCancelButton: true,
                     heightAuto: false,
-                }).then((res) => showError(res, error));
+                }).then((res) => showError(res, error.message));
             });
 
             sortForm.addEventListener('input', () => {
