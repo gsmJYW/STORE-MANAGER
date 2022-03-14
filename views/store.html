@@ -1003,15 +1003,7 @@
                     a.setAttribute('href', `${storeUrl}/products/${row.id}`);
                     a.setAttribute('target', '_blank');
 
-                    if (row.title.length > 48) {
-                        let titleSplit = row.title.split(' ');
-                        a.innerHTML += titleSplit.slice(0, Math.ceil(titleSplit.length / 2) - 1).join(' ');
-                        a.innerHTML += '<br>';
-                        a.innerHTML += titleSplit.slice(Math.ceil(titleSplit.length / 2)).join(' ');
-                    }
-                    else {
-                        a.innerHTML = row.title;
-                    }
+                    a.innerHTML = row.title.match(/.{1,48}/g).join('<br>');
 
                     let th2 = document.createElement('th');
                     th2.appendChild(a);
@@ -1049,15 +1041,7 @@
                     a.setAttribute('href', `${storeUrl}/products/${row.id}`);
                     a.setAttribute('target', '_blank');
 
-                    if (row.title.length > 48) {
-                        let titleSplit = row.title.split(' ');
-                        a.innerHTML += titleSplit.slice(0, Math.ceil(titleSplit.length / 2) - 1).join(' ');
-                        a.innerHTML += '<br>';
-                        a.innerHTML += titleSplit.slice(Math.ceil(titleSplit.length / 2)).join(' ');
-                    }
-                    else {
-                        a.innerHTML = row.title;
-                    }
+                    a.innerHTML = row.title.match(/.{1,48}/g).join('<br>');
 
                     let th2 = document.createElement('th');
                     th2.appendChild(a);
