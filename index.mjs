@@ -996,7 +996,6 @@ function getN09ProductList(productAmount) {
         res.on('end', () => {
           let document = parser.parse(data);
           let li = document.querySelectorAll('.item.xans-record-');
-          let index = 0;
 
           li.forEach((item, index) => {
             let product = {
@@ -1004,11 +1003,7 @@ function getN09ProductList(productAmount) {
               popularityIndex: (page - 1) * 112 + index,
             };
 
-            let titleElement = item.getElementsByTagName('span')[4];
             let linkElement = item.getElementsByTagName('a')[0];
-
-            product.title = titleElement.innerText.trim()
-
             let link = linkElement.getAttribute('href');
             link = link.split('=')[1];
             link = link.split('&')[0];
@@ -1023,6 +1018,10 @@ function getN09ProductList(productAmount) {
 
             let spanList = item.getElementsByTagName('span');
             for (let span of spanList) {
+              if (span.getAttribute('style').includes('font-size:13px;color:#242424;font-weight:bold;')) {
+                product.title = span.innerText.trim();
+              }
+
               if (span.innerText.endsWith('원')) {
                 product.price = parseInt(span.innerText.replace(/[^\d.]/g, ''));
               }
