@@ -1,6 +1,9 @@
 ## SQL 초기 설정
 
 ```sql
+CREATE DATABASE `storeManager`;
+USE `storeManager`;
+
 CREATE TABLE `user` (
   `uid` char(28) NOT NULL,
   `email` varchar(255) NOT NULL,
@@ -18,7 +21,7 @@ CREATE TABLE `store` (
   PRIMARY KEY (`url`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-INSERT INTO store (url, title) VALUES ('https://n09.co.kr', '엔공구 공식 쇼핑몰'), ('https://hyundai.auton.co.kr', '카라이프몰');
+INSERT INTO store (url, title) VALUES ('https://n09.co.kr', '엔공구 공식 쇼핑몰'), ('https://hyundai.auton.kr', '카라이프몰');
 
 CREATE TABLE `bookmark` (
   `uid` char(28) NOT NULL,
