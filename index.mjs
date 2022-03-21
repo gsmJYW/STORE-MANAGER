@@ -1,3 +1,4 @@
+import { exit } from 'process'
 import dateFormat from 'dateformat'
 import fs from 'fs'
 import bodyParser from 'body-parser'
@@ -17,7 +18,26 @@ const __dirname = dirname(__filename)
 import admin from 'firebase-admin'
 import { getAuth } from 'firebase-admin/auth'
 import serviceAccount from './store-manager-5d527-firebase-adminsdk-2ovpp-f0b6ef3a8a.json'
-import { title } from 'process'
+
+const credentials = {
+  key: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.key.pem'),
+  cert: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.crt.pem'),
+}
+
+const args = process.argv.slice(2);
+
+if (args.length < 5) {
+  console.error('Parameters not provided: [host] [user] [password] [database] [connectionLimit]')
+  exit(1)
+}
+
+const pool = mysql.createPool({
+  host: args[0],
+  user: args[1],
+  password: args[2],
+  database: args[3],
+  connectionLimit: args[4],
+})
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -25,19 +45,6 @@ admin.initializeApp({
 })
 
 const auth = getAuth()
-
-const credentials = {
-  key: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.key.pem'),
-  cert: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.crt.pem'),
-}
-
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'gaesugack7328',
-  database: 'store_manager',
-  connectionLimit: 100,
-})
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({
@@ -168,7 +175,7 @@ app.post('/quota', async (req, res) => {
 
     let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
     let isAdmin = result[0][0].permission == 1
-    
+
     result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND date = '${dateFormat(now, 'yyyy-mm-dd', true)}'`)
 
     res.json({
