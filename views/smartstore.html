@@ -44,7 +44,7 @@
         }
     </style>
 
-    <title>STORE MANAGER - 엔공구 공식 쇼핑몰</title>
+    <title>STORE MANAGER - {store_title}</title>
     <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
 
     <link rel="stylesheet"
@@ -67,7 +67,12 @@
                 </button>
             </form>
             <span style="margin: 0px 0px 0px 8px"></span>
-            <h2 style="font-weight: 600">엔공구 공식 쇼핑몰</h2>
+            <h2 style="font-weight: 600">{store_title}</h2>
+            <button id="bookmark-button" type="button"
+                style="background: none; padding: 0px; border: none; outline: none">
+                <i id="bookmark" class="far fa-star fa-lg" style="color: orange; margin: 0px 0px 14px 8px"></i>
+            </button>
+            <span style="margin: 6px 0px 0px 3px">즐겨찾기</span>
         </div>
         <div class="d-flex p-2 border" style="width: 680px; margin: auto">
             <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
@@ -165,7 +170,7 @@
                 measurementId: "G-37DECVWLYX"
             })
 
-            const storeUrl = 'https://n09.co.kr'
+            const storeUrl = '{store_url}'
             const endpoint = storeUrl.split('/').pop()
 
             function showError(html, error) {
@@ -206,6 +211,72 @@
                     showConfirmButton: false,
                     allowOutsideClick: false,
                     heightAuto: false,
+                })
+            }
+
+            let isBookmarked
+            let bookmarkList
+            let bookmarkCount
+
+            async function bookmarkOn() {
+                fetch('/bookmark/update', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id_token: await user.getIdToken(), store_url: storeUrl }),
+                }).then(async (res) => {
+                    let json = await res.json()
+
+                    if (json.result == 'ok') {
+                        bookmark.classList.remove('far')
+                        bookmark.classList.add('fas')
+                        isBookmarked = true
+                        bookmarkCount++
+                    }
+                    else {
+                        throw new Error(json.error)
+                    }
+                }).catch((error) => {
+                    showError(`
+                        <div style="line-height: 130%">
+                            즐겨찾기를 등록하지 못했어요.<br>
+                            다시 시도해주세요.
+                        </div>
+                    `, error.message)
+                    return
+                })
+            }
+
+            async function bookmarkOff() {
+                fetch('/bookmark/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id_token: await user.getIdToken(), store_url: storeUrl }),
+                }).then(async (res) => {
+                    let json = await res.json()
+
+                    if (json.result == 'ok') {
+                        bookmark.classList.remove('fas')
+                        bookmark.classList.add('far')
+                        isBookmarked = false
+                        bookmarkCount--
+                    }
+                    else {
+                        throw new Error(json.error)
+                    }
+                }).catch((error) => {
+                    showError(`
+                        <div style="line-height: 130%">
+                            즐겨찾기를 해제하지 못했어요.<br>
+                            다시 시도해주세요.
+                        </div>
+                    `, error.message)
+                    return
                 })
             }
 
@@ -250,287 +321,422 @@
                         `, error.message)
                     })
 
-                    fetch(`/history`, {
+                    fetch('/bookmarkList', {
                         method: 'POST',
                         headers: {
                             'Accept': 'application/json',
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({
-                            id_token: await user.getIdToken(),
-                            store_url: storeUrl,
-                        }),
+                        body: JSON.stringify({ id_token: await user.getIdToken() }),
                     }).then(async (res) => {
                         let json = await res.json()
+                        if (json.result == 'ok') {
+                            bookmarkList = json.bookmarkList
+                            bookmarkList.sort((a, b) => a.title - b.title)
+                            bookmarkCount = bookmarkList.length
+                            isBookmarked = bookmarkList.filter((bookmark) => bookmark.storeUrl == storeUrl).length > 0
 
-                        if (json.result != 'ok') {
+                            if (isBookmarked) {
+                                bookmark.classList.remove('far')
+                                bookmark.classList.add('fas')
+                            }
+
+                            bookmarkButton.addEventListener('click', () => {
+                                if (isBookmarked) {
+                                    bookmarkOff()
+                                }
+                                else {
+                                    if (bookmarkCount >= 10) {
+                                        swal.fire({
+                                            title: '잠시만요!',
+                                            html: `
+                                                <div style="line-height: 130%">
+                                                    즐겨찾기는 10개까지 등록할 수 있어요!<br>
+                                                    즐겨찾기 하나를 해제하고 등록 하시겠어요?
+                                                </div>
+                                            `,
+                                            showCancelButton: true,
+                                            confirmButtonText: '즐겨찾기 선택',
+                                            cancelButtonText: '안 돼요!',
+                                            heightAuto: false,
+                                        }).then(async (res) => {
+                                            if (res.isConfirmed) {
+                                                fetch('/bookmarkList', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Accept': 'application/json',
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                    body: JSON.stringify({ id_token: await user.getIdToken() }),
+                                                }).then(async (res) => {
+                                                    let json = await res.json()
+                                                    bookmarkList = json.bookmarkList
+
+                                                    if (json.result == 'ok') {
+                                                        let inputOptions = new Promise((resolve) => {
+                                                            let options = {}
+
+                                                            for (let bookmark of bookmarkList) {
+                                                                options[bookmark.storeUrl] = bookmark.title
+                                                            }
+
+                                                            setTimeout(() => resolve(options), 1000)
+                                                        })
+
+                                                        let { value: color } = Swal.fire({
+                                                            title: '해제할 즐겨찾기',
+                                                            input: 'radio',
+                                                            customClass: { input: 'swal-option' },
+                                                            inputOptions: inputOptions,
+                                                            showCancelButton: true,
+                                                            confirmButtonText: '선택',
+                                                            cancelButtonText: '안 돼요!',
+                                                            inputValidator: async (value) => {
+                                                                if (value) {
+                                                                    fetch('/bookmark/delete', {
+                                                                        method: 'POST',
+                                                                        headers: {
+                                                                            'Accept': 'application/json',
+                                                                            'Content-Type': 'application/json',
+                                                                        },
+                                                                        body: JSON.stringify({ id_token: await user.getIdToken(), store_url: value }),
+                                                                    }).then(async (res) => {
+                                                                        let json = await res.json()
+
+                                                                        if (json.result == 'ok') {
+                                                                            bookmarkOn()
+                                                                        }
+                                                                        else {
+                                                                            throw new Error(json.error)
+                                                                        }
+                                                                    }).catch((error) => {
+                                                                        showError(`
+                                                                            <div style="line-height: 130%">
+                                                                                즐겨찾기를 해제하지 못했어요.<br>
+                                                                                다시 시도해주세요.
+                                                                            </div>
+                                                                        `, error.message)
+                                                                        return
+                                                                    })
+                                                                }
+                                                            }
+                                                        })
+                                                    }
+                                                    else {
+                                                        throw new Error(json.error)
+                                                    }
+                                                }).catch((error) => {
+                                                    showError(`
+                                                        <div style="line-height: 130%">
+                                                            즐겨찾기를 불러오지 못했어요.<br>
+                                                            다시 시도해주세요.
+                                                        </div>
+                                                    `, error.message)
+                                                    return
+                                                })
+                                            }
+                                        })
+                                    }
+                                    else {
+                                        bookmarkOn()
+                                    }
+                                }
+                            })
+                        }
+                        else {
+                            throw new Error(json.error)
+                        }
+
+                        fetch(`/history`, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                id_token: await user.getIdToken(),
+                                store_url: storeUrl,
+                            }),
+                        }).then(async (res) => {
+                            let json = await res.json()
+
+                            if (json.result != 'ok') {
+                                showError(`
+                                    <div style="line-height: 130%">
+                                        제품 기록을 불러오지 못했어요.<br>
+                                        새로고침을 시도해주세요.
+                                    </div>
+                                `, json.error)
+                                return
+                            }
+
+                            historyList = json.history
+                            historyList.sort((a, b) => b - a)
+
+                            for (let history of historyList) {
+                                oldSelect.add(getOption(history))
+                                newSelect.add(getOption(history))
+                            }
+
+                            swal.close()
+
+                            if (historyList.length == 0) {
+                                swal.fire({
+                                    title: '처음이세요?',
+                                    html: '<div style="line-height: 130%">아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!</div>',
+                                    confirmButtonText: '알겠어요',
+                                    showCancelButton: false,
+                                })
+                            }
+
+                            oldSelect.addEventListener('change', async () => {
+                                if (oldSelect.value == 0) {
+                                    oldProductList = []
+                                    updateTable()
+                                    return
+                                }
+
+                                if (oldSelect.value >= newSelect.value) {
+                                    newProductList = []
+                                    newSelect.selectedIndex = 0
+                                    updateTable()
+                                }
+
+                                showLoading(`
+                                    <div style="line-height: 130%">
+                                        제품 기록을 불러오는 중이에요.<br>
+                                        제품이 많을 수록 오래 걸려요!
+                                    </div>
+                                `)
+
+                                function showOldSelectError(error) {
+                                    oldProductList = []
+                                    oldSelect.selectedIndex = 0
+
+                                    showError(`
+                                        <div style="line-height: 130%">
+                                            제품 기록을 불러오지 못했어요.<br>
+                                            다시 시도해주세요.
+                                        </div>
+                                    `, error)
+                                }
+
+                                fetch(`/productList`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        store_url: storeUrl,
+                                        time: oldSelect.value,
+                                        id_token: await user.getIdToken(),
+                                    }),
+                                }).then(async (res) => {
+                                    let json = await res.json()
+
+                                    if (json.result != 'ok') {
+                                        if (json.result == 'quota exceeded') {
+                                            showQuotaExceededError('조회한 제품 개수', json.quotaUsed, 100000)
+                                        }
+                                        else if (json.result == 'error') {
+                                            showOldSelectError(json.error)
+                                        }
+
+                                        oldSelect.value = 0
+                                        return
+                                    }
+
+                                    oldProductList = json.productList
+                                    updateTable()
+                                    swal.close()
+                                }).catch((error) => showOldSelectError(error))
+                            })
+
+                            newSelect.addEventListener('change', async () => {
+                                if (newSelect.value == 0) {
+                                    newProductList = []
+                                    updateTable()
+                                    return
+                                }
+
+                                if (oldSelect.value >= newSelect.value) {
+                                    oldProductList = []
+                                    oldSelect.selectedIndex = 0
+                                    updateTable()
+                                }
+
+                                showLoading(`
+                                    <div style="line-height: 130%">
+                                        제품 기록을 불러오는 중이에요.<br>
+                                        제품이 많을 수록 오래 걸려요!
+                                    </div>
+                                `)
+
+                                function showNewSelectError(error) {
+                                    newProductList = []
+                                    newSelect.selectedIndex = 0
+
+                                    showError(`
+                                        <div style="line-height: 130%">
+                                            제품 기록을 불러오지 못했어요.<br>
+                                            다시 시도해주세요.
+                                        </div>
+                                    `, error)
+                                }
+
+                                fetch(`/productList`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        store_url: storeUrl,
+                                        time: newSelect.value,
+                                        id_token: await user.getIdToken(),
+                                    }),
+                                }).then(async (res) => {
+                                    let json = await res.json()
+
+                                    if (json.result != 'ok') {
+                                        if (json.result == 'quota exceeded') {
+                                            showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
+                                        }
+                                        else if (json.result == 'error') {
+                                            showNewSelectError(json.error)
+                                        }
+
+                                        newSelect.value = 0
+                                        return
+                                    }
+
+                                    newProductList = json.productList
+                                    updateTable()
+                                    swal.close()
+                                }).catch((error) => showNewSelectError(error))
+                            })
+
+                            updateButton.addEventListener('click', async () => {
+                                showLoading(`
+                                    <div style="line-height: 130%">
+                                        새로운 제품 기록을 쓰는 중이에요.<br>
+                                        제품이 많을 수록 오래 걸려요!
+                                    </div>
+                                `)
+
+                                fetch(`/smartstore/update`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        store_url: storeUrl,
+                                        id_token: await user.getIdToken(),
+                                    }),
+                                }).then(async (res) => {
+                                    let json = await res.json()
+                                    let html = '확인 하시겠어요?'
+
+                                    if (json.result == 'already exists') {
+                                        html = `
+                                            <span style="line-height: 130%">
+                                                이미 누군가 업데이트 했어요!<br>
+                                                확인 하시겠어요?
+                                            </span>
+                                        `
+                                    }
+                                    else if (json.result != 'ok') {
+                                        if (json.result == 'quota exceeded') {
+                                            showQuotaExceededError('업데이트한 제품 개수', json.quotaUsed, json.quotaLimit)
+                                        }
+                                        else if (json.result == 'error') {
+                                            showError(`
+                                                <div style="line-height: 130%">
+                                                    업데이트에 실패 하였어요.<br>
+                                                    다시 시도해주세요.
+                                                </div>
+                                            `, json.error)
+                                        }
+                                        return
+                                    }
+
+                                    let time = json.time
+
+                                    if (historyList.includes(time)) {
+                                        showWarning(`
+                                            <div style="line-height: 130%">
+                                                이미 업데이트 되어있어요.<br>
+                                                업데이트는 1분마다 하실 수 있어요.
+                                            </div>
+                                        `)
+                                        return
+                                    }
+
+                                    historyList.unshift(time)
+
+                                    swal.fire({
+                                        title: '업데이트 성공!',
+                                        html: html,
+                                        icon: 'success',
+                                        heightAuto: false,
+                                        confirmButtonText: '네',
+                                        cancelButtonText: '됐어요!',
+                                        showCancelButton: true,
+                                    }).then(async (res) => {
+                                        let oldSelectValue = oldSelect.value
+                                        let newSelectValue = newSelect.value
+
+                                        while (oldSelect.options.length > 1) {
+                                            oldSelect.remove(1)
+                                        }
+
+                                        while (newSelect.options.length > 1) {
+                                            newSelect.remove(1)
+                                        }
+
+                                        for (let history of historyList.sort().reverse()) {
+                                            oldSelect.add(getOption(history))
+                                            newSelect.add(getOption(history))
+                                        }
+
+                                        oldSelect.value = oldSelectValue
+
+                                        if (res.isConfirmed) {
+                                            newSelect.value = time
+                                            newProductList = json.productList
+                                            updateTable()
+                                        }
+                                        else {
+                                            newSelect.value = newSelectValue
+                                        }
+                                    })
+                                }).catch((error) => {
+                                    showError(`
+                                        <div style="line-height: 130%">
+                                            업데이트에 실패 하였어요.<br>
+                                            다시 시도해주세요.
+                                        </div>
+                                    `, error.message)
+                                })
+                            })
+                        }).catch((error) => {
                             showError(`
                                 <div style="line-height: 130%">
                                     제품 기록을 불러오지 못했어요.<br>
                                     새로고침을 시도해주세요.
                                 </div>
-                            `, json.error)
-                            return
-                        }
-
-                        historyList = json.history
-                        historyList.sort((a, b) => b - a)
-
-                        for (let history of historyList) {
-                            oldSelect.add(getOption(history))
-                            newSelect.add(getOption(history))
-                        }
-
-                        swal.close()
-
-                        if (historyList.length == 0) {
-                            swal.fire({
-                                title: '처음이세요?',
-                                html: '<div style="line-height: 130%">아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!</div>',
-                                confirmButtonText: '알겠어요',
-                                showCancelButton: false,
-                            })
-                        }
-
-                        oldSelect.addEventListener('change', async () => {
-                            if (oldSelect.value == 0) {
-                                oldProductList = []
-                                updateTable()
-                                return
-                            }
-
-                            if (oldSelect.value >= newSelect.value) {
-                                newProductList = []
-                                newSelect.selectedIndex = 0
-                                updateTable()
-                            }
-
-                            showLoading(`
-                                <div style="line-height: 130%">
-                                    제품 기록을 불러오는 중이에요.<br>
-                                    제품이 많을 수록 오래 걸려요!
-                                </div>
-                            `)
-
-                            function showOldSelectError(error) {
-                                oldProductList = []
-                                oldSelect.selectedIndex = 0
-
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        제품 기록을 불러오지 못했어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `, error)
-                            }
-
-                            fetch(`/productList`, {
-                                method: 'POST',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    store_url: storeUrl,
-                                    time: oldSelect.value,
-                                    id_token: await user.getIdToken(),
-                                }),
-                            }).then(async (res) => {
-                                let json = await res.json()
-
-                                if (json.result != 'ok') {
-                                    if (json.result == 'quota exceeded') {
-                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, 100000)
-                                    }
-                                    else if (json.result == 'error') {
-                                        showOldSelectError(json.error)
-                                    }
-
-                                    oldSelect.value = 0
-                                    return
-                                }
-
-                                oldProductList = json.productList
-                                updateTable()
-                                swal.close()
-                            }).catch((error) => showOldSelectError(error))
-                        })
-
-                        newSelect.addEventListener('change', async () => {
-                            if (newSelect.value == 0) {
-                                newProductList = []
-                                updateTable()
-                                return
-                            }
-
-                            if (oldSelect.value >= newSelect.value) {
-                                oldProductList = []
-                                oldSelect.selectedIndex = 0
-                                updateTable()
-                            }
-
-                            showLoading(`
-                                <div style="line-height: 130%">
-                                    제품 기록을 불러오는 중이에요.<br>
-                                    제품이 많을 수록 오래 걸려요!
-                                </div>
-                            `)
-
-                            function showNewSelectError(error) {
-                                newProductList = []
-                                newSelect.selectedIndex = 0
-
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        제품 기록을 불러오지 못했어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `, error)
-                            }
-
-                            fetch(`/productList`, {
-                                method: 'POST',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    store_url: storeUrl,
-                                    time: newSelect.value,
-                                    id_token: await user.getIdToken(),
-                                }),
-                            }).then(async (res) => {
-                                let json = await res.json()
-
-                                if (json.result != 'ok') {
-                                    if (json.result == 'quota exceeded') {
-                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
-                                    }
-                                    else if (json.result == 'error') {
-                                        showNewSelectError(json.error)
-                                    }
-
-                                    newSelect.value = 0
-                                    return
-                                }
-
-                                newProductList = json.productList
-                                updateTable()
-                                swal.close()
-                            }).catch((error) => showNewSelectError(error))
-                        })
-
-                        updateButton.addEventListener('click', async () => {
-                            showLoading(`
-                                <div style="line-height: 130%">
-                                    새로운 제품 기록을 쓰는 중이에요.<br>
-                                    제품이 많을 수록 오래 걸려요!
-                                </div>
-                            `)
-
-                            fetch(`/n09/update`, {
-                                method: 'POST',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    store_url: storeUrl,
-                                    id_token: await user.getIdToken(),
-                                }),
-                            }).then(async (res) => {
-                                let json = await res.json()
-                                let html = '확인 하시겠어요?'
-
-                                if (json.result == 'already exists') {
-                                    html = `
-                                        <span style="line-height: 130%">
-                                            이미 누군가 업데이트 했어요!<br>
-                                            확인 하시겠어요?
-                                        </span>
-                                    `
-                                }
-                                else if (json.result != 'ok') {
-                                    if (json.result == 'quota exceeded') {
-                                        showQuotaExceededError('업데이트한 제품 개수', json.quotaUsed, json.quotaLimit)
-                                    }
-                                    else if (json.result == 'error') {
-                                        showError(`
-                                            <div style="line-height: 130%">
-                                                업데이트에 실패 하였어요.<br>
-                                                다시 시도해주세요.
-                                            </div>
-                                        `, json.error)
-                                    }
-                                    return
-                                }
-
-                                let time = json.time
-
-                                if (historyList.includes(time)) {
-                                    showWarning(`
-                                        <div style="line-height: 130%">
-                                            이미 업데이트 되어있어요.<br>
-                                            업데이트는 1분마다 하실 수 있어요.
-                                        </div>
-                                    `)
-                                    return
-                                }
-
-                                historyList.unshift(time)
-
-                                swal.fire({
-                                    title: '업데이트 성공!',
-                                    html: html,
-                                    icon: 'success',
-                                    heightAuto: false,
-                                    confirmButtonText: '네',
-                                    cancelButtonText: '됐어요!',
-                                    showCancelButton: true,
-                                }).then(async (res) => {
-                                    let oldSelectValue = oldSelect.value
-                                    let newSelectValue = newSelect.value
-
-                                    while (oldSelect.options.length > 1) {
-                                        oldSelect.remove(1)
-                                    }
-
-                                    while (newSelect.options.length > 1) {
-                                        newSelect.remove(1)
-                                    }
-
-                                    for (let history of historyList.sort().reverse()) {
-                                        oldSelect.add(getOption(history))
-                                        newSelect.add(getOption(history))
-                                    }
-
-                                    oldSelect.value = oldSelectValue
-
-                                    if (res.isConfirmed) {
-                                        newSelect.value = time
-                                        newProductList = json.productList
-                                        updateTable()
-                                    }
-                                    else {
-                                        newSelect.value = newSelectValue
-                                    }
-                                })
-                            }).catch((error) => {
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        업데이트에 실패 하였어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `, error.message)
-                            })
+                            `, error.message)
                         })
                     }).catch((error) => {
                         showError(`
                             <div style="line-height: 130%">
-                                제품 기록을 불러오지 못했어요.<br>
-                                새로고침을 시도해주세요.
+                            즐겨찾기를 불러오는데 실패하였어요.<br>
+                            다시 시도해주세요.
                             </div>
                         `, error.message)
+                        return
                     })
                 } else {
                     swal.fire({
@@ -570,6 +776,7 @@
             let statusList = ['신규', '판매중', '품절', '판매중단']
 
             const homeIcon = document.getElementById('home-icon')
+            const bookmarkButton = document.getElementById('bookmark-button')
             const oldSelect = document.getElementById('old-select')
             const newSelect = document.getElementById('new-select')
             const updateButton = document.getElementById('update-button')
@@ -1051,7 +1258,7 @@
 
                     let a = document.createElement('a')
 
-                    a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
+                    a.setAttribute('href', `${storeUrl}/products/${row.id}`)
                     a.setAttribute('target', '_blank')
                     a.innerHTML = row.title.match(/.{1,42}/g).join('<br>')
 
@@ -1086,7 +1293,7 @@
 
                     let a = document.createElement('a')
 
-                    a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
+                    a.setAttribute('href', `${storeUrl}/products/${row.id}`)
                     a.setAttribute('target', '_blank')
                     a.innerHTML = row.title.match(/.{1,42}/g).join('<br>')
 
@@ -1174,12 +1381,12 @@
                         let idCell = ws[`A${index}`]
                         let titleCell = ws[`B${index}`]
 
-                        titleCell.f = `=HYPERLINK("${storeUrl}/product/detail.html?product_no=${idCell.v}", "${titleCell.v}")`
+                        titleCell.f = `=HYPERLINK("${storeUrl}/products/${idCell.v}", "${titleCell.v}")`
                     }
 
                     let wb = XLSX.utils.book_new()
-                    XLSX.utils.book_append_sheet(wb, ws, '엔공구 공식 쇼핑몰')
-                    XLSX.writeFile(wb, `엔공구 공식 쇼핑몰 ${filename}.xlsx`)
+                    XLSX.utils.book_append_sheet(wb, ws, '{store_title}')
+                    XLSX.writeFile(wb, `{store_title} ${filename}.xlsx`)
                 })
             })
 

@@ -60,71 +60,82 @@
 <body>
     <div class="container align-items-center justify-content-center">
         <p></p>
-        <div class="d-flex" style="width: 680px; margin: auto;">
+        <div class="d-flex" style="width: 680px; margin: auto">
             <form action="/">
-                <button type="submit" style="background: none; padding: 0px; border: none; outline: none;">
-                    <i id="home-icon" class="fa fa-home" style="font-size: 30px; margin: 1px 0px 0px 0px;"></i>
+                <button type="submit" style="background: none; padding: 0px; border: none; outline: none">
+                    <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 0px 0px 0px"></i>
                 </button>
             </form>
             <span style="margin: 0px 0px 0px 8px"></span>
-            <h2 style="font-weight: 600;">카라이프몰</h2>
+            <h2 style="font-weight: 600">카라이프몰</h2>
         </div>
-        <div class="d-flex p-2 border" style="width: 680px; margin: auto;">
-            <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin:auto;">
+        <div class="d-flex p-2 border" style="width: 680px; margin: auto">
+            <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
                 <option value="0" selected>이전 데이터 선택</option>
             </select>
-            <span style="margin: auto;"> → </span>
-            <select id="new-select" class="form-select w-auto" style="width: 250px !important; margin: auto;">
+            <span style="margin: auto"> → </span>
+            <select id="new-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
                 <option value="0" selected>최근 데이터 선택</option>
             </select>
-            <span style="margin: auto;">또는</span>
-            <button id="update-button" type="button" class="btn btn-primary" style="margin: auto;">업데이트</button>
+            <span style="margin: auto">또는</span>
+            <button id="update-button" type="button" class="btn btn-primary" style="margin: auto">업데이트</button>
         </div>
         <div class="container" id="result" style="width: 1120px" hidden>
             <p>&nbsp;</p>
             <div id="sort-form">
-                <div class="form-check form-check-inline" style="padding-top: 4px;">
+                <div class="form-check-inline" style="margin: 0px">
+                    <button id="filter-button" type="button" class="btn btn-primary"
+                        style="margin: 6px 12px 0px 0px; padding: 4px 8px 4px 10px; font-size: 14px">
+                        필터링&nbsp;
+                    </button>
+                </div>
+                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
                     <input class="form-check-input" type="checkbox" id="load-all" value="load-all">
                     <label class="form-check-label">전부 로딩하기</label>
                 </div>
-                <div class="form-check form-check-inline" style="padding-top: 4px;">
+                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
                     <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
                         checked="checked">
-                    <label class="form-check-label">상태가 바뀐 제품을 위로</label>
+                    <label class="form-check-label">바뀐 제품을 위로</label>
                 </div>
-                <div class="form-check form-check-inline">
+                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
                     <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent"
                         checked="checked">
                     <label class="form-check-label">최신 순으로</label>
                 </div>
-                <div class="form-check form-check-inline">
+                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
                     <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
                         value="by-popularity">
                     <label class="form-check-label">인기 순으로</label>
                 </div>
-                <div class="d-flex" style="float: right; margin: auto;">
-                    <span id="product-amount" style="margin: auto; padding-bottom: 7px;"></span>
-                    <div class="p-1"></div>
-                    <div class="pb-2">
-                        <button id="excel-export-button" type="button" class="btn btn-primary"
-                            style="margin: auto; padding: 4px 10px; font-size: 14px;">
-                            엑셀 파일 (.xlsx)&nbsp;
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
-                                viewBox="0 0 16 16" width="16" height="16">
-                                <path
-                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
-                                </path>
-                                <path
-                                    d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z">
-                                </path>
-                            </svg>
-                        </button>
-                    </div>
+                <div class="d-flex" style="float: right; margin: auto">
+                    <span id="product-amount" style="margin: 10px 8px 0px 0px"></span>
+                    <button id="excel-export-button" type="button" class="btn btn-primary"
+                        style="margin: 6px 0px 0px 0px; padding: 4px 10px; font-size: 14px">
+                        엑셀 파일 (.xlsx)&nbsp;
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
+                            viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
+                            </path>
+                            <path
+                                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z">
+                            </path>
+                        </svg>
+                    </button>
                 </div>
             </div>
             <table id="result-table"></table>
+            <span>&nbsp;<br>&nbsp;<br></span>
         </div>
-        <div hidden>
+        <div id="hidden-div" hidden>
+            <span id="minimum-code"></span>
+            <span id="maximum-code"></span>
+            <span id="title-search"></span>
+            <span id="minimum-popularity"></span>
+            <span id="maximum-popularity"></span>
+            <span id="minimum-price"></span>
+            <span id="maximum-price"></span>
             <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
             <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
                 <script type="text/javascript"
@@ -141,8 +152,8 @@
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
         <script type="module">
-            import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js';
-            import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
+            import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
+            import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
 
             initializeApp({
                 apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
@@ -152,62 +163,375 @@
                 messagingSenderId: "36522862962",
                 appId: "1:36522862962:web:8a9e9b88373a19add095eb",
                 measurementId: "G-37DECVWLYX"
-            });
+            })
 
-            const storeUrl = 'https://hyundai.auton.kr';
-            const endpoint = storeUrl.split('/').pop();
-            const auth = getAuth();
-            let idToken;
-            let uid;
+            const storeUrl = 'https://hyundai.auton.kr'
+            const endpoint = storeUrl.split('/').pop()
 
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    uid = user.uid;
-                    idToken = await user.getIdToken();
+            function showError(html, error) {
+                swal.fire({
+                    title: '이런!',
+                    html: html,
+                    icon: 'error',
+                    confirmButtonText: '어떻게 된거죠?',
+                    cancelButtonText: '알겠어요',
+                    showCancelButton: true,
+                    heightAuto: false,
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        swal.fire({
+                            title: '원인',
+                            html: error,
+                            confirmButtonText: '알겠어요',
+                            showCancelButton: false,
+                            heightAuto: false,
+                        })
+                    }
+                })
+            }
 
-                    fetch('/option', {
+            function showWarning(html) {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: html,
+                    confirmButtonText: '알겠어요',
+                    heightAuto: false,
+                })
+            }
+
+            function showLoading(html) {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: html,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    heightAuto: false,
+                })
+            }
+
+            const auth = getAuth()
+            let user
+
+            onAuthStateChanged(auth, async (firebaseUser) => {
+                if (firebaseUser) {
+                    user = firebaseUser
+
+                    fetch('/user', {
                         method: 'POST',
                         headers: {
                             'Accept': 'application/json',
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ id_token: idToken }),
+                        body: JSON.stringify({ id_token: await user.getIdToken() }),
                     }).then(async (res) => {
-                        let json = await res.json();
-                        if (json.result == 'OK') {
-                            if (json.option != 'default') {
-                                if (json.option.loadAll == 1) {
-                                    loadAll.checked = true;
-                                }
+                        let json = await res.json()
+                        if (json.result == 'ok') {
+                            if (json.user.loadAll == 1) {
+                                loadAll.checked = true
+                            }
 
-                                if (json.option.highlightChanges == 0) {
-                                    highlightChanges.checked = false;
-                                }
+                            if (json.user.highlightChanges == 0) {
+                                highlightChanges.checked = false
+                            }
 
-                                if (json.option.sortMethod == 1) {
-                                    byPopularity.checked = true;
-                                }
+                            if (json.user.sortMethod == 1) {
+                                byPopularity.checked = true
                             }
                         }
                         else {
-                            throw new Error(json.error);
+                            throw new Error(json.error)
                         }
                     }).catch((error) => {
-                        swal.fire({
-                            title: '이런!',
-                            html: `
-                                <div style="line-height: 130%;">
-                                    설정을 불러오는데 실패하였어요.<br>
-                                    다시 시도해주세요.
+                        showError(`
+                            <div style="line-height: 130%">
+                                설정을 불러오는데 실패하였어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `, error.message)
+                    })
+
+                    fetch(`/history`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            id_token: await user.getIdToken(),
+                            store_url: storeUrl,
+                        }),
+                    }).then(async (res) => {
+                        let json = await res.json()
+
+                        if (json.result != 'ok') {
+                            showError(`
+                                <div style="line-height: 130%">
+                                    제품 기록을 불러오지 못했어요.<br>
+                                    새로고침을 시도해주세요.
                                 </div>
-                            `,
-                            icon: 'error',
-                            confirmButtonText: '어떻게 된거죠?',
-                            cancelButtonText: '알겠어요',
-                            showCancelButton: true,
-                            heightAuto: false,
-                        }).then((res) => showError(res, error.message));
-                    });
+                            `, json.error)
+                            return
+                        }
+
+                        historyList = json.history
+                        historyList.sort((a, b) => b - a)
+
+                        for (let history of historyList) {
+                            oldSelect.add(getOption(history))
+                            newSelect.add(getOption(history))
+                        }
+
+                        swal.close()
+
+                        if (historyList.length == 0) {
+                            swal.fire({
+                                title: '처음이세요?',
+                                html: '<div style="line-height: 130%">아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!</div>',
+                                confirmButtonText: '알겠어요',
+                                showCancelButton: false,
+                            })
+                        }
+
+                        oldSelect.addEventListener('change', async () => {
+                            if (oldSelect.value == 0) {
+                                oldProductList = []
+                                updateTable()
+                                return
+                            }
+
+                            if (oldSelect.value >= newSelect.value) {
+                                newProductList = []
+                                newSelect.selectedIndex = 0
+                                updateTable()
+                            }
+
+                            showLoading(`
+                                <div style="line-height: 130%">
+                                    제품 기록을 불러오는 중이에요.<br>
+                                    제품이 많을 수록 오래 걸려요!
+                                </div>
+                            `)
+
+                            function showOldSelectError(error) {
+                                oldProductList = []
+                                oldSelect.selectedIndex = 0
+
+                                showError(`
+                                    <div style="line-height: 130%">
+                                        제품 기록을 불러오지 못했어요.<br>
+                                        다시 시도해주세요.
+                                    </div>
+                                `, error)
+                            }
+
+                            fetch(`/productList`, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    store_url: storeUrl,
+                                    time: oldSelect.value,
+                                    id_token: await user.getIdToken(),
+                                }),
+                            }).then(async (res) => {
+                                let json = await res.json()
+
+                                if (json.result != 'ok') {
+                                    if (json.result == 'quota exceeded') {
+                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, 100000)
+                                    }
+                                    else if (json.result == 'error') {
+                                        showOldSelectError(json.error)
+                                    }
+
+                                    oldSelect.value = 0
+                                    return
+                                }
+
+                                oldProductList = json.productList
+                                updateTable()
+                                swal.close()
+                            }).catch((error) => showOldSelectError(error))
+                        })
+
+                        newSelect.addEventListener('change', async () => {
+                            if (newSelect.value == 0) {
+                                newProductList = []
+                                updateTable()
+                                return
+                            }
+
+                            if (oldSelect.value >= newSelect.value) {
+                                oldProductList = []
+                                oldSelect.selectedIndex = 0
+                                updateTable()
+                            }
+
+                            showLoading(`
+                                <div style="line-height: 130%">
+                                    제품 기록을 불러오는 중이에요.<br>
+                                    제품이 많을 수록 오래 걸려요!
+                                </div>
+                            `)
+
+                            function showNewSelectError(error) {
+                                newProductList = []
+                                newSelect.selectedIndex = 0
+
+                                showError(`
+                                    <div style="line-height: 130%">
+                                        제품 기록을 불러오지 못했어요.<br>
+                                        다시 시도해주세요.
+                                    </div>
+                                `, error)
+                            }
+
+                            fetch(`/productList`, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    store_url: storeUrl,
+                                    time: newSelect.value,
+                                    id_token: await user.getIdToken(),
+                                }),
+                            }).then(async (res) => {
+                                let json = await res.json()
+
+                                if (json.result != 'ok') {
+                                    if (json.result == 'quota exceeded') {
+                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
+                                    }
+                                    else if (json.result == 'error') {
+                                        showNewSelectError(json.error)
+                                    }
+
+                                    newSelect.value = 0
+                                    return
+                                }
+
+                                newProductList = json.productList
+                                updateTable()
+                                swal.close()
+                            }).catch((error) => showNewSelectError(error))
+                        })
+
+                        updateButton.addEventListener('click', async () => {
+                            showLoading(`
+                                <div style="line-height: 130%">
+                                    새로운 제품 기록을 쓰는 중이에요.<br>
+                                    제품이 많을 수록 오래 걸려요!
+                                </div>
+                            `)
+
+                            fetch(`/hyundai/auton/update`, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    store_url: storeUrl,
+                                    id_token: await user.getIdToken(),
+                                }),
+                            }).then(async (res) => {
+                                let json = await res.json()
+                                let html = '확인 하시겠어요?'
+
+                                if (json.result == 'already exists') {
+                                    html = `
+                                        <span style="line-height: 130%">
+                                            이미 누군가 업데이트 했어요!<br>
+                                            확인 하시겠어요?
+                                        </span>
+                                    `
+                                }
+                                else if (json.result != 'ok') {
+                                    if (json.result == 'quota exceeded') {
+                                        showQuotaExceededError('업데이트한 제품 개수', json.quotaUsed, json.quotaLimit)
+                                    }
+                                    else if (json.result == 'error') {
+                                        showError(`
+                                            <div style="line-height: 130%">
+                                                업데이트에 실패 하였어요.<br>
+                                                다시 시도해주세요.
+                                            </div>
+                                        `, json.error)
+                                    }
+                                    return
+                                }
+
+                                let time = json.time
+
+                                if (historyList.includes(time)) {
+                                    showWarning(`
+                                        <div style="line-height: 130%">
+                                            이미 업데이트 되어있어요.<br>
+                                            업데이트는 1분마다 하실 수 있어요.
+                                        </div>
+                                    `)
+                                    return
+                                }
+
+                                historyList.unshift(time)
+
+                                swal.fire({
+                                    title: '업데이트 성공!',
+                                    html: html,
+                                    icon: 'success',
+                                    heightAuto: false,
+                                    confirmButtonText: '네',
+                                    cancelButtonText: '됐어요!',
+                                    showCancelButton: true,
+                                }).then(async (res) => {
+                                    let oldSelectValue = oldSelect.value
+                                    let newSelectValue = newSelect.value
+
+                                    while (oldSelect.options.length > 1) {
+                                        oldSelect.remove(1)
+                                    }
+
+                                    while (newSelect.options.length > 1) {
+                                        newSelect.remove(1)
+                                    }
+
+                                    for (let history of historyList.sort().reverse()) {
+                                        oldSelect.add(getOption(history))
+                                        newSelect.add(getOption(history))
+                                    }
+
+                                    oldSelect.value = oldSelectValue
+
+                                    if (res.isConfirmed) {
+                                        newSelect.value = time
+                                        newProductList = json.productList
+                                        updateTable()
+                                    }
+                                    else {
+                                        newSelect.value = newSelectValue
+                                    }
+                                })
+                            }).catch((error) => {
+                                showError(`
+                                    <div style="line-height: 130%">
+                                        업데이트에 실패 하였어요.<br>
+                                        다시 시도해주세요.
+                                    </div>
+                                `, error.message)
+                            })
+                        })
+                    }).catch((error) => {
+                        showError(`
+                            <div style="line-height: 130%">
+                                제품 기록을 불러오지 못했어요.<br>
+                                새로고침을 시도해주세요.
+                            </div>
+                        `, error.message)
+                    })
                 } else {
                     swal.fire({
                         title: '잠시만요!',
@@ -217,468 +541,409 @@
                         showCancelButton: false,
                         heightAuto: false,
                     }).then((res) => {
-                        let form = document.createElement('form');
-                        form.style.visibility = 'hidden';
-                        form.method = 'GET';
-                        form.action = '/';
-                        document.body.appendChild(form);
-                        form.submit();
-                    });
+                        let form = document.createElement('form')
+                        form.style.visibility = 'hidden'
+                        form.method = 'GET'
+                        form.action = '/'
+                        document.body.appendChild(form)
+                        form.submit()
+                    })
                 }
-            });
+            })
 
-            function showError(res, error) {
-                if (res.isConfirmed) {
-                    swal.fire({
-                        title: '원인',
-                        html: error,
-                        confirmButtonText: '알겠어요',
-                        showCancelButton: false,
-                        heightAuto: false,
-                    });
-                }
-            }
+            let loadCount = 50
 
-            let loadCount = 50;
+            let table = []
+            let loadingTable = []
+            let historyList = []
+            let oldProductList = []
+            let newProductList = []
+            let sortedProductList = []
 
-            let table = [];
-            let loadingTable = [];
-            let historyList = [];
-            let oldProductList = [];
-            let newProductList = [];
-            let sortedProductList = [];
+            let minimumCode = -Infinity
+            let maximumCode = Infinity
+            let title = ''
+            let minimumPopularity = -Infinity
+            let maximumPopularity = Infinity
+            let minimumPrice = -Infinity
+            let maximumPrice = Infinity
+            let statusList = ['신규', '판매중', '품절', '판매중단']
 
-            const homeIcon = document.getElementById('home-icon');
-            const oldSelect = document.getElementById('old-select');
-            const newSelect = document.getElementById('new-select');
-            const updateButton = document.getElementById('update-button');
-            const result = document.getElementById('result');
-            const resultTable = document.getElementById('result-table');
-            const sortForm = document.getElementById('sort-form');
-            const loadAll = document.getElementById('load-all');
-            const highlightChanges = document.getElementById('highlight-changes');
-            const byPopularity = document.getElementById('by-popularity');
-            const byRecent = document.getElementById('by-recent');
-            const productAmount = document.getElementById('product-amount');
-            const excelExportButton = document.getElementById('excel-export-button');
+            const homeIcon = document.getElementById('home-icon')
+            const oldSelect = document.getElementById('old-select')
+            const newSelect = document.getElementById('new-select')
+            const updateButton = document.getElementById('update-button')
+            const result = document.getElementById('result')
+            const resultTable = document.getElementById('result-table')
+            const sortForm = document.getElementById('sort-form')
+            const minimumCodeSpan = document.getElementById('minimum-code')
+            const maximumCodeSpan = document.getElementById('maximum-code')
+            const titleSearchSpan = document.getElementById('title-search')
+            const minimumPopularitySpan = document.getElementById('minimum-popularity')
+            const maximumPopularitySpan = document.getElementById('maximum-popularity')
+            const minimumPriceSpan = document.getElementById('minimum-price')
+            const maximumPriceSpan = document.getElementById('maximum-price')
+            const loadAll = document.getElementById('load-all')
+            const highlightChanges = document.getElementById('highlight-changes')
+            const byPopularity = document.getElementById('by-popularity')
+            const byRecent = document.getElementById('by-recent')
+            const productAmount = document.getElementById('product-amount')
+            const filterButton = document.getElementById('filter-button')
+            const excelExportButton = document.getElementById('excel-export-button')
 
-            swal.fire({
-                title: '잠시만요!',
-                html: '제품 기록들 목록을 불러오는 중이에요.',
-                showCancelButton: false,
-                showConfirmButton: false,
-                allowOutsideClick: false,
-                heightAuto: false,
-            });
+            showLoading('제품 기록들 목록을 불러오는 중이에요.')
 
             function getOption(value) {
-                let text = value.toString();
-                text = `${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}:${text.slice(10, 12)}`;
-                return new Option(text, value);
+                let text = value.toString()
+                text = `${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}:${text.slice(10, 12)}`
+                return new Option(text, value)
             }
 
-            fetch(`/history`, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ store_url: storeUrl }),
-            }).then(async (res) => {
-                let json = await res.json();
+            function showQuotaExceededError(quotaDesc, quota, maxQuota) {
+                showWarning(`
+                    <span style="line-height: 130%">
+                        하루 사용량을 초과했어요!<br>
+                        ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
+                    </span>
+                `)
+            }
 
-                if (json.result != 'OK') {
-                    swal.fire({
-                        title: '이런!',
-                        html: `
-                            <div style="line-height: 130%;">
-                                제품 기록을 불러오지 못했어요.<br>
-                                새로고침을 시도해주세요.
-                            </div>
-                        `,
-                        icon: 'error',
-                        confirmButtonText: '어떻게 된거죠?',
-                        cancelButtonText: '알겠어요',
-                        showCancelButton: true,
-                        heightAuto: false,
-                    }).then((res) => showError(res, json.error));
-                    return;
+            filterButton.addEventListener('click', () => {
+                let codeInput = document.createElement('input')
+                codeInput.classList.add('form-control')
+                codeInput.style = 'display: inline-block; box-shadow: none; width: 25%'
+                codeInput.setAttribute('type', 'number')
+                codeInput.setAttribute('min', '0')
+                codeInput.setAttribute('step', '1')
+                codeInput.setAttribute('placeholder', '상품 코드')
+
+                let biggerThan = codeInput.cloneNode(true)
+                biggerThan.setAttribute('onchange', `document.getElementById('minimum-code').innerText = this.value`)
+
+                if (minimumCode != -Infinity) {
+                    biggerThan.setAttribute('value', minimumCode)
                 }
 
-                historyList = json.history;
-                historyList.sort((a, b) => b - a);
+                let smallerThan = codeInput.cloneNode(true)
+                smallerThan.setAttribute('onchange', `document.getElementById('maximum-code').innerText = this.value`)
 
-                for (let history of historyList) {
-                    oldSelect.add(getOption(history));
-                    newSelect.add(getOption(history));
+                if (maximumCode != Infinity) {
+                    smallerThan.setAttribute('value', maximumCode)
                 }
 
-                swal.close();
+                let biggerThanLabel = document.createElement('label')
+                biggerThanLabel.style = 'padding: 5.3px 8px 0px 8px; display: inline-block'
+                biggerThanLabel.innerText = '이상'
 
-                if (historyList.length == 0) {
-                    swal.fire({
-                        title: '처음이세요?',
-                        html: '<div style="line-height: 130%;">아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!</div>',
-                        confirmButtonText: '알겠어요',
-                        showCancelButton: false,
-                    });
+                let smallerThanLabel = document.createElement('label')
+                smallerThanLabel.style = 'padding: 5.3px 0px 0px 8px; display: inline-block'
+                smallerThanLabel.innerText = '이하'
+
+                let titleSearch = document.createElement('input')
+                titleSearch.classList.add('form-control')
+                titleSearch.style = 'box-shadow: none; width: 70%; margin: auto'
+                titleSearch.setAttribute('type', 'input')
+                titleSearch.setAttribute('placeholder', '제품명')
+                titleSearch.setAttribute('onchange', `document.getElementById('title-search').innerText = this.value`)
+
+                if (title.length > 0) {
+                    titleSearch.value = title
                 }
 
-                oldSelect.addEventListener('change', () => {
-                    if (oldSelect.value == 0) {
-                        oldProductList = [];
-                        updateTable(newProductList = newProductList);
-                        return;
+                let popularityInput = document.createElement('input')
+                popularityInput.classList.add('form-control')
+                popularityInput.style = 'display: inline-block; box-shadow: none; width: 25%'
+                popularityInput.setAttribute('type', 'number')
+                popularityInput.setAttribute('min', '0')
+                popularityInput.setAttribute('step', '1')
+                popularityInput.setAttribute('placeholder', '인기 순위')
+
+                let popularThan = popularityInput.cloneNode(true)
+                popularThan.setAttribute('onchange', `document.getElementById('minimum-popularity').innerText = this.value`)
+
+                if (minimumPopularity != -Infinity) {
+                    popularThan.setAttribute('value', minimumPopularity)
+                }
+
+                let notPopularThan = popularityInput.cloneNode(true)
+                notPopularThan.setAttribute('onchange', `document.getElementById('maximum-popularity').innerText = this.value`)
+
+                if (maximumPopularity != Infinity) {
+                    notPopularThan.setAttribute('value', maximumPopularity)
+                }
+
+                let priceInput = document.createElement('input')
+                priceInput.classList.add('form-control')
+                priceInput.style = 'display: inline-block; box-shadow: none; width: 25%'
+                priceInput.setAttribute('type', 'number')
+                priceInput.setAttribute('placeholder', '가격(원)')
+
+                let moreExpensiveThan = priceInput.cloneNode(true)
+                moreExpensiveThan.setAttribute('onchange', `document.getElementById('minimum-price').innerText = this.value`)
+
+                if (minimumPrice != -Infinity) {
+                    moreExpensiveThan.setAttribute('value', minimumPrice)
+                }
+
+                let cheaperThan = priceInput.cloneNode(true)
+                cheaperThan.setAttribute('onchange', `document.getElementById('maximum-price').innerText = this.value`)
+
+                if (maximumPrice != Infinity) {
+                    cheaperThan.setAttribute('value', maximumPrice)
+                }
+
+                let checkBox = document.createElement('input')
+                checkBox.classList.add('form-check-input')
+                checkBox.setAttribute('type', 'checkbox')
+
+                let newProduct = checkBox.cloneNode(true)
+                let selling = checkBox.cloneNode(true)
+                let soldOut = checkBox.cloneNode(true)
+
+                let newProductLabel = document.createElement('label')
+                newProductLabel.style = 'padding-top: 5.3px'
+                newProductLabel.innerText = '신규'
+
+                let sellingLabel = document.createElement('label')
+                sellingLabel.style = 'padding-top: 5.3px'
+                sellingLabel.innerText = '판매중'
+
+                let soldOutLabel = document.createElement('label')
+                soldOutLabel.style = 'padding-top: 5.3px'
+                soldOutLabel.innerText = '품절 & 판매중단'
+
+                let codeDiv = document.createElement('div')
+                codeDiv.classList.add('form-group')
+                codeDiv.appendChild(biggerThan)
+                codeDiv.appendChild(biggerThanLabel)
+                codeDiv.appendChild(smallerThan)
+                codeDiv.appendChild(smallerThanLabel)
+
+                let popularityDiv = document.createElement('div')
+                popularityDiv.classList.add('form-group')
+                popularityDiv.appendChild(popularThan.cloneNode(true))
+                popularityDiv.appendChild(biggerThanLabel.cloneNode(true))
+                popularityDiv.appendChild(notPopularThan.cloneNode(true))
+                popularityDiv.appendChild(smallerThanLabel.cloneNode(true))
+
+                let priceDiv = document.createElement('div')
+                priceDiv.classList.add('form-group')
+                priceDiv.appendChild(moreExpensiveThan.cloneNode(true))
+                priceDiv.appendChild(biggerThanLabel.cloneNode(true))
+                priceDiv.appendChild(cheaperThan.cloneNode(true))
+                priceDiv.appendChild(smallerThanLabel.cloneNode(true))
+
+                let newProductDiv = document.createElement('div')
+                newProductDiv.classList.add('form-check', 'form-check-inline')
+                newProductDiv.appendChild(newProduct)
+                newProductDiv.appendChild(newProductLabel)
+
+                let sellingDiv = document.createElement('div')
+                sellingDiv.classList.add('form-check', 'form-check-inline')
+                sellingDiv.appendChild(selling)
+                sellingDiv.appendChild(sellingLabel)
+
+                let soldOutDiv = document.createElement('div')
+                soldOutDiv.classList.add('form-check', 'form-check-inline')
+                soldOutDiv.appendChild(soldOut)
+                soldOutDiv.appendChild(soldOutLabel)
+
+                let statusForm = document.createElement('form')
+                statusForm.appendChild(newProductDiv)
+                statusForm.appendChild(sellingDiv)
+                statusForm.appendChild(soldOutDiv)
+
+                let space = document.createElement('span')
+                space.innerHTML = '&nbsp'
+
+                let div = document.createElement('div')
+                div.appendChild(codeDiv)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(titleSearch)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(popularityDiv)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(priceDiv)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(statusForm)
+
+                for (let status of statusList) {
+                    if (status == '신규') {
+                        newProduct.checked = true
                     }
 
-                    if (oldSelect.value >= newSelect.value) {
-                        newProductList = [];
-                        newSelect.selectedIndex = 0;
-                        updateTable();
+                    if (status == '판매중') {
+                        selling.checked = true
                     }
 
-                    swal.fire({
-                        title: '잠시만요!',
-                        html: `
-                            <div style="line-height: 130%;">
-                                제품 기록을 불러오는 중이에요.<br>
-                                제품이 많을 수록 오래 걸려요!
-                            </div>
-                        `,
-                        showCancelButton: false,
-                        showConfirmButton: false,
-                        allowOutsideClick: false,
-                        heightAuto: false,
-                    });
-
-                    function showOldSelectError(error) {
-                        oldProductList = [];
-                        oldSelect.selectedIndex = 0;
-
-                        swal.fire({
-                            title: '이런!',
-                            html: `
-                                <div style="line-height: 130%;">
-                                    제품 기록을 불러오지 못했어요.<br>
-                                    다시 시도해주세요.
-                                </div>
-                            `,
-                            icon: 'error',
-                            confirmButtonText: '어떻게 된거죠?',
-                            cancelButtonText: '알겠어요',
-                            showCancelButton: true,
-                            heightAuto: false,
-                        }).then((res) => showError(res, error));
+                    if (status == '품절' || status == '판매중단') {
+                        soldOut.checked = true
                     }
+                }
 
-                    fetch(`/productList`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            store_url: storeUrl,
-                            time: oldSelect.value,
-                        }),
-                    }).then(async (res) => {
-                        let json = await res.json();
-
-                        if (json.result != 'OK') {
-                            showOldSelectError(json.error);
-                            return;
-                        }
-
-                        oldProductList = json.productList;
-                        updateTable(oldProductList, newProductList);
-                        swal.close();
-                    }).catch((error) => showOldSelectError(error));
-                });
-
-                newSelect.addEventListener('change', () => {
-                    if (newSelect.value == 0) {
-                        newProductList = [];
-                        updateTable(oldProductList = oldProductList);
-                        return;
-                    }
-
-                    if (oldSelect.value >= newSelect.value) {
-                        oldProductList = [];
-                        oldSelect.selectedIndex = 0;
-                        updateTable();
-                    }
-
-                    swal.fire({
-                        title: '잠시만요!',
-                        html: `
-                            <div style="line-height: 130%;">
-                                제품 기록을 불러오는 중이에요.<br>
-                                제품이 많을 수록 오래 걸려요!
-                            </div>
-                        `,
-                        showCancelButton: false,
-                        showConfirmButton: false,
-                        allowOutsideClick: false,
-                        heightAuto: false,
-                    });
-
-                    function showNewSelectError(error) {
-                        newProductList = [];
-                        newSelect.selectedIndex = 0;
-
-                        swal.fire({
-                            title: '이런!',
-                            html: `
-                                <div style="line-height: 130%;">
-                                    제품 기록을 불러오지 못했어요.<br>
-                                    다시 시도해주세요.
-                                </div>
-                            `,
-                            icon: 'error',
-                            confirmButtonText: '어떻게 된거죠?',
-                            cancelButtonText: '알겠어요',
-                            showCancelButton: true,
-                            heightAuto: false,
-                        }).then((res) => showError(res, error));
-                    }
-
-                    fetch(`/productList`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            store_url: storeUrl,
-                            time: newSelect.value,
-                        }),
-                    }).then(async (res) => {
-                        let json = await res.json();
-
-                        if (json.result != 'OK') {
-                            showNewSelectError(json.error);
-                            return;
-                        }
-
-                        newProductList = json.productList;
-                        updateTable(oldProductList, newProductList);
-                        swal.close();
-                    }).catch((error) => showNewSelectError(error));
-                });
-
-                updateButton.addEventListener('click', () => {
-                    swal.fire({
-                        title: '잠시만요!',
-                        html: `
-                            <div style="line-height: 130%;">
-                                새로운 제품 기록을 쓰는 중이에요.<br>
-                                제품이 많을 수록 오래 걸려요!
-                            </div>
-                        `,
-                        showCancelButton: false,
-                        showConfirmButton: false,
-                        allowOutsideClick: false,
-                        heightAuto: false,
-                    });
-
-                    fetch(`/hyundai/auton/update`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            uid: uid,
-                        }),
-                    }).then(async (res) => {
-                        let json = await res.json()
-
-                        if (json.result != 'OK') {
-                            swal.fire({
-                                title: '이런!',
-                                html: `
-                                    <div style="line-height: 130%;">
-                                        업데이트에 실패 하였어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `,
-                                icon: 'error',
-                                confirmButtonText: '어떻게 된거죠?',
-                                cancelButtonText: '알겠어요',
-                                showCancelButton: true,
-                                heightAuto: false,
-                            }).then((res) => showError(res, json.error));
-                            return;
-                        }
-
-                        let time = json.time;
-
-                        if (historyList.includes(time)) {
-                            swal.fire({
-                                title: '잠시만요!',
-                                html: `
-                                    <div style="line-height: 130%;">
-                                        이미 업데이트 되어있어요.<br>
-                                        업데이트는 1분마다 하실 수 있어요.
-                                    </div>
-                                `,
-                                confirmButtonText: '알겠어요',
-                                heightAuto: false,
-                            });
-                            return;
-                        }
-
-                        historyList.unshift(time);
-
-                        swal.fire({
-                            title: '업데이트 성공!',
-                            html: '바로 확인 하시겠어요?',
-                            icon: 'success',
-                            heightAuto: false,
-                            confirmButtonText: '네',
-                            cancelButtonText: '됐어요!',
-                            showCancelButton: true,
-                        }).then(async (res) => {
-                            let oldSelectValue = oldSelect.value;
-                            let newSelectValue = newSelect.value;
-
-                            while (oldSelect.options.length > 1) {
-                                oldSelect.remove(1);
-                            }
-
-                            while (newSelect.options.length > 1) {
-                                newSelect.remove(1);
-                            }
-
-                            for (let history of historyList.sort().reverse()) {
-                                oldSelect.add(getOption(history));
-                                newSelect.add(getOption(history));
-                            }
-
-                            oldSelect.value = oldSelectValue;
-
-                            if (res.isConfirmed) {
-                                newSelect.value = time;
-                                newProductList = json.productList;
-                                updateTable(oldProductList, newProductList);
-                            }
-                            else {
-                                newSelect.value = newSelectValue;
-                            }
-                        });
-                    }).catch((error) => {
-                        swal.fire({
-                            title: '이런!',
-                            html: `
-                                <div style="line-height: 130%;">
-                                    업데이트에 실패 하였어요.<br>
-                                    다시 시도해주세요.
-                                </div>
-                            `,
-                            icon: 'error',
-                            confirmButtonText: '어떻게 된거죠?',
-                            cancelButtonText: '알겠어요',
-                            showCancelButton: true,
-                            heightAuto: false,
-                        }).then((res) => showError(res, error.message));
-                    });
-                });
-            }).catch((error) => {
                 swal.fire({
-                    title: '이런!',
-                    html: `
-                        <div style="line-height: 130%;">
-                            제품 기록을 불러오지 못했어요.<br>
-                            새로고침을 시도해주세요.
-                        </div>
-                    `,
-                    icon: 'error',
-                    confirmButtonText: '어떻게 된거죠?',
-                    cancelButtonText: '알겠어요',
+                    title: '필터링',
+                    html: div,
+                    confirmButtonText: '확인',
+                    cancelButtonText: '이게 아닌데!',
                     showCancelButton: true,
                     heightAuto: false,
-                }).then((res) => showError(res, error.message));
-            });
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        if (minimumCodeSpan.innerText.length > 0) {
+                            minimumCode = Number(minimumCodeSpan.innerText)
+                        }
+                        else {
+                            minimumCode = -Infinity
+                        }
+
+                        if (maximumCodeSpan.innerText.length > 0) {
+                            maximumCode = Number(maximumCodeSpan.innerText)
+                        }
+                        else {
+                            maximumCode = Infinity
+                        }
+
+                        title = titleSearchSpan.innerText
+
+                        if (minimumPopularitySpan.innerText.length > 0) {
+                            minimumPopularity = Number(minimumPopularitySpan.innerText)
+                        }
+                        else {
+                            minimumPopularity = -Infinity
+                        }
+
+                        if (maximumPopularitySpan.innerText.length > 0) {
+                            maximumPopularity = Number(maximumPopularitySpan.innerText)
+                        }
+                        else {
+                            maximumPopularity = Infinity
+                        }
+
+                        if (minimumPriceSpan.innerText.length > 0) {
+                            minimumPrice = Number(minimumPriceSpan.innerText)
+                        }
+                        else {
+                            minimumPrice = -Infinity
+                        }
+
+                        if (maximumPriceSpan.innerText.length > 0) {
+                            maximumPrice = Number(maximumPriceSpan.innerText)
+                        }
+                        else {
+                            maximumPrice = Infinity
+                        }
+
+                        let tempStatusList = []
+
+                        if (newProduct.checked) {
+                            tempStatusList.push('신규')
+                        }
+
+                        if (selling.checked) {
+                            tempStatusList.push('판매중')
+                        }
+
+                        if (soldOut.checked) {
+                            tempStatusList.push('품절', '판매중단')
+                        }
+
+                        if (tempStatusList.length > 0) {
+                            statusList = tempStatusList
+                        }
+                        else {
+                            statusList = ['신규', '판매중', '품절', '판매중단']
+                        }
+
+                        updateTable()
+                    }
+                })
+            })
 
             sortForm.addEventListener('input', () => {
-                updateTable(oldProductList, newProductList);
-            });
+                updateTable()
+            })
 
-            function updateTable(oldProductList = [], newProductList = []) {
-                resultTable.innerHTML = '';
-                productAmount.textContent = '제품 수량: ';
+            function updateTable() {
+                resultTable.innerHTML = ''
+                productAmount.textContent = '제품 수량: '
 
                 if (newProductList.length == 0 && oldProductList.length == 0) {
-                    result.hidden = true;
-                    return;
+                    result.hidden = true
+                    return
                 }
 
-                result.hidden = false;
+                result.hidden = false
 
-                table = [];
-                let deletedProductList = [...oldProductList];
-                let productList = newProductList.length > 0 ? newProductList : oldProductList;
-
-                let recentProductId = -1;
+                table = []
+                let deletedProductList = []
+                let productList = newProductList.length > 0 ? newProductList : oldProductList
 
                 if (oldProductList.length > 0 & newProductList.length > 0) {
-                    productAmount.textContent += `${oldProductList.length.toLocaleString('ko-KR')}개 → `;
+                    let deletedProductList = [...oldProductList]
+                    let recentProductId = Math.max.apply(Math, oldProductList.map((product) => product.id))
+
+                    productAmount.textContent += `${oldProductList.length.toLocaleString('ko-KR')}개 → `
 
                     for (let product of newProductList) {
-                        let oldProduct = deletedProductList.find((element) => element.id == product.id);
-                        deletedProductList = deletedProductList.filter((element) => element.id != product.id);
+                        let oldProduct = deletedProductList.find((element) => element.id == product.id)
+                        deletedProductList = deletedProductList.filter((element) => element.id != product.id)
 
                         let row = {
                             id: product.id,
                             title: product.title,
-                            price: '',
-                            status: '',
-                            popularityIndex: product.popularityIndex,
-                            changed: false,
-                        };
+                            popularityRank: `${product.popularityIndex + 1} (${product.category})`,
+                            prevPrice: '',
+                            price: product.price,
+                            prevStatus: '',
+                            status: product.isSoldOut ? '품절' : '판매중',
+                            isChanged: false,
+                        }
 
                         if (oldProduct == undefined) {
-                            row.price = `${product.price.toLocaleString('ko-KR')}원`;
-                            row.status = `신규(${product.isSoldOut ? '품절' : '판매중'})`;
-                            row.changed = true;
-                            table.push(row);
-
                             if (recentProductId > product.id) {
-                                row.status = `판매중단 <br> → ${product.isSoldOut ? '품절' : '판매중'}`;
+                                row.prevStatus = '판매중단'
+                                row.status = product.isSoldOut ? '품절' : '판매중'
+                            }
+                            else {
+                                row.status = `신규, ${row.status}`
+                                row.isChanged = true
                             }
 
-                            continue;
-                        }
-                        else if (recentProductId == -1) {
-                            recentProductId = product.id;
+                            table.push(row)
+                            continue
                         }
 
                         if (oldProduct.price != product.price) {
-                            row.price = `${oldProduct.price}원 <br> → `;
-                            row.changed = true;
+                            if (product.price <= 0) {
+                                row.price = oldProduct.price
+                            }
+                            else if (oldProduct.price > 0) {
+                                row.prevPrice = oldProduct.price
+                                row.isChanged = true
+                            }
                         }
-
-                        row.price += `${product.price.toLocaleString('ko-KR')}원`
 
                         if (oldProduct.isSoldOut != product.isSoldOut) {
-                            row.status = `${oldProduct.isSoldOut ? '품절' : '판매중'} <br> → `;
-                            row.changed = true;
+                            row.prevStatus = oldProduct.isSoldOut ? '품절' : '판매중'
+                            row.isChanged = true
                         }
 
-                        row.status += product.isSoldOut ? '품절' : '판매중';
-                        table.push(row);
+                        table.push(row)
                     }
 
                     for (let deletedProduct of deletedProductList) {
                         let row = {
                             id: deletedProduct.id,
                             title: deletedProduct.title,
-                            price: `${deletedProduct.price.toLocaleString('ko-KR')}원`,
-                            status: `${deletedProduct.isSoldOut ? '품절' : '판매중'} <br> → 판매중단`,
-                            popularityIndex: deletedProduct.popularityIndex,
-                            changed: true,
-                        };
-                        table.push(row);
+                            popularityRank: `${deletedProduct.popularityIndex + 1} (${deletedProduct.category})`,
+                            prevPrice: deletedProduct.price,
+                            price: '',
+                            prevStatus: deletedProduct.isSoldOut ? '품절' : '판매중',
+                            status: '',
+                            isChanged: true,
+                        }
+                        table.push(row)
                     }
                 }
                 else {
@@ -686,176 +951,266 @@
                         let row = {
                             id: product.id,
                             title: product.title,
-                            price: `${product.price.toLocaleString('ko-KR')}원`,
+                            popularityRank: `${product.popularityIndex + 1} (${product.category})`,
+                            prevPrice: '',
+                            price: product.price,
+                            prevStatus: '',
                             status: product.isSoldOut ? '품절' : '판매중',
-                            popularityIndex: product.popularityIndex,
-                            changed: true,
-                        };
-                        table.push(row);
+                        }
+                        table.push(row)
                     }
                 }
 
-                productAmount.textContent += `${productList.length.toLocaleString('ko-KR')}개`;
+                productAmount.textContent += `${productList.length.toLocaleString('ko-KR')}개`
 
                 if (byRecent.checked) {
-                    table.sort((a, b) => b.id - a.id);
+                    table.sort((a, b) => b.id - a.id)
                 }
                 else if (byPopularity.checked) {
-                    table.sort((a, b) => a.popularityIndex - b.popularityIndex);
+                    table.sort((a, b) => {
+                        let aSplit = a.popularityRank.split(' ')
+                        let bSplit = b.popularityRank.split(' ')
+
+                        if (Number(aSplit[0]) > Number(bSplit[0])) {
+                            return 1;
+                        }
+
+                        if (Number(aSplit[0]) < Number(bSplit[0])) {
+                            return -1;
+                        }
+
+                        if (aSplit[1] > bSplit[1]) {
+                            return 1;
+                        }
+
+                        if (aSplit[1] < bSplit[1]) {
+                            return -1;
+                        }
+                    })
                 }
 
                 if (oldProductList.length > 0 & newProductList.length > 0) {
-                    let newProductAmount = newProductList.length - oldProductList.length + deletedProductList.length;
-                    productAmount.innerHTML += `(<span style="color: green">+${newProductAmount}</span><span style="color: red"> -${deletedProductList.length}</span>)`;
+                    let newProductAmount = newProductList.length - oldProductList.length + deletedProductList.length
+                    productAmount.innerHTML += `(<span style="color: green">+${newProductAmount}</span><span style="color: red"> -${deletedProductList.length}</span>)`
 
                     if (highlightChanges.checked) {
-                        table.sort((a, b) => b.changed - a.changed);
+                        table.sort((a, b) => b.isChanged - a.isChanged)
+                    }
+
+                    for (let row of table) {
+                        delete row.isChanged
                     }
                 }
 
-                let tr = document.createElement('tr');
-                resultTable.appendChild(tr);
+                for (let index = table.length - 1; index >= 0; index--) {
+                    let isFiltered = false
 
-                let th1 = document.createElement('th');
-                th1.innerHTML = '상품 코드';
+                    isFiltered =
+                        table[index].id < minimumCode ||
+                        table[index].id > maximumCode ||
+                        !table[index].title.includes(title) ||
+                        Number(table[index].popularityRank.split(' ')[0]) < minimumPopularity ||
+                        Number(table[index].popularityRank.split(' ')[0]) > maximumPopularity ||
+                        table[index].price < minimumPrice ||
+                        table[index].price > maximumPrice
 
-                let th2 = document.createElement('th');
-                th2.innerHTML = '상품명';
+                    let includeStatus = false
 
-                let th3 = document.createElement('th');
-                th3.innerHTML = '가격';
+                    for (let status of statusList) {
+                        if (table[index].status.split('→').pop().includes(status)) {
+                            includeStatus = true
+                        }
+                    }
 
-                let th4 = document.createElement('th');
-                th4.innerHTML = '상태';
+                    isFiltered = isFiltered || !includeStatus
 
-                for (let th of [th1, th2, th3, th4]) {
-                    th.setAttribute('style', 'font-weight: 600');
-                    tr.appendChild(th);
+                    if (isFiltered) {
+                        table.splice(index, 1)
+                    }
+                }
+
+                let tr = document.createElement('tr')
+                resultTable.appendChild(tr)
+
+                let th1 = document.createElement('th')
+                th1.innerHTML = '상품 코드'
+
+                let th2 = document.createElement('th')
+                th2.innerHTML = '상품명'
+
+                let th3 = document.createElement('th')
+                th3.innerHTML = '인기 순위'
+
+                let th4 = document.createElement('th')
+                th4.innerHTML = '가격'
+
+                let th5 = document.createElement('th')
+                th5.innerHTML = '상태'
+
+                for (let th of [th1, th2, th3, th4, th5]) {
+                    th.setAttribute('style', 'font-weight: 600')
+                    tr.appendChild(th)
                 }
 
                 if (loadAll.checked) {
-                    loadCount = 2147483647;
+                    loadCount = Infinity
                 }
                 else {
-                    loadCount = 50;
+                    loadCount = 50
                 }
 
-                loadingTable = table.slice(loadCount);
+                loadingTable = table.slice(loadCount)
 
                 for (let row of table.slice(0, loadCount)) {
-                    let tr = document.createElement('tr');
-                    resultTable.appendChild(tr);
+                    let tr = document.createElement('tr')
+                    resultTable.appendChild(tr)
 
-                    let th1 = document.createElement('th');
+                    let th1 = document.createElement('th')
                     th1.innerHTML = row.id
 
-                    let a = document.createElement('a');
+                    let a = document.createElement('a')
 
-                    a.setAttribute('href', `${storeUrl}/product/category/product_view2/${row.id}`);
-                    a.setAttribute('target', '_blank');
-                    a.innerHTML = row.title.match(/.{1,48}/g).join('<br>');
+                    a.setAttribute('href', `${storeUrl}/product/category/product_view2/${row.id}`)
+                    a.setAttribute('target', '_blank')
+                    a.innerHTML = row.title.match(/.{1,42}/g).join('<br>')
 
-                    let th2 = document.createElement('th');
-                    th2.appendChild(a);
+                    let th2 = document.createElement('th')
+                    th2.appendChild(a)
 
-                    let th3 = document.createElement('th');
-                    th3.innerHTML = row.price;
+                    let th3 = document.createElement('th')
+                    th3.innerHTML = row.popularityRank
 
-                    let th4 = document.createElement('th');
-                    th4.innerHTML = row.status;
+                    let th4 = document.createElement('th')
+                    th4.innerHTML = row.prevPrice.toString().length > 0 ? `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ` : ''
+                    th4.innerHTML += `${row.price.toLocaleString('ko-KR')}원`
 
-                    for (let th of [th1, th2, th3, th4]) {
-                        th.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th);
+                    let th5 = document.createElement('th')
+                    th5.innerHTML = row.prevStatus.length > 0 ? `${row.prevStatus.toLocaleString('ko-KR')}<br>→ ` : ''
+                    th5.innerHTML += row.status
+
+                    for (let th of [th1, th2, th3, th4, th5]) {
+                        th.setAttribute('style', 'font-weight: 400')
+                        tr.appendChild(th)
                     }
                 }
             }
 
             function loadTable() {
-                if (loadingTable.length > 0) {
-                    loadingTable = loadingTable.slice(loadCount);
-                }
-                else {
-                    return;
-                }
-
                 for (let row of loadingTable.slice(0, loadCount)) {
-                    let tr = document.createElement('tr');
-                    resultTable.appendChild(tr);
+                    let tr = document.createElement('tr')
+                    resultTable.appendChild(tr)
 
-                    let th1 = document.createElement('th');
+                    let th1 = document.createElement('th')
                     th1.innerHTML = row.id
 
-                    let a = document.createElement('a');
+                    let a = document.createElement('a')
 
-                    a.setAttribute('href', `${storeUrl}/product/category/product_view2/${row.id}`);
-                    a.setAttribute('target', '_blank');
+                    a.setAttribute('href', `${storeUrl}/product/category/product_view2/${row.id}`)
+                    a.setAttribute('target', '_blank')
+                    a.innerHTML = row.title.match(/.{1,42}/g).join('<br>')
 
-                    if (row.title.length > 48) {
-                        let titleSplit = row.title.split(' ');
-                        a.innerHTML += titleSplit.slice(0, Math.ceil(titleSplit.length / 2) - 1).join(' ');
-                        a.innerHTML += '<br>';
-                        a.innerHTML += titleSplit.slice(Math.ceil(titleSplit.length / 2)).join(' ');
-                    }
-                    else {
-                        a.innerHTML = row.title;
-                    }
+                    let th2 = document.createElement('th')
+                    th2.appendChild(a)
 
-                    let th2 = document.createElement('th');
-                    th2.appendChild(a);
+                    let th3 = document.createElement('th')
+                    th3.innerHTML = row.popularityRank
 
-                    let th3 = document.createElement('th');
-                    th3.innerHTML = row.price;
+                    let th4 = document.createElement('th')
+                    th4.innerHTML = row.prevPrice.toString().length > 0 ? `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ` : ''
+                    th4.innerHTML += `${row.price.toLocaleString('ko-KR')}원`
 
-                    let th4 = document.createElement('th');
-                    th4.innerHTML = row.status;
+                    let th5 = document.createElement('th')
+                    th5.innerHTML = row.prevStatus.length > 0 ? `${row.prevStatus.toLocaleString('ko-KR')}<br>→ ` : ''
+                    th5.innerHTML += row.status
 
-                    for (let th of [th1, th2, th3, th4]) {
-                        th.setAttribute('style', 'font-weight: 400');
-                        tr.appendChild(th);
+                    for (let th of [th1, th2, th3, th4, th5]) {
+                        th.setAttribute('style', 'font-weight: 400')
+                        tr.appendChild(th)
                     }
                 }
+                loadingTable = loadingTable.slice(loadCount)
             }
 
             window.onscroll = (e) => {
                 if ((window.innerHeight + window.scrollY) >= document.body.scrollHeight) {
-                    loadTable();
+                    loadTable()
                 }
-            };
+            }
 
-            excelExportButton.addEventListener('click', () => {
-                let ws = XLSX.utils.json_to_sheet(table);
-                let dateList = [];
+            excelExportButton.addEventListener('click', async () => {
+                fetch(`/save`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id_token: await user.getIdToken(),
+                        store_url: storeUrl,
+                    }),
+                }).then(async (res) => {
+                    let json = await res.json()
 
-                if (oldProductList.length > 0) {
-                    let text = oldSelect.value.toString();
-                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`);
-                }
+                    if (json.result != 'ok') {
+                        if (json.result == 'quota exceeded') {
+                            showQuotaExceededError('엑셀 다운로드 횟수', json.quotaUsed, json.quotaLimit)
+                        }
+                        else if (json.result == 'error') {
+                            showError(`
+                                <div style="line-height: 130%">
+                                    다운로드에 실패 하였어요.<br>
+                                    다시 시도해주세요.
+                                </div>
+                            `, json.error)
+                        }
+                        return
+                    }
 
-                if (newProductList.length > 0) {
-                    let text = newSelect.value.toString();
-                    dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`);
-                }
+                    let ws = XLSX.utils.json_to_sheet(table)
+                    let dateList = []
 
-                let filename = dateList.join(' → ');
+                    if (oldProductList.length > 0) {
+                        let text = oldSelect.value.toString()
+                        dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`)
+                    }
 
-                for (let row = 0; row < table.length; row++) {
-                    let idCell = ws[`A${row + 1}`];
-                    let titleCell = ws[`B${row + 1}`];
+                    if (newProductList.length > 0) {
+                        let text = newSelect.value.toString()
+                        dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`)
+                    }
 
-                    titleCell.f = `=HYPERLINK("${storeUrl}/product/category/product_view2/${idCell.v}", "${titleCell.v}")`;
-                }
+                    let filename = dateList.join(' → ')
 
-                let wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, '카라이프몰');
-                XLSX.writeFile(wb, `카라이프몰 ${filename}.xlsx`);
-            });
+                    ws.A1.v = '상품 코드'
+                    ws.B1.v = '상품명'
+                    ws.C1.v = '인기 순위'
+                    ws.D1.v = '이전 가격'
+                    ws.E1.v = '현재 가격'
+                    ws.F1.v = '이전 상태'
+                    ws.G1.v = '현재 상태'
+
+                    for (let index = 1; index <= table.length; index++) {
+                        let idCell = ws[`A${index}`]
+                        let titleCell = ws[`B${index}`]
+
+                        titleCell.f = `=HYPERLINK("${storeUrl}/product/category/product_view2/${idCell.v}", "${titleCell.v}")`
+                    }
+
+                    let wb = XLSX.utils.book_new()
+                    XLSX.utils.book_append_sheet(wb, ws, '카라이프몰')
+                    XLSX.writeFile(wb, `카라이프몰 ${filename}.xlsx`)
+                })
+            })
 
             function s2ab(s) {
-                var buf = new ArrayBuffer(s.length);
-                var view = new Uint8Array(buf);
-                for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-                return buf;
+                var buf = new ArrayBuffer(s.length)
+                var view = new Uint8Array(buf)
+
+                for (var i = 0; i < s.length; i++) {
+                    view[i] = s.charCodeAt(i) & 0xFF
+                }
+
+                return buf
             }
         </script>
 </body>
