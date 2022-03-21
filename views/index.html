@@ -99,28 +99,29 @@
 </head>
 
 <body>
-  <div class="form-check form-check-inline" style="padding: 0px;">
-    <div class="d-flex" style="margin: auto;">
-      <button id='info-button' type="button" style="background: none; padding: 0px; border: none; outline: none;">
-        <i id="info-icon" class="fa fa-info-circle" style="font-size: 30px; margin: auto;"></i>
+  <div class="form-check form-check-inline" style="padding: 0px">
+    <div class="d-flex" style="margin: auto">
+      <button id='info-button' type="button" style="background: none; padding: 0px; border: none; outline: none">
+        <i id="info-icon" class="fa fa-info-circle" style="font-size: 30px; margin: auto"></i>
       </button>
-      <span style="margin: 4px 0px 0px 6px;">처음이세요?</span>
+      <span style="margin: 4px 0px 0px 6px">처음이세요?</span>
     </div>
   </div>
-  <div class="d-flex" style="float: right; margin: auto;">
+  <div class="d-flex" style="float: right; margin: auto">
     <div class="dropdown">
       <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
       <div id="user-menu" class="dropdown-content" hidden>
         <a id="dropdown-option" class="dropdown-item dropdown-available">설정</a>
+        <a id="dropdown-quota" class="dropdown-item dropdown-available">사용량</a>
         <a id="dropdown-email" class="dropdown-item disabled"></a>
       </div>
     </div>
     <div id="search-div" class="container d-flex align-items-center justify-content-center"
-      style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+      style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)">
       <div>
         <div class="text-center">
           <a href="http://n09company.com" target="_blank"><img src="https://imgur.com/YPhrrAJ.png" width="160"
-              height="160" style="margin: 120px 0px;"></a>
+              height="160" style="margin: 120px 0px"></a>
         </div>
         <div class="input-group rounded p-2">
           <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none; width: 518px;"
@@ -129,7 +130,7 @@
           <button id="search-button" class="btn btn-primary fas fa-search"></input>
         </div>
         <form action="">
-          <h6 id="search-helper" class="text-center px-2" style="line-height: 130%; font-weight: 100;"><br>&nbsp;</h6>
+          <h6 id="search-helper" class="text-center px-2" style="line-height: 130%; font-weight: 100"><br>&nbsp;</h6>
         </form>
         <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 66px 0px 77px 0px">
           해당
@@ -148,7 +149,7 @@
           <a href="https://09bro.net" target="_blank"><img src="https://imgur.com/7HP4qOb.png" width="72" height="24"
               style="margin: 0px 8px;"></a>
           <a href="https://play.google.com/store/apps/details?id=com.n09.fanorama" target="_blank"><img
-              src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto;"></a>
+              src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto"></a>
         </div>
         <div hidden>
           <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
@@ -164,8 +165,8 @@
       </div>
     </div>
     <script type="module">
-      import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js';
-      import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
+      import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
 
       initializeApp({
         apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
@@ -175,312 +176,366 @@
         messagingSenderId: "36522862962",
         appId: "1:36522862962:web:8a9e9b88373a19add095eb",
         measurementId: "G-37DECVWLYX"
-      });
+      })
 
-      const auth = getAuth();
-      const signinButton = document.getElementById('signin-button');
-      const userMenu = document.getElementById('user-menu');
-      const dropdownEmail = document.getElementById('dropdown-email');
-      let idToken = '';
+      const auth = getAuth()
+      const userMenu = document.getElementById('user-menu')
+      const dropdownEmail = document.getElementById('dropdown-email')
+      let user
 
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          let connectedSpan = document.evaluate('/html/body/div[2]/div[1]/div/div/div/span/span[2]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-          let buttonWrapper = document.querySelector('.abcRioButton.abcRioButtonLightBlue');
+      onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          user = firebaseUser
+
+          let connectedSpan = document.evaluate('/html/body/div[2]/div[1]/div/div/div/span/span[2]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+          let buttonWrapper = document.querySelector('.abcRioButton.abcRioButtonLightBlue')
 
           if (connectedSpan != undefined && buttonWrapper != undefined) {
-            connectedSpan.innerText = `${user.displayName} ▼`;
-            userMenu.hidden = false;
-            buttonWrapper.style = 'min-width: 120px; height: 36px;';
-            dropdownEmail.innerText = user.email;
+            connectedSpan.innerText = `${user.displayName} ▼`
+            userMenu.hidden = false
+            buttonWrapper.style = 'min-width: 120px; height: 36px'
+            dropdownEmail.innerText = user.email
           }
 
-          idToken = await user.getIdToken();
+          let idToken = await user.getIdToken()
+
+          fetch('/signin', {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id_token: idToken }),
+          }).catch()
+
+          fetch('/user', {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id_token: idToken }),
+          }).then(async (res) => {
+            let json = await res.json()
+            if (json.user.permission == 1) {
+              let dropdownAdmin = document.createElement('a')
+              dropdownAdmin.innerHTML = '관리자'
+              dropdownAdmin.classList.add('dropdown-item', 'dropdown-available')
+              userMenu.insertBefore(dropdownAdmin, dropdownEmail)
+
+              dropdownAdmin.addEventListener('click', () => {
+
+                swal.fire({
+                  title: '관리자 전용',
+                  html: `
+                    <div style="line-height: 130%">
+                      <!--비공개 스토어<br>-->
+                      <button type="button" class="btn btn-primary" onclick="window.open('/n09','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
+                        엔공구 공식 쇼핑몰
+                      </button><br>
+                      <button type="button" class="btn btn-primary" onclick="window.open('/hyundai/auton','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
+                        카라이프몰
+                      </button><!--<br><br>
+                      정보 열람<br>
+                      <button type="button" class="btn btn-primary" onclick="window.open('/visitor','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
+                        유저 접속 기록
+                      </button>
+                      -->
+                    </div>
+                  `,
+                  showConfirmButton: false,
+                  showCancelButton: true,
+                  cancelButtonText: '취소',
+                });
+              })
+            }
+          }).catch()
 
           fetch('/bookmarkList', {
             method: 'POST',
             headers: {
               'Accept': 'application/json',
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
             },
             body: JSON.stringify({ id_token: idToken }),
           }).then(async (res) => {
-            let json = await res.json();
-            if (json.result == 'OK') {
-              let bookmarkList = json.bookmarkList;
-              bookmarkList.sort((a, b) => a.title - b.title);
+            let json = await res.json()
+            if (json.result == 'ok') {
+              let bookmarkList = json.bookmarkList
+              bookmarkList.sort((a, b) => a.title - b.title)
 
               if (bookmarkList.length > 0) {
-                searchHelper.innerHTML = '';
+                searchHelper.innerHTML = ''
               }
 
-              let isThereNewLine = false;
-              let isThereBoomark = false;
+              let isThereNewLine = false
+              let isThereBoomark = false
 
               for (let bookmark of bookmarkList) {
                 if (isThereBoomark) {
-                  let span = document.createElement('span');
-                  span.innerHTML = '&nbsp&nbsp;';
-                  searchHelper.appendChild(span);
+                  let span = document.createElement('span')
+                  span.innerHTML = '&nbsp&nbsp'
+                  searchHelper.appendChild(span)
                 }
 
-                isThereBoomark = true;
+                isThereBoomark = true
 
-                let a = document.createElement('a');
-                a.innerHTML = bookmark.title;
+                let a = document.createElement('a')
+                a.innerHTML = bookmark.title
 
                 if (bookmark.storeUrl.includes('smartstore.naver.com')) {
-                  let endpoint = bookmark.storeUrl.split('/').pop();
-                  a.setAttribute('href', `/smartstore/${endpoint}`);
+                  let endpoint = bookmark.storeUrl.split('/').pop()
+                  a.setAttribute('href', `/smartstore/${endpoint}`)
                 }
 
-                searchHelper.appendChild(a);
+                searchHelper.appendChild(a)
 
-                if (searchHelper.offsetWidth > 575) {
-                  let br = document.createElement('br');
-                  searchHelper.insertBefore(br, a);
-                  isThereNewLine = true;
+                if (searchHelper.offsetWidth > 575 && !isThereNewLine) {
+                  let br = document.createElement('br')
+                  searchHelper.insertBefore(br, a)
+                  isThereNewLine = true
                 }
               }
 
               if (!isThereNewLine) {
-                let br = document.createElement('br');
-                searchHelper.appendChild(br);
+                let br = document.createElement('br')
+                searchHelper.appendChild(br)
 
-                let span = document.createElement('span');
-                span.innerHTML = '&nbsp;';
-                searchHelper.appendChild(span);
+                let span = document.createElement('span')
+                span.innerHTML = '&nbsp'
+                searchHelper.appendChild(span)
               }
 
               if (!isThereBoomark) {
-                searchHelper.innerHTML = '매번 검색하기 귀찮으시죠? 클릭 한 번으로 스토어에 접속해보세요! ';
+                searchHelper.innerHTML = '매번 검색하기 귀찮으시죠? 클릭 한 번으로 스토어에 접속해보세요! '
 
-                let howToBookmark = document.createElement('button');
-                howToBookmark.type = "button";
-                howToBookmark.style = 'background:none; border:none; margin:0; padding:0; color: #0066CC;';
-                howToBookmark.innerHTML = '즐겨찾기 사용법';
-                howToBookmark.setAttribute('onclick', 'showHowToBookmark();');
-                searchHelper.appendChild(howToBookmark);
+                let howToBookmark = document.createElement('button')
+                howToBookmark.type = "button"
+                howToBookmark.style = 'background: none; border: none; margin: 0; padding: 0; color: #0066CC'
+                howToBookmark.innerHTML = '즐겨찾기 사용법'
+                howToBookmark.setAttribute('onclick', `
+                  swal.fire({
+                    title: '즐겨찾기 A to Z',
+                    html: \`
+                      <div style="text-align: left; line-height: 130%">
+                      <div class="text-center">
+                        <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
+                      </div>
+                      <div class="text-center" style="margin: 8px 0px">
+                        <img src="https://imgur.com/x13joXj.png" width="454" height="81">
+                      </div><br>
+                        1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>
+                        2. 스토어 이름 옆 노란 별 아이콘을 클릭해주세요.<br>
+                        3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>
+                      <div class="text-center"><img src="https://imgur.com/YtMW1un.png" width="454" height="67"></div><br>
+                        즐겨찾기는 최대 10개까지만 등록하실 수 있어요.<br>
+                        그 이상 등록하려 하셔도 삭제할 즐겨찾기 선택창이 떠요.<br><br>
+                        즐겨찾기는 브라우저에 쿠키를 통해 저장해요.<br>
+                        쿠키를 삭제하시면 즐겨찾기도 삭제돼요.
+                      </div>
+                    \`,
+                    confirmButtonText: '알겠어요',
+                  })
+                `)
 
-                searchHelper.innerHTML += '<br>&nbsp;'
+                searchHelper.appendChild(howToBookmark)
+                searchHelper.innerHTML += '<br>&nbsp'
               }
             }
             else {
-              throw new Error(json.error);
+              throw new Error(json.error)
             }
           }).catch((error) => {
-            swal.fire({
-              title: '이런!',
-              html: `
-              <div style="line-height: 130%;">
+            showError(`
+              <div style="line-height: 130%">
                 즐겨찾기를 불러오는데 실패하였어요.<br>
                 다시 시도해주세요.
               </div>
-            `,
-              icon: 'error',
-              confirmButtonText: '어떻게 된거죠?',
-              cancelButtonText: '알겠어요',
-              showCancelButton: true,
-              heightAuto: false,
-            }).then((res) => showError(res, error.message));
-          });
+            `, error.message)
+          })
         }
-      });
+      })
 
       function onSignIn(googleUser) {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          unsubscribe();
+          unsubscribe()
           if (!isUserEqual(googleUser, firebaseUser)) {
-            const credential = GoogleAuthProvider.credential(
-              googleUser.getAuthResponse().id_token);
+            const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token)
 
-            signInWithCredential(auth, credential).then(() => {
-              let form = document.createElement('form');
-              form.style.visibility = 'hidden';
-              form.method = 'GET';
-              form.action = '/';
-              document.body.appendChild(form);
-              form.submit();
+            signInWithCredential(auth, credential).then(async () => {
+              let form = document.createElement('form')
+              form.style.visibility = 'hidden'
+              form.method = 'GET'
+              form.action = '/'
+              document.body.appendChild(form)
+              form.submit()
             }).catch((error) => {
-              const errorCode = error.code;
-              const errorMessage = error.message;
-              const email = error.email;
-              const credential = GoogleAuthProvider.credentialFromError(error);
+              const errorCode = error.code
+              const errorMessage = error.message
+              const email = error.email
+              const credential = GoogleAuthProvider.credentialFromError(error)
 
-              swal.fire({
-                title: '이런!',
-                html: `
-                  <div style="line-height: 130%;">
-                    로그인에 실패 하셨어요.<br>
-                    다시 시도해주세요.
-                  </div>
-                `,
-                icon: 'error',
-                confirmButtonText: '어떻게 된거죠?',
-                cancelButtonText: '알겠어요',
-                showCancelButton: true,
-                heightAuto: false,
-              }).then((res) => showError(res, error.message));
-            });
+              showError(`
+                <div style="line-height: 130%">
+                  로그인에 실패 하셨어요.<br>
+                  다시 시도해주세요.
+                </div>
+              `, error.message)
+            })
           }
-        });
+        })
       }
 
       function isUserEqual(googleUser, firebaseUser) {
         if (firebaseUser) {
-          const providerData = firebaseUser.providerData;
+          const providerData = firebaseUser.providerData
           for (let i = 0; i < providerData.length; i++) {
             if (providerData[i].providerId === GoogleAuthProvider.PROVIDER_ID &&
               providerData[i].uid === googleUser.getBasicProfile().getId()) {
-              return true;
+              return true
             }
           }
         }
-        return false;
+        return false
       }
 
-      window.onSignIn = onSignIn;
+      window.onSignIn = onSignIn
 
-      const infoButton = document.getElementById('info-button');
-      const searchDiv = document.getElementById('search-div');
-      const searchInput = document.getElementById('search-input');
-      const searchHelper = document.getElementById('search-helper');
-      const searchButton = document.getElementById('search-button');
-      const urlValidator = document.getElementById('url-validator');
-      const mostVisited = document.getElementById('most-visited');
-      const dropdownOption = document.getElementById('dropdown-option');
+      const infoButton = document.getElementById('info-button')
+      const searchDiv = document.getElementById('search-div')
+      const searchInput = document.getElementById('search-input')
+      const searchHelper = document.getElementById('search-helper')
+      const searchButton = document.getElementById('search-button')
+      const urlValidator = document.getElementById('url-validator')
+      const mostVisited = document.getElementById('most-visited')
+      const dropdownOption = document.getElementById('dropdown-option')
+      const dropdownQuota = document.getElementById('dropdown-quota')
 
-      dropdownOption.addEventListener('click', () => {
-        fetch('/option', {
+      dropdownOption.addEventListener('click', async () => {
+        fetch('/user', {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ id_token: idToken }),
+          body: JSON.stringify({ id_token: await user.getIdToken() }),
         }).then(async (res) => {
-          let json = await res.json();
-          if (json.result == 'OK') {
-            let defaultOption = {
-              loadAll: 0,
-              highlightChanges: 1,
-              sortMethod: 0,
-            };
+          let json = await res.json()
+          if (json.result == 'ok') {
+            let user = json.user
 
-            let option = json.option;
+            let loadAll = document.createElement('input')
+            loadAll.classList.add('form-check-input')
+            loadAll.setAttribute('type', 'checkbox')
 
-            if (option == 'default') {
-              option = defaultOption;
+            let highlightChanges = document.createElement('input')
+            highlightChanges.classList.add('form-check-input')
+            highlightChanges.setAttribute('type', 'checkbox')
+
+            let byRecent = document.createElement('input')
+            byRecent.classList.add('form-check-input')
+            byRecent.setAttribute('type', 'radio')
+            byRecent.setAttribute('name', 'sort-radio')
+
+            let byPopularity = document.createElement('input')
+            byPopularity.classList.add('form-check-input')
+            byPopularity.setAttribute('type', 'radio')
+            byPopularity.setAttribute('name', 'sort-radio')
+
+            let loadAllLabel = document.createElement('label')
+            loadAllLabel.style = 'padding-top: 5.3px'
+            loadAllLabel.innerText = '전부 로딩하기'
+
+            let highlightChangesLabel = document.createElement('label')
+            highlightChangesLabel.style = 'padding-top: 5.3px'
+            highlightChangesLabel.innerText = '바뀐 제품을 위로'
+
+            let byRecentLabel = document.createElement('label')
+            byRecentLabel.style = 'padding-top: 5.3px'
+            byRecentLabel.innerText = '최신 순으로'
+
+            let byPopularityLabel = document.createElement('label')
+            byPopularityLabel.style = 'padding-top: 5.3px'
+            byPopularityLabel.innerText = '인기 순으로'
+
+            if (user.loadAll) {
+              loadAll.checked = true
             }
 
-            let loadAll = document.createElement('input');
-            loadAll.classList.add('form-check-input');
-            loadAll.setAttribute('type', 'checkbox');
-
-            let highlightChanges = document.createElement('input');
-            highlightChanges.classList.add('form-check-input');
-            highlightChanges.setAttribute('type', 'checkbox');
-
-            let byRecent = document.createElement('input');
-            byRecent.classList.add('form-check-input');
-            byRecent.setAttribute('type', 'radio');
-            byRecent.setAttribute('name', 'sort-radio');
-
-            let byPopularity = document.createElement('input');
-            byPopularity.classList.add('form-check-input');
-            byPopularity.setAttribute('type', 'radio');
-            byPopularity.setAttribute('name', 'sort-radio');
-
-            let loadAllLabel = document.createElement('label');
-            loadAllLabel.style = 'padding-top: 5.3px;';
-            loadAllLabel.innerText = '전부 로딩하기';
-
-            let highlightChangesLabel = document.createElement('label');
-            highlightChangesLabel.style = 'padding-top: 5.3px;';
-            highlightChangesLabel.innerText = '상태가 바뀐 제품을 위로';
-
-            let byRecentLabel = document.createElement('label');
-            byRecentLabel.style = 'padding-top: 5.3px;';
-            byRecentLabel.innerText = '최신 순으로';
-
-            let byPopularityLabel = document.createElement('label');
-            byPopularityLabel.style = 'padding-top: 5.3px;';
-            byPopularityLabel.innerText = '인기 순으로';
-
-            if (option.loadAll) {
-              loadAll.checked = true;
+            if (user.highlightChanges) {
+              highlightChanges.checked = true
             }
 
-            if (option.highlightChanges) {
-              highlightChanges.checked = true;
-            }
-
-            if (option.sortMethod == 0) {
-              byRecent.checked = true;
+            if (user.sortMethod == 0) {
+              byRecent.checked = true
             }
             else {
-              byPopularity.checked = true;
+              byPopularity.checked = true
             }
 
-            let loadAllDiv = document.createElement('div');
-            loadAllDiv.classList.add('form-check', 'form-check-inline');
-            loadAllDiv.appendChild(loadAll);
-            loadAllDiv.appendChild(loadAllLabel);
+            let loadAllDiv = document.createElement('div')
+            loadAllDiv.classList.add('form-check', 'form-check-inline')
+            loadAllDiv.appendChild(loadAll)
+            loadAllDiv.appendChild(loadAllLabel)
 
-            let highlightChangesDiv = document.createElement('div');
-            highlightChangesDiv.classList.add('form-check', 'form-check-inline');
-            highlightChangesDiv.appendChild(highlightChanges);
-            highlightChangesDiv.appendChild(highlightChangesLabel);
+            let highlightChangesDiv = document.createElement('div')
+            highlightChangesDiv.classList.add('form-check', 'form-check-inline')
+            highlightChangesDiv.appendChild(highlightChanges)
+            highlightChangesDiv.appendChild(highlightChangesLabel)
 
-            let byRecentDiv = document.createElement('div');
-            byRecentDiv.classList.add('form-check', 'form-check-inline');
-            byRecentDiv.appendChild(byRecent);
-            byRecentDiv.appendChild(byRecentLabel);
+            let byRecentDiv = document.createElement('div')
+            byRecentDiv.classList.add('form-check', 'form-check-inline')
+            byRecentDiv.appendChild(byRecent)
+            byRecentDiv.appendChild(byRecentLabel)
 
-            let byPopularityDiv = document.createElement('div');
-            byPopularityDiv.classList.add('form-check', 'form-check-inline');
-            byPopularityDiv.appendChild(byPopularity);
-            byPopularityDiv.appendChild(byPopularityLabel);
+            let byPopularityDiv = document.createElement('div')
+            byPopularityDiv.classList.add('form-check', 'form-check-inline')
+            byPopularityDiv.appendChild(byPopularity)
+            byPopularityDiv.appendChild(byPopularityLabel)
 
-            let span = document.createElement('span');
-            span.style = 'line-height: 130%';
+            let span = document.createElement('span')
+            span.style = 'line-height: 130%'
             span.innerHTML = `
               스토어 접속 시 기본 설정이에요.<br>
               그때그때 바꾸실 수 있어요.<br><br>
-            `;
+            `
 
-            let form = document.createElement('form');
-            form.appendChild(span);
-            form.appendChild(loadAllDiv);
-            form.appendChild(highlightChangesDiv);
-            form.appendChild(byRecentDiv);
-            form.appendChild(byPopularityDiv);
+            let space = document.createElement('span')
+            space.innerHTML = '&nbsp<br>'
+
+            let form = document.createElement('form')
+            form.appendChild(span)
+            form.appendChild(loadAllDiv)
+            form.appendChild(highlightChangesDiv)
+            form.appendChild(space)
+            form.appendChild(byRecentDiv)
+            form.appendChild(byPopularityDiv)
 
             swal.fire({
               title: '설정',
               html: form,
               confirmButtonText: '확인',
-              cancelButtonText: '이게 아닌데!',
+              cancelButtonText: '안 돼요!',
               showCancelButton: true,
               heightAuto: false,
-            }).then((res) => {
+            }).then(async (res) => {
               if (res.isConfirmed) {
-                fetch('/option/update', {
+                fetch('/user/update', {
                   method: 'POST',
                   headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
-                    id_token: idToken,
+                    id_token: await user.getIdToken(),
                     load_all: loadAll.checked ? 1 : 0,
                     highlight_changes: highlightChanges.checked ? 1 : 0,
                     sort_method: byRecent.checked ? 0 : 1,
                   }),
                 }).then(async (res) => {
-                  let json = await res.json();
+                  let json = await res.json()
 
-                  if (json.result == 'OK') {
+                  if (json.result == 'ok') {
                     swal.fire({
                       title: '설정 변경 성공!',
                       icon: 'success',
@@ -489,81 +544,102 @@
                     })
                   }
                   else {
-                    throw new Error(res.error);
+                    throw new Error(res.error)
                   }
                 }).catch((error) => {
-                  swal.fire({
-                    title: '이런!',
-                    html: `
-                      <div style="line-height: 130%;">
-                        설정을 변경하는데 실패하였어요.<br>
-                        다시 시도해주세요.
-                      </div>
-                    `,
-                    icon: 'error',
-                    confirmButtonText: '어떻게 된거죠?',
-                    cancelButtonText: '알겠어요',
-                    showCancelButton: true,
-                    heightAuto: false,
-                  }).then((res) => showError(res, error.message));
-                });
+                  showError(`
+                    <div style="line-height: 130%">
+                      설정을 변경하는데 실패하였어요.<br>
+                      다시 시도해주세요.
+                    </div>
+                  `, error.message)
+                })
               }
-            });
+            })
           }
           else {
-            throw new Error(json.error);
+            throw new Error(json.error)
           }
         }).catch((error) => {
-          swal.fire({
-            title: '이런!',
-            html: `
-              <div style="line-height: 130%;">
-                설정을 불러오는데 실패하였어요.<br>
-                다시 시도해주세요.
-              </div>
-            `,
-            icon: 'error',
-            confirmButtonText: '어떻게 된거죠?',
-            cancelButtonText: '알겠어요',
-            showCancelButton: true,
-            heightAuto: false,
-          }).then((res) => showError(res, error.message));
-        });
-      });
+          showError(`
+            <div style="line-height: 130%">
+              설정을 불러오는데 실패하였어요.<br>
+              다시 시도해주세요.
+            </div>
+          `, error.message)
+        })
+      })
 
-      function showHowToBookmark() {
-        swal.fire({
-          title: '즐겨찾기 A to Z',
-          html: `
-            <div style="text-align: left; line-height: 130%;">
-            <div class="text-center">
-              <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
+      dropdownQuota.addEventListener('click', async () => {
+        fetch('/quota', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id_token: await user.getIdToken() }),
+        }).then(async (res) => {
+          let json = await res.json()
+          if (json.result == 'ok') {
+            let productListQuota = 0
+            let updateQuota = 0
+            let saveQuota = 0
+
+            let productListQueryList = json.quota.filter((query) => query.type == 1)
+
+            for (let productListQuery of productListQueryList) {
+              productListQuota += productListQuery.amount
+            }
+
+            let updateQueryList = json.quota.filter((query) => query.type == 2)
+
+            for (let updateQuery of updateQueryList) {
+              updateQuota += updateQuery.amount
+            }
+
+            let saveQueryList = json.quota.filter((query) => query.type == 3)
+
+            for (let saveQuery of saveQueryList) {
+              saveQuota += saveQuery.amount
+            }
+
+            swal.fire({
+              title: '사용량',
+              html: `
+                <span style="line-height: 130%">
+                  오늘의 사용량이에요.<br>
+                  사용량은 자정에 초기화 돼요!<br><br>
+                  조회 <b>${productListQuota.toLocaleString('ko-KR')} / 100,000개</b><br>
+                  업데이트 <b>${updateQuota.toLocaleString('ko-KR')} / 25,000개</b><br>
+                  엑셀로 저장 <b>${saveQuota.toLocaleString('ko-KR')} / 10회</b>
+                  ${json.isAdmin ? '<br><br>(관리자이셔서 영향을 받지 않아요)' : ''}
+                </span>
+              `,
+              confirmButtonText: '알겠어요',
+              showCancelButton: false,
+            })
+          }
+          else {
+            throw new Error(json.error)
+          }
+        }).catch((error) => {
+          showError(`
+            <div style="line-height: 130%">
+              사용량을 불러오는데 실패하였어요.<br>
+              다시 시도해주세요.
             </div>
-            <div class="text-center" style="margin: 8px 0px;">
-              <img src="https://imgur.com/x13joXj.png" width="454" height="81">
-            </div><br>
-              1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>
-              2. 스토어 이름 옆 노란 별 아이콘을 클릭해주세요.<br>
-              3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>
-            <div class="text-center"><img src="https://imgur.com/YtMW1un.png" width="454" height="67"></div><br>
-              즐겨찾기는 최대 10개까지만 등록하실 수 있어요.<br>
-              그 이상 등록하려 하셔도 삭제할 즐겨찾기 선택창이 떠요.<br><br>
-              즐겨찾기는 브라우저에 쿠키를 통해 저장해요.<br>
-              쿠키를 삭제하시면 즐겨찾기도 삭제돼요.
-            </div>
-          `,
-          confirmButtonText: '알겠어요',
-        });
-      }
+          `, error.message)
+        })
+      })
 
       infoButton.addEventListener('click', () => {
         let html = `
-          <div style="line-height: 130%;"><br>
+          <div style="line-height: 130%"><br>
             <b>STORE MANAGER</b>입니다.<br>
             온라인 스토어의 판매 기록을 수집하실 수 있게 도와드려요!<br>
             클릭 몇 번으로 수천수만 제품의 변화를 기록해 보세요!
           </div>
-        `;
+        `
 
         swal.fire({
           title: '어서오세요!',
@@ -573,7 +649,7 @@
           swal.fire({
             title: '어떻게요?',
             html: `
-              <div style="line-height: 130%;"><br>
+              <div style="line-height: 130%"><br>
                 검색창에 스토어의 이름을 치세요, 완벽하게 안 쓰셔도 돼요!<br>
                 <div class="text-center">
                   <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
@@ -590,12 +666,12 @@
             swal.fire({
               title: '그래서요?',
               html: `
-                <div style="line-height: 160%;">
+                <div style="line-height: 160%">
                   성공적으로 스토어에 접속한 결과예요.
                   <div class="text-center">
                     <img src="https://imgur.com/x13joXj.png" width="454" height="81">
                   </div><br>
-                  <button type="button" class="btn btn-primary" style="font-size: 14px; padding: 4px 8px; margin: 3px 0px 0px 0px;">
+                  <button type="button" class="btn btn-primary" style="font-size: 14px; padding: 4px 8px; margin: 3px 0px 0px 0px">
                     업데이트
                   </button>
                   버튼을 누르면 제품 정보를 수집해요.<br>
@@ -613,10 +689,10 @@
               swal.fire({
                 title: '결과는요?',
                 html: `
-                  <div style="line-height: 160%;">
+                  <div style="line-height: 160%">
                     데이터를 선택하시면 다음과 같이 표시돼요.<br>
                     정렬 기준을 선택하시거나 다운로드 받으실 수도 있어요!<br><br>
-                    <div class="text-center" style="margin: 8px 0px;">
+                    <div class="text-center" style="margin: 8px 0px">
                       <img src="https://imgur.com/q1ZDJpG.png" width="454" height="322">
                     </div><br>
                     데이터 관리에 대해서는 걱정하지 마세요,<br>
@@ -624,33 +700,43 @@
                   </div>
                 `,
                 confirmButtonText: '멋지네요!',
-              });
-            });
-          });
-        });
-      });
+              })
+            })
+          })
+        })
+      })
 
-      function showError(res, error) {
-        if (res.isConfirmed) {
-          swal.fire({
-            title: '원인',
-            html: error,
-            confirmButtonText: '알겠어요',
-            showCancelButton: false,
-            heightAuto: false,
-          });
-        }
+      function showError(html, error) {
+        swal.fire({
+          title: '이런!',
+          html: html,
+          icon: 'error',
+          confirmButtonText: '어떻게 된거죠?',
+          cancelButtonText: '알겠어요',
+          showCancelButton: true,
+          heightAuto: false,
+        }).then((res) => {
+          if (res.isConfirmed) {
+            swal.fire({
+              title: '원인',
+              html: error,
+              confirmButtonText: '알겠어요',
+              showCancelButton: false,
+              heightAuto: false,
+            })
+          }
+        })
       }
 
       searchInput.addEventListener('keyup', (e) => {
         if (e.code == 'Enter') {
-          search();
+          search()
         }
-      });
+      })
 
       searchButton.addEventListener('click', () => {
-        search();
-      });
+        search()
+      })
 
       function search() {
         if (searchInput.value.trim().length == 0) {
@@ -659,9 +745,9 @@
             text: '검색창이 너무 허전해요.',
             confirmButtonText: '알겠어요',
             heightAuto: false,
-          });
+          })
 
-          return;
+          return
         }
 
         swal.fire({
@@ -671,20 +757,20 @@
           showConfirmButton: false,
           allowOutsideClick: false,
           heightAuto: false,
-        });
+        })
 
         fetch('/smartstore/search', {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ query: searchInput.value }),
         }).then(async (res) => {
-          let json = await res.json();
-          swal.close();
+          let json = await res.json()
+          swal.close()
 
-          if (json.result == 'OK') {
+          if (json.result == 'ok') {
             swal.fire({
               title: '스토어 발견!',
               html: `'${json.store_title}' 스토어로 진행 하시겠어요?`,
@@ -695,42 +781,26 @@
               heightAuto: false,
             }).then((res) => {
               if (res.isConfirmed) {
-                let form = document.createElement('form');
-                form.style.visibility = 'hidden';
-                form.method = 'GET';
-                form.action = `/smartstore/${json.store_url}`;
-                document.body.appendChild(form);
-                form.submit();
+                let form = document.createElement('form')
+                form.style.visibility = 'hidden'
+                form.method = 'GET'
+                form.action = `/smartstore/${json.store_url}`
+                document.body.appendChild(form)
+                form.submit()
               }
-            });
+            })
           }
           else {
-            swal.fire({
-              title: '이런!',
-              html: `
-                <div style="line-height: 130%;">
-                  스토어를 검색했지만 찾지 못했어요.<br>
-                  검색어를 다시 한 번 확인해주세요.
-                </div>
-              `,
-              icon: 'error',
-              confirmButtonText: '어떻게 된거죠?',
-              cancelButtonText: '알겠어요',
-              showCancelButton: true,
-              heightAuto: false,
-            }).then((res) => showError(res, json.error));
+            showError(`
+              <div style="line-height: 130%">
+                스토어를 검색했지만 찾지 못했어요.<br>
+                검색어를 다시 한 번 확인해주세요.
+              </div>
+            `, json.error)
           }
         }).catch((error) => {
-          swal.fire({
-            title: '이런!',
-            html: '스토어를 검색하지 못했어요.',
-            icon: 'error',
-            confirmButtonText: '어떻게 된거죠?',
-            cancelButtonText: '알겠어요',
-            showCancelButton: true,
-            heightAuto: false,
-          }).then((res) => showError(res, error.message));
-        });
+          showError('스토어를 검색하지 못했어요.', error.message)
+        })
       }
     </script>
 </body>
