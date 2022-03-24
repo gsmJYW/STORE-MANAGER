@@ -603,7 +603,7 @@
             function getOption(time) {
                 let value = time
                 let date = new Date(time)
-                let text = `${date.getUTCFullYear()}. ${date.getUTCMonth().toString().padStart(2, '0')}. ${date.getUTCDay().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
+                let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
                 return new Option(text, value)
             }
 
@@ -1179,13 +1179,13 @@
 
                     if (oldProductList.length > 0) {
                         let date = new Date(Number(oldSelect.value))
-                        let text = `${date.getUTCFullYear()}. ${date.getUTCMonth().toString().padStart(2, '0')}. ${date.getUTCDay().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
+                        let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
                         dateList.push(text)
                     }
 
                     if (newProductList.length > 0) {
                         let date = new Date(Number(newSelect.value))
-                        let text = `${date.getUTCFullYear()}. ${date.getUTCMonth().toString().padStart(2, '0')}. ${date.getUTCDay().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
+                        let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
                         dateList.push(text)
                     }
 
