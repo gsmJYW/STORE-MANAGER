@@ -17,7 +17,7 @@ const __dirname = dirname(__filename)
 
 import admin from 'firebase-admin'
 import { getAuth } from 'firebase-admin/auth'
-import serviceAccount from './store-manager-5d527-firebase-adminsdk-2ovpp-f0b6ef3a8a.json'
+import serviceAccount from './store-manager-5d527-firebase-adminsdk-2ovpp-f0b6ef3a8a.json' assert { type: 'json' }
 
 const credentials = {
   key: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.key.pem'),
@@ -72,7 +72,7 @@ app.get('/visitor', async (req, res) => {
 })
 
 app.post('/recentVisitorList', async (req, res) => {
-  let idToken = req.body.id_token
+  let idToken = req.body.idToken
   let conn
 
   try {
@@ -84,11 +84,18 @@ app.post('/recentVisitorList', async (req, res) => {
 
     if (result[0].length > 0) {
       if (result[0][0].permission == 1) {
-        result = await conn.query(`SELECT *, GREATEST(date, time) as datetime FROM query GROUP BY uid`)
+        result = await conn.query(`SELECT *, MAX(second) as second FROM query GROUP BY uid`)
+        let visitorList = result[0]
+
+        for (let visitor of visitorList) {
+          let user = await auth.getUser(visitor.uid)
+          visitor.email = user.email
+          visitor.displayName = user.displayName
+        }
 
         res.json({
           result: 'ok',
-          visitorList: result[0],
+          visitorList: visitorList,
         })
 
         return
@@ -106,7 +113,7 @@ app.post('/recentVisitorList', async (req, res) => {
 })
 
 app.post('/signin', async (req, res) => {
-  let idToken = req.body.id_token
+  let idToken = req.body.idToken
   let conn
 
   try {
@@ -134,7 +141,7 @@ app.post('/signin', async (req, res) => {
 })
 
 app.post('/user', async (req, res) => {
-  let idToken = req.body.id_token
+  let idToken = req.body.idToken
   let conn
 
   try {
@@ -163,7 +170,7 @@ app.post('/user', async (req, res) => {
 })
 
 app.post('/quota', async (req, res) => {
-  let idToken = req.body.id_token
+  let idToken = req.body.idToken
   let conn
 
   try {
@@ -176,7 +183,7 @@ app.post('/quota', async (req, res) => {
     let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
     let isAdmin = result[0][0].permission == 1
 
-    result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND date = '${dateFormat(now, 'yyyy-mm-dd', true)}'`)
+    result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND second = ${getSecond(now)}`)
 
     res.json({
       result: 'ok',
@@ -198,10 +205,10 @@ app.post('/quota', async (req, res) => {
 })
 
 app.post('/user/update', async (req, res) => {
-  let idToken = req.body.id_token
-  let loadAll = req.body.load_all
-  let highlightChanges = req.body.highlight_changes
-  let sortMethod = req.body.sort_method
+  let idToken = req.body.idToken
+  let loadAll = req.body.loadAll
+  let highlightChanges = req.body.highlightChanges
+  let sortMethod = req.body.sortMethod
   let conn
 
   try {
@@ -227,8 +234,8 @@ app.post('/user/update', async (req, res) => {
 })
 
 app.post('/bookmarkList', async (req, res) => {
-  let idToken = req.body.id_token
-  let storeUrl = req.body.store_url
+  let idToken = req.body.idToken
+  let storeUrl = req.body.storeUrl
   let conn
 
   try {
@@ -263,8 +270,8 @@ app.post('/bookmarkList', async (req, res) => {
 })
 
 app.post('/bookmark/update', async (req, res) => {
-  let idToken = req.body.id_token
-  let storeUrl = req.body.store_url
+  let idToken = req.body.idToken
+  let storeUrl = req.body.storeUrl
   let conn
 
   try {
@@ -292,8 +299,8 @@ app.post('/bookmark/update', async (req, res) => {
 })
 
 app.post('/bookmark/delete', async (req, res) => {
-  let idToken = req.body.id_token
-  let storeUrl = req.body.store_url
+  let idToken = req.body.idToken
+  let storeUrl = req.body.storeUrl
   let conn
 
   try {
@@ -321,8 +328,8 @@ app.post('/bookmark/delete', async (req, res) => {
 })
 
 app.post('/save', async (req, res) => {
-  let idToken = req.body.id_token
-  let storeUrl = req.body.store_url
+  let idToken = req.body.idToken
+  let storeUrl = req.body.storeUrl
   let conn
 
   try {
@@ -335,7 +342,7 @@ app.post('/save', async (req, res) => {
     let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
 
     if (result[0][0].permission == 0) {
-      let result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND date = '${dateFormat(now, 'yyyy-mm-dd', true)}' AND type = 3`)
+      let result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND day = ${getDay(now)} AND type = 3`)
 
       let quotaLimit = 10
 
@@ -352,8 +359,8 @@ app.post('/save', async (req, res) => {
     }
 
     await conn.query(`
-      INSERT INTO query (uid, storeUrl, date, time, type, amount) VALUES ('${uid}', '${storeUrl}', '${dateFormat(now, 'yyyy-mm-dd', true)}', '${dateFormat(now, 'HH:MM:ss.l')}', 3, 1)
-      ON DUPLICATE KEY UPDATE time = '${dateFormat(now, 'HH:MM:ss.l')}', amount = amount + 1
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 3, 1)
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + 1
     `)
 
     res.json({ result: 'ok' })
@@ -436,8 +443,8 @@ app.post('/smartstore/search', async (req, res) => {
 })
 
 app.post('/history', async (req, res) => {
-  let idToken = req.body.id_token
-  let storeUrl = req.body.store_url
+  let idToken = req.body.idToken
+  let storeUrl = req.body.storeUrl
 
   try {
     let decodedToken = await auth.verifyIdToken(idToken)
@@ -456,11 +463,11 @@ app.post('/history', async (req, res) => {
     }
 
     await conn.query(`
-      INSERT INTO query (uid, storeUrl, date, time, type, amount) VALUES ('${uid}', '${storeUrl}', '${dateFormat(now, 'yyyy-mm-dd', true)}', '${dateFormat(now, 'HH:MM:ss.l')}', 0, 1)
-      ON DUPLICATE KEY UPDATE time = '${dateFormat(now, 'HH:MM:ss.l')}', amount = amount + 1
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 0, 1)
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + 1
     `)
 
-    result = await conn.query(`SELECT time FROM history WHERE storeUrl = '${storeUrl}' GROUP BY time`)
+    result = await conn.query(`SELECT FROM_UNIXTIME(minute * 60) as time FROM history WHERE storeUrl = '${storeUrl}'`)
     let history = []
 
     for (let row of result[0]) {
@@ -482,8 +489,8 @@ app.post('/history', async (req, res) => {
 })
 
 app.post('/productList', async (req, res) => {
-  let idToken = req.body.id_token
-  let storeUrl = req.body.store_url
+  let idToken = req.body.idToken
+  let storeUrl = req.body.storeUrl
   let time = req.body.time
 
   let conn
@@ -502,7 +509,7 @@ app.post('/productList', async (req, res) => {
         res.json({ result: 'no permission' })
       }
 
-      result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND date = '${dateFormat(now, 'yyyy-mm-dd', true)}' AND type = 1`)
+      result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid = '${uid}' AND day = ${getDay(now)} AND type = 1`)
 
       let quotaLimit = 100000
 
@@ -518,12 +525,12 @@ app.post('/productList', async (req, res) => {
       }
     }
 
-    result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`)
+    result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(new Date(time))}`)
     let productList = result[0]
 
     await conn.query(`
-      INSERT INTO query (uid, storeUrl, date, time, type, amount) VALUES ('${uid}', '${storeUrl}', '${dateFormat(now, 'yyyy-mm-dd', true)}', '${dateFormat(now, 'HH:MM:ss.l')}', 1, ${productList.length})
-      ON DUPLICATE KEY UPDATE time = '${dateFormat(now, 'HH:MM:ss.l')}', amount = amount + ${productList.length}
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 1, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
     `)
 
     res.json({
@@ -590,15 +597,15 @@ app.get('/smartstore/:endpoint', async (req, res) => {
     }
 
     let htmlString = data.toString()
-    htmlString = htmlString.replaceAll('{store_url}', storeUrl)
-    htmlString = htmlString.replaceAll('{store_title}', storeTitle)
+    htmlString = htmlString.replaceAll('$storeUrl', storeUrl)
+    htmlString = htmlString.replaceAll('$storeTitle', storeTitle)
     res.send(htmlString)
   })
 })
 
 app.post('/smartstore/update', async (req, res) => {
-  let idToken = req.body.id_token
-  let storeUrl = req.body.store_url
+  let idToken = req.body.idToken
+  let storeUrl = req.body.storeUrl
   let conn
 
   try {
@@ -606,13 +613,12 @@ app.post('/smartstore/update', async (req, res) => {
     let uid = decodedToken.uid
 
     let now = await getKST()
-    let time = parseInt(dateFormat(now, 'yyyymmddHHMM', true))
 
     conn = await pool.getConnection()
     let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
 
     if (result[0][0].permission == 0) {
-      result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND date = '${dateFormat(now, 'yyyy-mm-dd', true)}' AND type = 2`)
+      result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND day = ${getDay(now)} AND type = 2`)
 
       let quotaLimit = 25000
 
@@ -628,45 +634,47 @@ app.post('/smartstore/update', async (req, res) => {
       }
     }
 
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`)
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
     let productList
 
     if (result[0].length > 0) {
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`)
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
       productList = result[0]
 
       res.json({
         result: 'already exists',
-        time: time,
+        time: new Date(history.minute * 60 * 1000),
         productList: productList,
       })
+      return
     }
-    else {
-      let productAmount = await getSmartstoreProductAmount(storeUrl)
-      productList = await getSmartstoreProductList(storeUrl, productAmount)
 
-      let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES '
+    let productAmount = await getSmartstoreProductAmount(storeUrl)
+    productList = await getSmartstoreProductList(storeUrl, productAmount)
 
-      for (let product of productList) {
-        let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-        query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
-      }
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
 
-      query = query.substring(0, query.length - 2)
-      await conn.query(query)
-      await conn.query(`REPLACE INTO history (storeUrl, time) VALUES ('${storeUrl}', ${time})`)
-
-      await conn.query(`
-        INSERT INTO query (uid, storeUrl, date, time, type, amount) VALUES ('${uid}', '${storeUrl}', '${dateFormat(now, 'yyyy-mm-dd', true)}', '${dateFormat(now, 'HH:MM:ss.l')}', 2, ${productList.length})
-        ON DUPLICATE KEY UPDATE time = '${dateFormat(now, 'HH:MM:ss.l')}', amount = amount + ${productList.length}
-      `)
-
-      res.json({
-        result: 'ok',
-        time: time,
-        productList: productList,
-      })
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
     }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+
+    await conn.query(`
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
+    `)
+
+    res.json({
+      result: 'ok',
+      time: new Date(getMinute(now) * 60 * 1000),
+      productList: productList,
+    })
   }
   catch (error) {
     res.json({
@@ -687,12 +695,11 @@ app.get('/n09', async (req, res) => {
 
 app.post('/n09/update', async (req, res) => {
   let storeUrl = 'https://n09.co.kr'
-  let idToken = req.body.id_token
+  let idToken = req.body.idToken
   let conn
 
   try {
     let now = await getKST()
-    let time = parseInt(dateFormat(now, 'yyyymmddHHMM', true))
 
     let decodedToken = await auth.verifyIdToken(idToken)
     let uid = decodedToken.uid
@@ -705,43 +712,47 @@ app.post('/n09/update', async (req, res) => {
       return;
     }
 
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`)
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+    let productList
 
     if (result[0].length > 0) {
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`)
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+      productList = result[0]
 
       res.json({
-        result: 'ok',
-        time: time,
-        productList: result[0],
-      })
-    }
-    else {
-      let productAmount = await getN09ProductAmount()
-      let productList = await getN09ProductList(productAmount)
-
-      let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut) VALUES '
-
-      for (let product of productList) {
-        let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-        query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
-      }
-
-      query = query.substring(0, query.length - 2)
-      await conn.query(query)
-      await conn.query(`REPLACE INTO history (storeUrl, time) VALUES ('${storeUrl}', ${time})`)
-
-      await conn.query(`
-        INSERT INTO query (uid, storeUrl, date, time, type, amount) VALUES ('${uid}', '${storeUrl}', '${dateFormat(now, 'yyyy-mm-dd', true)}', '${dateFormat(now, 'HH:MM:ss.l')}', 2, ${productList.length})
-        ON DUPLICATE KEY UPDATE time = '${dateFormat(now, 'HH:MM:ss.l')}', amount = amount + ${productList.length}
-      `)
-
-      res.json({
-        result: 'ok',
-        time: time,
+        result: 'already exists',
+        time: new Date(history.minute * 60 * 1000),
         productList: productList,
       })
+      return
     }
+
+    let productAmount = await getN09ProductAmount()
+    productList = await getN09ProductList(productAmount)
+
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
+
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
+    }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+
+    await conn.query(`
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
+    `)
+
+    res.json({
+      result: 'ok',
+      time: new Date(getMinute(now) * 60 * 1000),
+      productList: productList,
+    })
   }
   catch (error) {
     res.json({
@@ -762,12 +773,11 @@ app.get('/hyundai/auton', async (req, res) => {
 
 app.post('/hyundai/auton/update', async (req, res) => {
   let storeUrl = 'https://hyundai.auton.kr'
-  let idToken = req.body.id_token
+  let idToken = req.body.idToken
   let conn
 
   try {
     let now = await getKST()
-    let time = parseInt(dateFormat(now, 'yyyymmddHHMM', true))
 
     let decodedToken = await auth.verifyIdToken(idToken)
     let uid = decodedToken.uid
@@ -780,121 +790,123 @@ app.post('/hyundai/auton/update', async (req, res) => {
       return;
     }
 
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND time = ${time}`)
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+    let productList
 
     if (result[0].length > 0) {
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND time = ${time}`)
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+      productList = result[0]
 
       res.json({
-        result: 'ok',
-        time: time,
-        productList: result[0],
-      })
-    }
-    else {
-      let categoryIdList = []
-
-      while (categoryIdList <= 0) {
-        categoryIdList = await getCarLifeMallCategoryIdList()
-      }
-
-      let categoryList = await getCarLifeMallCategoryList(categoryIdList)
-
-      while (true) {
-        let tempCategoryIdList = []
-
-        for (let index = categoryList.length - 1; index >= 0; index--) {
-          let category = categoryList[index]
-
-          if (isNaN(category.productAmount)) {
-            tempCategoryIdList.push(category.id)
-          }
-        }
-
-        if (tempCategoryIdList.length > 0) {
-          let tempCategoryList = await getCarLifeMallCategoryList(tempCategoryIdList)
-
-          for (let tempCategory of tempCategoryList) {
-            for (let category of categoryList) {
-              if (category.id == tempCategory.id) {
-                category.productAmount = tempCategory.productAmount
-              }
-            }
-          }
-        }
-        else {
-          break
-        }
-      }
-
-      let pageList = []
-
-      for (let category of categoryList) {
-        for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
-          pageList.push({
-            categoryId: category.id,
-            categoryTitle: category.title,
-            num: page,
-          })
-        }
-      }
-
-      pageList = await getCarLifeMallProductList(pageList)
-
-      while (true) {
-        let tempPageList = []
-
-        for (let page of pageList) {
-          if (page.productList.length <= 0) {
-            tempPageList.push(page)
-          }
-        }
-
-        if (tempPageList.length > 0) {
-          tempPageList = await getCarLifeMallProductList(tempPageList)
-
-          for (let tempPage of tempPageList) {
-            for (let page of pageList) {
-              if (tempPage.categoryId == page.categoryId && tempPage.num == page.num) {
-                page.productList = tempPage.productList
-              }
-            }
-          }
-        }
-        else {
-          break
-        }
-      }
-
-      let productList = []
-
-      for (let page of pageList) {
-        for (let product of page.productList) {
-          if (productList.filter((tempProduct) => tempProduct.id == product.id).length <= 0) {
-            productList.push(product)
-          }
-        }
-      }
-
-      console.log(productList)
-
-      let query = 'REPLACE INTO product (storeUrl, time, id, title, price, popularityIndex, isSoldOut, category) VALUES '
-
-      for (let product of productList) {
-        let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-        query += `('${storeUrl}', ${time}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
-      }
-
-      query = query.substring(0, query.length - 2)
-      await conn.query(query)
-      await conn.query(`REPLACE INTO history (storeUrl, time) VALUES ('${storeUrl}', ${time})`)
-
-      res.json({
-        result: 'ok',
-        time: time,
+        result: 'already exists',
+        time: new Date(history.minute * 60 * 1000),
         productList: productList,
       })
+      return
     }
+
+    let categoryIdList = []
+
+    while (categoryIdList <= 0) {
+      categoryIdList = await getCarLifeMallCategoryIdList()
+    }
+
+    let categoryList = await getCarLifeMallCategoryList(categoryIdList)
+
+    while (true) {
+      let tempCategoryIdList = []
+
+      for (let index = categoryList.length - 1; index >= 0; index--) {
+        let category = categoryList[index]
+
+        if (isNaN(category.productAmount)) {
+          tempCategoryIdList.push(category.id)
+        }
+      }
+
+      if (tempCategoryIdList.length > 0) {
+        let tempCategoryList = await getCarLifeMallCategoryList(tempCategoryIdList)
+
+        for (let tempCategory of tempCategoryList) {
+          for (let category of categoryList) {
+            if (category.id == tempCategory.id) {
+              category.productAmount = tempCategory.productAmount
+            }
+          }
+        }
+      }
+      else {
+        break
+      }
+    }
+
+    let pageList = []
+
+    for (let category of categoryList) {
+      for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
+        pageList.push({
+          categoryId: category.id,
+          categoryTitle: category.title,
+          num: page,
+        })
+      }
+    }
+
+    pageList = await getCarLifeMallProductList(pageList)
+
+    while (true) {
+      let tempPageList = []
+
+      for (let page of pageList) {
+        if (page.productList.length <= 0) {
+          tempPageList.push(page)
+        }
+      }
+
+      if (tempPageList.length > 0) {
+        tempPageList = await getCarLifeMallProductList(tempPageList)
+
+        for (let tempPage of tempPageList) {
+          for (let page of pageList) {
+            if (tempPage.categoryId == page.categoryId && tempPage.num == page.num) {
+              page.productList = tempPage.productList
+            }
+          }
+        }
+      }
+      else {
+        break
+      }
+    }
+
+    productList = []
+
+    for (let page of pageList) {
+      for (let product of page.productList) {
+        if (productList.filter((tempProduct) => tempProduct.id == product.id).length <= 0) {
+          productList.push(product)
+        }
+      }
+    }
+
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
+
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+    }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', '${getMinute(now)}')`)
+
+    res.json({
+      result: 'ok',
+      time: new Date(getMinute(now) * 60 * 1000),
+      productList: productList,
+    })
   }
   catch (error) {
     res.json({
@@ -909,10 +921,100 @@ app.post('/hyundai/auton/update', async (req, res) => {
   }
 })
 
+app.get('/autowash', async (req, res) => {
+  res.sendFile(__dirname + '/views/autowash.html')
+})
+
+app.post('/autowash/update', async (req, res) => {
+  let storeUrl = 'https://autowash.co.kr'
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let now = await getKST()
+
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return;
+    }
+
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+    let productList
+
+    if (result[0].length > 0) {
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+      productList = result[0]
+
+      res.json({
+        result: 'already exists',
+        time: new Date(history.minute * 60 * 1000),
+        productList: productList,
+      })
+      return
+    }
+
+    let categoryIdList = await getAutowashCategoryIdList()
+    let categoryList = await getAutowashCategoryList(categoryIdList)
+    productList = await getAutowashProductList(categoryList)
+
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
+
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+    }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+
+    await conn.query(`
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
+    `)
+
+    res.json({
+      result: 'ok',
+      time: new Date(getMinute(now) * 60 * 1000),
+      productList: productList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message == undefined ? error : error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+function getSecond(date) {
+  return parseInt(date.getTime() / 1000)
+}
+
+function getMinute(date) {
+  return parseInt(date.getTime() / 1000 / 60)
+}
+
+function getDay(date) {
+  return parseInt(date.getTime() / 1000 / 60 / 60 / 24)
+}
+
 async function getKST() {
   let now = await NTPClient.getNetworkTime()
-  let kst = new Date(now.getTime() + 1000 * 60 * 60 * 9)
-  return kst
+  return new Date(now.getTime() + 1000 * 60 * 60 * 9)
 }
 
 function searchNaver(query) {
@@ -984,7 +1086,7 @@ function getSmartstoreProductAmount(storeUrl) {
         let document = parser.parse(data)
 
         let productAmountElement = document.querySelector('._3-WhDl_6j2')
-        let productAmount = parseInt(productAmountElement.text.replace(/[^0-9]/g, ''))
+        let productAmount = Number(productAmountElement.text.replace(/[^0-9]/g, ''))
 
         resolve(productAmount)
       })
@@ -1018,10 +1120,10 @@ function getSmartstoreProductList(storeUrl, productAmount) {
               let page = pageElements.find(element => element.getAttribute('aria-current') == 'true')
 
               let product = {
-                id: parseInt(idElements[productIndex].getAttribute('href').split('/').pop()),
-                popularityIndex: (parseInt(page.text) - 1) * 80 + productIndex,
+                id: Number(idElements[productIndex].getAttribute('href').split('/').pop()),
+                popularityIndex: (Number(page.text) - 1) * 80 + productIndex,
                 title: titleElements[productIndex].text.trim(),
-                price: parseInt(priceElements[productIndex].text.replace(',', '')),
+                price: Number(priceElements[productIndex].text.replace(',', '')),
                 isSoldOut: false,
               }
 
@@ -1062,7 +1164,7 @@ function getCarLifeMallCategoryIdList() {
         let document = parser.parse(data)
         let links = document.getElementsByTagName('a')
 
-        let catergoryIdList = []
+        let categoryIdList = []
 
         for (let link of links) {
           let href = link.getAttribute('href')
@@ -1076,15 +1178,15 @@ function getCarLifeMallCategoryIdList() {
             let pcid = href.slice(0, href.indexOf(','))
 
             if (!isNaN(pcid)) {
-              let catergoryId = parseInt(pcid)
+              let categoryId = Number(pcid)
 
-              if (!catergoryIdList.includes(catergoryId)) {
-                catergoryIdList.push(catergoryId)
+              if (!categoryIdList.includes(categoryId)) {
+                categoryIdList.push(categoryId)
               }
             }
           }
         }
-        resolve(catergoryIdList)
+        resolve(categoryIdList)
       })
     }).on('error', (error) => reject(error))
   })
@@ -1119,7 +1221,7 @@ function getCarLifeMallCategoryList(categoryIdList) {
               }
             }
 
-            let productAmount = parseInt(flexText.slice(3, flexText.indexOf('개')))
+            let productAmount = Number(flexText.slice(3, flexText.indexOf('개')))
 
             categoryList.push({
               id: categoryId,
@@ -1180,7 +1282,7 @@ function getCarLifeMallProductList(pageList) {
               href = href.slice(0, href.indexOf(','))
 
               if (!isNaN(href)) {
-                idList.push(parseInt(href))
+                idList.push(Number(href))
               }
             }
           }
@@ -1189,7 +1291,7 @@ function getCarLifeMallProductList(pageList) {
             let product = {
               id: idList[productIndex],
               title: titleElements[productIndex].innerText.trim(),
-              price: parseInt(priceElements[productIndex].innerText.replace(/[^\d.]/g, '')),
+              price: Number(priceElements[productIndex].innerText.replace(/[^\d.]/g, '')),
               popularityIndex: (page.num - 1) * 100 + productIndex,
               isSoldOut: false,
               category: page.categoryTitle
@@ -1224,7 +1326,7 @@ function getN09ProductAmount() {
         let productAmountText = productAmountElement.innerText
         productAmountText = productAmountText.split(' : ')[1]
         productAmountText = productAmountText.split('개')[0]
-        let productAmount = parseInt(productAmountText)
+        let productAmount = Number(productAmountText)
         resolve(productAmount)
       })
     }).on('error', (error) => reject(error))
@@ -1258,7 +1360,7 @@ function getN09ProductList(productAmount) {
             let link = linkElement.getAttribute('href')
             link = link.split('=')[1]
             link = link.split('&')[0]
-            product.id = parseInt(link)
+            product.id = Number(link)
 
             let statusElements = item.getElementsByTagName('img')
             for (let statusElement of statusElements) {
@@ -1278,7 +1380,7 @@ function getN09ProductList(productAmount) {
               }
 
               if (span.innerText.endsWith('원')) {
-                product.price = parseInt(span.innerText.replace(/[^\d.]/g, ''))
+                product.price = Number(span.innerText.replace(/[^\d.]/g, ''))
               }
             }
 
@@ -1294,6 +1396,154 @@ function getN09ProductList(productAmount) {
           })
         })
       }).on('error', (error) => reject(error))
+    }
+  })
+}
+
+function getAutowashCategoryIdList() {
+  return new Promise((resolve, reject) => {
+    https.get('https://autowash.co.kr/goods/goods_list.php?cateCd=032', (res) => {
+      let data = ''
+
+      res.on('error', (error) => reject(error))
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      res.on('end', () => {
+        let document = parser.parse(data)
+        let links = document.getElementsByTagName('a')
+
+        let categoryIdList = []
+
+        for (let link of links) {
+          let categoryId = link.getAttribute('data-cate')
+
+          if (categoryId == undefined) {
+            let href = link.getAttribute('href')
+
+            if (href.includes('cateCd=')) {
+              categoryId = href.split('cateCd=')[1]
+
+              if (categoryId.length != 3) {
+                continue
+              }
+            }
+            else {
+              continue
+            }
+          }
+
+          if (categoryIdList.filter((element) => element == categoryId).length <= 0) {
+            categoryIdList.push(categoryId)
+          }
+        }
+        resolve(categoryIdList)
+      })
+    }).on('error', (error) => reject(error))
+  })
+}
+
+function getAutowashCategoryList(categoryIdList) {
+  return new Promise((resolve, reject) => {
+    let categoryList = []
+    let categories = categoryIdList.length
+
+    for (let categoryId of categoryIdList) {
+      https.get(`https://autowash.co.kr/goods/goods_list.php?cateCd=${categoryId}`, (res) => {
+        let data = ''
+
+        res.on('error', (error) => reject(error))
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          let document = parser.parse(data)
+          let categoryTitleElement = document.querySelector('.this_category')
+          let productAmountElement = document.querySelector('.pick_list_num')
+
+          let productAmount = Number(productAmountElement.innerText.replace(/[^\d.]/g, ''))
+
+          if (productAmount == 0) {
+            categories--
+          }
+          else {
+            categoryList.push({
+              id: categoryId,
+              title: categoryTitleElement.innerText.trim(),
+              productAmount: productAmount,
+            })
+          }
+
+          if (categoryList.length >= categories) {
+            resolve(categoryList)
+          }
+        })
+      }).on('error', (error) => reject(error))
+    }
+  })
+}
+
+function getAutowashProductList(categoryList) {
+  return new Promise((resolve, reject) => {
+    let productList = []
+    let productAmount = 0
+
+    for (let category of categoryList) {
+      productAmount += category.productAmount
+
+      for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
+        https.get(`https://autowash.co.kr/goods/goods_list.php?cateCd=${category.id}&page=${page}&start_price=&end_price=&prc_type=0&pageNum=100&sort=sellcnt`, (res) => {
+          let data = ''
+
+          res.on('error', (error) => reject(error))
+          res.on('data', (chunk) => {
+            data += chunk
+          })
+          res.on('end', () => {
+            let document = parser.parse(data)
+            let mainGoodsList = document.querySelector('.item_gallery_type.main_goods_list')
+            let itemContentList = mainGoodsList.querySelectorAll('.item_cont')
+
+            itemContentList.forEach((itemContent, index) => {
+              let id
+              let linkElements = itemContent.getElementsByTagName('a')
+
+              for (let linkElement of linkElements) {
+                let href = linkElement.getAttribute('href')
+
+                if (href.includes('goodsNo')) {
+                  href = href.split('goodsNo=')[1]
+                  href = href.split('&')[0]
+                  id = Number(href)
+                }
+              }
+
+              let title = itemContent.querySelector('.item_name').innerText.trim()
+              let priceElement = itemContent.querySelector('.item_price')
+              let price = Number(priceElement.innerText.replace(/[^\d.]/g, ''))
+
+              let product = {
+                id: id,
+                title: title,
+                price: price,
+                popularityIndex: (page - 1) * 100 + index,
+                isSoldOut: false,
+                category: category.title,
+              }
+
+              if (itemContent.querySelectorAll('.item_soldout_bg').length > 0) {
+                product.isSoldOut = true
+              }
+
+              productList.push(product)
+            })
+
+            if (productList.length >= productAmount) {
+              resolve(productList)
+            }
+          })
+        }).on('error', (error) => reject(error))
+      }
     }
   })
 }
