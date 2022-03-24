@@ -222,7 +222,7 @@
                             'Accept': 'application/json',
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ id_token: await user.getIdToken() }),
+                        body: JSON.stringify({ idToken: await user.getIdToken() }),
                     }).then(async (res) => {
                         let json = await res.json()
                         if (json.result == 'ok') {
@@ -257,8 +257,8 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            id_token: await user.getIdToken(),
-                            store_url: storeUrl,
+                            idToken: await user.getIdToken(),
+                            storeUrl: storeUrl,
                         }),
                     }).then(async (res) => {
                         let json = await res.json()
@@ -273,12 +273,13 @@
                             return
                         }
 
-                        historyList = json.history
-                        historyList.sort((a, b) => b - a)
+                        json.history.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
 
-                        for (let history of historyList) {
-                            oldSelect.add(getOption(history))
-                            newSelect.add(getOption(history))
+                        for (let history of json.history) {
+                            let time = new Date(history).getTime()
+                            oldSelect.add(getOption(time))
+                            newSelect.add(getOption(time))
+                            historyList.push(time)
                         }
 
                         swal.close()
@@ -286,7 +287,12 @@
                         if (historyList.length == 0) {
                             swal.fire({
                                 title: '처음이세요?',
-                                html: '<div style="line-height: 130%">아직 제품 기록이 없는 스토어에요.<br>업데이트 버튼을 눌러 첫 기록을 남겨보세요!</div>',
+                                html: `
+                                    <div style="line-height: 130%">
+                                        아직 제품 기록이 없는 스토어에요.<br>
+                                        업데이트 버튼을 눌러 첫 기록을 남겨보세요!
+                                    </div>
+                                `,
                                 confirmButtonText: '알겠어요',
                                 showCancelButton: false,
                             })
@@ -331,16 +337,16 @@
                                     'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                    store_url: storeUrl,
-                                    time: oldSelect.value,
-                                    id_token: await user.getIdToken(),
+                                    storeUrl: storeUrl,
+                                    time: new Date(Number(oldSelect.value)),
+                                    idToken: await user.getIdToken(),
                                 }),
                             }).then(async (res) => {
                                 let json = await res.json()
 
                                 if (json.result != 'ok') {
                                     if (json.result == 'quota exceeded') {
-                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, 100000)
+                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
                                     }
                                     else if (json.result == 'error') {
                                         showOldSelectError(json.error)
@@ -395,9 +401,9 @@
                                     'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                    store_url: storeUrl,
-                                    time: newSelect.value,
-                                    id_token: await user.getIdToken(),
+                                    storeUrl: storeUrl,
+                                    time: new Date(Number(newSelect.value)),
+                                    idToken: await user.getIdToken(),
                                 }),
                             }).then(async (res) => {
                                 let json = await res.json()
@@ -435,14 +441,27 @@
                                     'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                    store_url: storeUrl,
-                                    id_token: await user.getIdToken(),
+                                    idToken: await user.getIdToken(),
                                 }),
                             }).then(async (res) => {
                                 let json = await res.json()
                                 let html = '확인 하시겠어요?'
 
+                                let time = new Date(json.time).getTime()
+
                                 if (json.result == 'already exists') {
+                                    for (let history of historyList) {
+                                        if (parseInt(time / 1000 / 60) == parseInt(history / 1000 / 60)) {
+                                            showWarning(`
+                                                <div style="line-height: 130%">
+                                                    이미 업데이트 되어있어요.<br>
+                                                    업데이트는 1분 단위로 하실 수 있어요.
+                                                </div>
+                                            `)
+                                            return
+                                        }
+                                    }
+
                                     html = `
                                         <span style="line-height: 130%">
                                             이미 누군가 업데이트 했어요!<br>
@@ -462,18 +481,6 @@
                                             </div>
                                         `, json.error)
                                     }
-                                    return
-                                }
-
-                                let time = json.time
-
-                                if (historyList.includes(time)) {
-                                    showWarning(`
-                                        <div style="line-height: 130%">
-                                            이미 업데이트 되어있어요.<br>
-                                            업데이트는 1분마다 하실 수 있어요.
-                                        </div>
-                                    `)
                                     return
                                 }
 
@@ -593,9 +600,10 @@
 
             showLoading('제품 기록들 목록을 불러오는 중이에요.')
 
-            function getOption(value) {
-                let text = value.toString()
-                text = `${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}:${text.slice(10, 12)}`
+            function getOption(time) {
+                let value = time
+                let date = new Date(time)
+                let text = `${date.getUTCFullYear()}. ${date.getUTCMonth().toString().padStart(2, '0')}. ${date.getUTCDay().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
                 return new Option(text, value)
             }
 
@@ -1053,7 +1061,7 @@
 
                     a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
                     a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,42}/g).join('<br>')
+                    a.innerHTML = row.title.match(/.{1,40}/g).join('<br>')
 
                     let th2 = document.createElement('th')
                     th2.appendChild(a)
@@ -1088,7 +1096,7 @@
 
                     a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
                     a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,42}/g).join('<br>')
+                    a.innerHTML = row.title.match(/.{1,40}/g).join('<br>')
 
                     let th2 = document.createElement('th')
                     th2.appendChild(a)
@@ -1126,8 +1134,8 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        id_token: await user.getIdToken(),
-                        store_url: storeUrl,
+                        idToken: await user.getIdToken(),
+                        storeUrl: storeUrl,
                     }),
                 }).then(async (res) => {
                     let json = await res.json()
@@ -1151,13 +1159,15 @@
                     let dateList = []
 
                     if (oldProductList.length > 0) {
-                        let text = oldSelect.value.toString()
-                        dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`)
+                        let date = new Date(Number(oldSelect.value))
+                        let text = `${date.getUTCFullYear()}. ${date.getUTCMonth().toString().padStart(2, '0')}. ${date.getUTCDay().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
+                        dateList.push(text)
                     }
 
                     if (newProductList.length > 0) {
-                        let text = newSelect.value.toString()
-                        dateList.push(`${text.slice(0, 4)}. ${text.slice(4, 6)}. ${text.slice(6, 8)}. ${text.slice(8, 10)}_${text.slice(10, 12)}`)
+                        let date = new Date(Number(newSelect.value))
+                        let text = `${date.getUTCFullYear()}. ${date.getUTCMonth().toString().padStart(2, '0')}. ${date.getUTCDay().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
+                        dateList.push(text)
                     }
 
                     let filename = dateList.join(' → ')
