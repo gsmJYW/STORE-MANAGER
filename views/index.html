@@ -205,7 +205,7 @@
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ id_token: idToken }),
+            body: JSON.stringify({ idToken: idToken }),
           }).catch()
 
           fetch('/user', {
@@ -214,7 +214,7 @@
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ id_token: idToken }),
+            body: JSON.stringify({ idToken: idToken }),
           }).then(async (res) => {
             let json = await res.json()
             if (json.user.permission == 1) {
@@ -232,10 +232,14 @@
                       <!--비공개 스토어<br>-->
                       <button type="button" class="btn btn-primary" onclick="window.open('/n09','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
                         엔공구 공식 쇼핑몰
-                      </button><br>
+                      </button>
                       <button type="button" class="btn btn-primary" onclick="window.open('/hyundai/auton','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
                         카라이프몰
-                      </button><!--<br><br>
+                      </button>
+                      <button type="button" class="btn btn-primary" onclick="window.open('/autowash','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
+                        오토워시 공식 스토어
+                      </button>
+                      <!--<br><br>
                       정보 열람<br>
                       <button type="button" class="btn btn-primary" onclick="window.open('/visitor','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
                         유저 접속 기록
@@ -257,7 +261,7 @@
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ id_token: idToken }),
+            body: JSON.stringify({ idToken: idToken }),
           }).then(async (res) => {
             let json = await res.json()
             if (json.result == 'ok') {
@@ -418,7 +422,7 @@
             'Accept': 'application/json',
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ id_token: await user.getIdToken() }),
+          body: JSON.stringify({ idToken: await user.getIdToken() }),
         }).then(async (res) => {
           let json = await res.json()
           if (json.result == 'ok') {
@@ -527,10 +531,10 @@
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
-                    id_token: await user.getIdToken(),
-                    load_all: loadAll.checked ? 1 : 0,
-                    highlight_changes: highlightChanges.checked ? 1 : 0,
-                    sort_method: byRecent.checked ? 0 : 1,
+                    idToken: await user.getIdToken(),
+                    loadAll: loadAll.checked ? 1 : 0,
+                    highlightChanges: highlightChanges.checked ? 1 : 0,
+                    sortMethod: byRecent.checked ? 0 : 1,
                   }),
                 }).then(async (res) => {
                   let json = await res.json()
@@ -577,7 +581,7 @@
             'Accept': 'application/json',
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ id_token: await user.getIdToken() }),
+          body: JSON.stringify({ idToken: await user.getIdToken() }),
         }).then(async (res) => {
           let json = await res.json()
           if (json.result == 'ok') {
