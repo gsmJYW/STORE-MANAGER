@@ -574,9 +574,24 @@ app.get('/smartstore/:endpoint', async (req, res) => {
       storeTitle = await searchSmartstore(storeUrl)
       await conn.query(`
         INSERT INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')
-        ON DUPLICATE KEY title = '${storeTitle}'
+        ON DUPLICATE KEY UPDATE title = '${storeTitle}'
       `)
     }
+
+    fs.readFile(__dirname + '/views/smartstore.html', (error, data) => {
+      if (error != null) {
+        res.json({
+          result: 'error',
+          error: error.message == undefined ? error : error.message,
+        })
+        return
+      }
+
+      let htmlString = data.toString()
+      htmlString = htmlString.replaceAll('$storeUrl', storeUrl)
+      htmlString = htmlString.replaceAll('$storeTitle', storeTitle)
+      res.send(htmlString)
+    })
   }
   catch (error) {
     res.sendFile(__dirname + '/views/storeNotFound.html')
@@ -586,21 +601,6 @@ app.get('/smartstore/:endpoint', async (req, res) => {
       conn.release()
     }
   }
-
-  fs.readFile(__dirname + '/views/smartstore.html', (error, data) => {
-    if (error != null) {
-      res.json({
-        result: 'error',
-        error: error.message == undefined ? error : error.message,
-      })
-      return
-    }
-
-    let htmlString = data.toString()
-    htmlString = htmlString.replaceAll('$storeUrl', storeUrl)
-    htmlString = htmlString.replaceAll('$storeTitle', storeTitle)
-    res.send(htmlString)
-  })
 })
 
 app.post('/smartstore/update', async (req, res) => {
@@ -1060,7 +1060,7 @@ function searchSmartstore(storeUrl) {
         let errorElement = document.querySelector('._141KVzmWyN')
 
         if (titleElements.length > 0) {
-          let storeTitle = titleElements[0].text
+          let storeTitle = titleElements[0].innerText
 
           if (errorElement != undefined) {
             reject(errorElement.innerHTML)
@@ -1086,7 +1086,7 @@ function getSmartstoreProductAmount(storeUrl) {
         let document = parser.parse(data)
 
         let productAmountElement = document.querySelector('._3-WhDl_6j2')
-        let productAmount = Number(productAmountElement.text.replace(/[^0-9]/g, ''))
+        let productAmount = Number(productAmountElement.innerText.replace(/[^0-9]/g, ''))
 
         resolve(productAmount)
       })
@@ -1098,8 +1098,8 @@ function getSmartstoreProductList(storeUrl, productAmount) {
   return new Promise((resolve, reject) => {
     let productList = []
 
-    for (let page = 0; page < Math.ceil(productAmount / 80); page++) {
-      https.get(`${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page + 1}&size=80`, (res) => {
+    for (let page = 1; page <= Math.ceil(productAmount / 80); page++) {
+      https.get(`${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page}&size=80`, (res) => {
         let data = ''
 
         res.on('error', (error) => reject(error))
@@ -1108,43 +1108,32 @@ function getSmartstoreProductList(storeUrl, productAmount) {
         })
         res.on('end', () => {
           let document = parser.parse(data)
+          let li = document.querySelectorAll('._3S7Ho5J2Ql')
 
-          let idElements = document.querySelectorAll('._1vVKEk_wsi')
-          let titleElements = document.querySelectorAll('._1Zvjahn0GA')
-          let priceElements = document.querySelectorAll('._22XUYkkUGJ')
-          let soldOutElements = document.querySelectorAll('._1NtVbWcccv')
-          let pageElements = document.querySelectorAll('.UWN4IvaQza')
+          li.forEach((item, index) => {
+            let linkElement = item.getElementsByTagName('a')[0]
+            let titleElement = item.querySelector('._1Zvjahn0GA')
+            let priceElement = item.querySelector('._3_9J443eIx')
 
-          for (let productIndex = 0; productIndex < idElements.length; productIndex++) {
-            try {
-              let page = pageElements.find(element => element.getAttribute('aria-current') == 'true')
-
-              let product = {
-                id: Number(idElements[productIndex].getAttribute('href').split('/').pop()),
-                popularityIndex: (Number(page.text) - 1) * 80 + productIndex,
-                title: titleElements[productIndex].text.trim(),
-                price: Number(priceElements[productIndex].text.replace(',', '')),
-                isSoldOut: false,
-              }
-
-              for (let childNode of soldOutElements[productIndex].childNodes) {
-                if (childNode.toString().includes('_1eB0tn9wSc')) {
-                  product.isSoldOut = true
-                }
-              }
-              productList.push(product)
+            let product = {
+              id: Number(linkElement.getAttribute('href').split('/').pop()),
+              popularityIndex: (page - 1) * 80 + index,
+              title: titleElement.innerText.trim(),
+              price: Number(priceElement.innerText.replace(/[^\d.]/g, '')),
+              isSoldOut: false,
             }
-            catch (error) {
-              continue
+
+            if (item.querySelectorAll('_3Btky8fCyp').length > 0) {
+              product.isSoldOut = true
             }
-            finally {
-              productAmount--
-            }
+
+            productList.push(product)
+            productAmount--
 
             if (productAmount <= 0) {
               resolve(productList)
             }
-          }
+          })
         })
       }).on('error', (error) => reject(error))
     }
