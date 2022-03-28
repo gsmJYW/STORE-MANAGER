@@ -122,14 +122,17 @@ app.post('/signin', async (req, res) => {
     let user = await auth.getUser(uid)
 
     conn = await pool.getConnection()
+    
     await conn.query(`
       INSERT INTO user (uid, email, name) VALUES ('${uid}', '${user.email}', '${user.displayName}')
       ON DUPLICATE KEY UPDATE user.email = '${user.email}', name = '${user.displayName}'
     `)
+    
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
 
     res.json({
       result: 'ok',
-      uid: uid,
+      user: result[0][0],
     })
   }
   catch (error) {
@@ -183,7 +186,7 @@ app.post('/quota', async (req, res) => {
     let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
     let isAdmin = result[0][0].permission == 1
 
-    result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND second = ${getSecond(now)}`)
+    result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND day = ${getDay(now)}`)
 
     res.json({
       result: 'ok',
@@ -1115,23 +1118,30 @@ function getSmartstoreProductList(storeUrl, productAmount) {
             let titleElement = item.querySelector('._1Zvjahn0GA')
             let priceElement = item.querySelector('._3_9J443eIx')
 
-            let product = {
-              id: Number(linkElement.getAttribute('href').split('/').pop()),
-              popularityIndex: (page - 1) * 80 + index,
-              title: titleElement.innerText.trim(),
-              price: Number(priceElement.innerText.replace(/[^\d.]/g, '')),
-              isSoldOut: false,
+            try {
+              let product = {
+                id: Number(linkElement.getAttribute('href').split('/').pop()),
+                popularityIndex: (page - 1) * 80 + index,
+                title: titleElement.innerText.trim(),
+                price: Number(priceElement.innerText.replace(/[^\d.]/g, '')),
+                isSoldOut: false,
+              }
+
+              if (item.querySelectorAll('_3Btky8fCyp').length > 0) {
+                product.isSoldOut = true
+              }
+
+              productList.push(product)
             }
+            catch {
 
-            if (item.querySelectorAll('_3Btky8fCyp').length > 0) {
-              product.isSoldOut = true
             }
+            finally {
+              productAmount--
 
-            productList.push(product)
-            productAmount--
-
-            if (productAmount <= 0) {
-              resolve(productList)
+              if (productAmount <= 0) {
+                resolve(productList)
+              }
             }
           })
         })
