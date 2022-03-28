@@ -332,49 +332,49 @@
             <i class='bx bx-menu' id="btn"></i>
         </div>
         <ul class="nav-list">
-            <li>
+            <li class="signin-not-needed" hidden>
                 <a id="smartstore-button" href="#">
                     <img src="https://imgur.com/xpWa0pd.png" style="width: 25px; height: 25px; margin: 12px"></i>
                     <span class="links_name">스마트스토어</span>
                 </a>
                 <span class="tooltip">스마트스토어</span>
             </li>
-            <li>
+            <li class="signin-not-needed" hidden>
                 <a href="/n09">
                     <img src="https://imgur.com/YPhrrAJ.png" style="width: 30px; height: 30px; margin: 9px"></i>
                     <span class="links_name">엔공구</span>
                 </a>
                 <span class="tooltip">엔공구</span>
             </li>
-            <li>
+            <li class="signin-not-needed" hidden>
                 <a href="/autowash">
                     <img src="https://imgur.com/pZDIKRo.jpg" style="width: 25px; height: 25px; margin: 12px"></i>
                     <span class="links_name">오토워시</span>
                 </a>
                 <span class="tooltip">오토워시</span>
             </li>
-            <li>
+            <li class="signin-not-needed" hidden>
                 <a href="/hyundai/auton">
                     <img src="https://imgur.com/6sSNXyV.jpg" style="width: 25px; height: 25px; margin: 12px"></i>
                     <span class="links_name">카라이프몰</span>
                 </a>
                 <span class="tooltip">카라이프몰</span>
             </li>
-            <li class="signin-needed">
+            <li class="signin-needed" hidden>
                 <a id="option-button" href="#">
                     <i class='bx bx-cog'></i>
                     <span class="links_name">설정</span>
                 </a>
                 <span class="tooltip">설정</span>
             </li>
-            <li class="signin-needed">
+            <li class="signin-needed" hidden>
                 <a id="quota-button" href="#">
                     <i class='bx bx-pie-chart'></i>
                     <span class="links_name">사용량</span>
                 </a>
                 <span class="tooltip">사용량</span>
             </li>
-            <li>
+            <li class="signin-not-needed" hidden>
                 <a id="info-button" href="#">
                     <i class='bx bx-help-circle'></i>
                     <span class="links_name">처음이세요?</span>
@@ -456,70 +456,56 @@
                 const email = document.getElementById('email')
                 const signoutButton = document.getElementById('signout')
                 const signinNeededList = document.getElementsByClassName('signin-needed')
-                
+                const signinNotNeededList = document.getElementsByClassName('signin-not-needed')
+
                 let user
                 let bookmarkList = []
 
+                function postAsync(url, params = {}) {
+                    return new Promise((resolve, reject) => {
+                        fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(params),
+                        }).then(async (res) => {
+                            resolve(await res.json())
+                        }).catch((error) => reject(error.message))
+                    })
+                }
+
                 onAuthStateChanged(auth, async (firebaseUser) => {
+                    for (let signinNotNeeded of signinNotNeededList) {
+                        signinNotNeeded.hidden = false
+                    }
+
                     if (firebaseUser) {
                         user = firebaseUser
 
                         name.innerText = user.displayName
                         email.innerText = user.email
 
-                        let idToken = await user.getIdToken()
-
                         for (let signinNeeded of signinNeededList) {
                             signinNeeded.hidden = false
                         }
 
-                        fetch('/signin', {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ idToken: idToken }),
-                        }).catch()
+                        try {
+                            let json = await postAsync('/signin', { idToken: await user.getIdToken() })
 
-                        fetch('/user', {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ idToken: idToken }),
-                        }).then(async (res) => {
-                            let json = await res.json()
-                            if (json.user.permission == 1) {
-
-                            }
-                        }).catch()
-
-                        fetch('/bookmarkList', {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ idToken: idToken }),
-                        }).then(async (res) => {
-                            let json = await res.json()
-                            if (json.result == 'ok') {
-                                bookmarkList = json.bookmarkList
-                                bookmarkList.sort((a, b) => a.title - b.title)
-                            }
-                            else {
+                            if (json.result == 'error') {
                                 throw new Error(json.error)
                             }
-                        }).catch((error) => {
+                        }
+                        catch (error) {
                             showError(`
                                 <div style="line-height: 130%">
-                                    즐겨찾기를 불러오는데 실패하였어요.<br>
+                                    로그인에 실패 하셨어요.<br>
                                     다시 시도해주세요.
                                 </div>
                             `, error.message)
-                        })
+                        }
                     }
                     else {
                         for (let signinNeeded of signinNeededList) {
@@ -597,7 +583,29 @@
 
                 smartstoreButton.addEventListener('click', () => smartstoreSearch())
 
-                function smartstoreSearch() {
+                async function search() {
+                    if (searchInput.value.trim().length == 0) {
+                        return
+                    }
+
+                    swal.fire({
+                        title: '잠시만요!',
+                        text: '스토어에 접속하는 중이에요.',
+                        showCancelButton: false,
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        heightAuto: false,
+                    })
+
+                    try {
+                        await postAsync('/smartstore/search', { query: searchInput.value })
+                    }
+                    catch (error) {
+                        showError('스토어를 검색하지 못했어요.', error.message)
+                    }
+                }
+
+                async function smartstoreSearch() {
                     let div = document.createElement('div')
 
                     let searchInput = document.createElement('input')
@@ -625,41 +633,66 @@
                     div.appendChild(inputDiv)
                     div.appendChild(form)
 
-                    if (bookmarkList.length > 0) {
-                        searchHelper.innerHTML = ''
-                    }
+                    swal.fire({
+                        title: '스마트스토어',
+                        html: div,
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: '취소'
+                    })
 
-                    let isThereNewLine = false
-                    let isThereBoomark = false
+                    try {
+                        let json = await postAsync('/bookmarkList', { idToken: await user.getIdToken() })
 
-                    for (let bookmark of bookmarkList) {
-                        if (isThereBoomark) {
-                            let span = document.createElement('span')
-                            span.innerHTML = '&nbsp&nbsp'
-                            searchHelper.appendChild(span)
+                        if (json.result == 'error') {
+                            throw new Error(json.error)
                         }
 
-                        isThereBoomark = true
+                        bookmarkList = json.bookmarkList
+                        bookmarkList.sort((a, b) => a.title - b.title)
 
-                        let a = document.createElement('a')
-                        a.innerHTML = bookmark.title
-
-                        if (bookmark.storeUrl.includes('smartstore.naver.com')) {
-                            let endpoint = bookmark.storeUrl.split('/').pop()
-                            a.setAttribute('href', `/smartstore/${endpoint}`)
+                        if (bookmarkList.length > 0) {
+                            searchHelper.innerHTML = ''
                         }
 
-                        searchHelper.appendChild(a)
-                    }
+                        let isThereBoomark = false
+                        let recentHeight = Infinity
 
-                    if (!isThereBoomark) {
-                        searchHelper.innerHTML = '매번 검색하기 힘드시죠? 클릭만으로 접속하세요! '
+                        for (let bookmark of bookmarkList) {
+                            if (isThereBoomark) {
+                                let span = document.createElement('span')
+                                span.innerHTML = '&nbsp&nbsp'
+                                searchHelper.appendChild(span)
+                            }
 
-                        let howToBookmark = document.createElement('button')
-                        howToBookmark.type = "button"
-                        howToBookmark.style = 'background: none; border: none; margin: 0; padding: 0; color: #0066CC'
-                        howToBookmark.innerHTML = '즐겨찾기 사용법'
-                        howToBookmark.setAttribute('onclick', `
+                            isThereBoomark = true
+
+                            let a = document.createElement('a')
+                            a.innerHTML = bookmark.title
+
+                            if (bookmark.storeUrl.includes('smartstore.naver.com')) {
+                                let endpoint = bookmark.storeUrl.split('/').pop()
+                                a.setAttribute('href', `/smartstore/${endpoint}`)
+                            }
+
+                            searchHelper.appendChild(a)
+
+                            if (searchHelper.offsetHeight > recentHeight) {
+                                let br = document.createElement('br')
+                                searchHelper.insertBefore(br, a)
+                            }
+
+                            recentHeight = searchHelper.offsetHeight
+                        }
+
+                        if (!isThereBoomark) {
+                            searchHelper.innerHTML = '매번 검색하기 힘드시죠? 클릭만으로 접속하세요! '
+
+                            let howToBookmark = document.createElement('button')
+                            howToBookmark.type = "button"
+                            howToBookmark.style = 'background: none; border: none; margin: 0; padding: 0; color: #0066CC'
+                            howToBookmark.innerHTML = '즐겨찾기 사용법'
+                            howToBookmark.setAttribute('onclick', `
                             swal.fire({
                                 title: '즐겨찾기 A to Z',
                                 html: \`
@@ -681,282 +714,198 @@
                             }).then(() => smartstoreSearch())
                         `)
 
-                        searchHelper.appendChild(howToBookmark)
-                    }
+                            searchHelper.appendChild(howToBookmark)
+                        }
 
-                    swal.fire({
-                        title: '스마트스토어',
-                        html: div,
-                        showConfirmButton: false,
-                        showCancelButton: true,
-                        cancelButtonText: '취소'
-                    })
+                        searchInput.addEventListener('keyup', (e) => {
+                            if (e.code == 'Enter') {
+                                search()
+                            }
+                        })
 
-                    searchInput.addEventListener('keyup', (e) => {
-                        if (e.code == 'Enter') {
+                        searchButton.addEventListener('click', () => {
                             search()
-                        }
-                    })
-
-                    searchButton.addEventListener('click', () => {
-                        search()
-                    })
-
-                    function search() {
-                        if (searchInput.value.trim().length == 0) {
-                            return
-                        }
-
-                        swal.fire({
-                            title: '잠시만요!',
-                            text: '스토어에 접속하는 중이에요.',
-                            showCancelButton: false,
-                            showConfirmButton: false,
-                            allowOutsideClick: false,
-                            heightAuto: false,
                         })
-
-                        fetch('/smartstore/search', {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ query: searchInput.value }),
-                        }).then(async (res) => {
-                            let json = await res.json()
-                            swal.close()
-
-                            if (json.result == 'ok') {
-                                swal.fire({
-                                    title: '스토어 발견!',
-                                    html: `'${json.store_title}' 스토어로 진행 하시겠어요?`,
-                                    icon: 'success',
-                                    confirmButtonText: '네',
-                                    cancelButtonText: '이게 아닌데!',
-                                    showCancelButton: true,
-                                    heightAuto: false,
-                                }).then((res) => {
-                                    if (res.isConfirmed) {
-                                        let form = document.createElement('form')
-                                        form.style.visibility = 'hidden'
-                                        form.method = 'GET'
-                                        form.action = `/smartstore/${json.store_url}`
-                                        document.body.appendChild(form)
-                                        form.submit()
-                                    }
-                                    else {
-                                        smartstoreSearch()
-                                    }
-                                })
-                            }
-                            else {
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        스토어를 검색했지만 찾지 못했어요.<br>
-                                        검색어를 다시 한 번 확인해주세요.
-                                    </div>
-                                `, json.error).then(
-                                    smartstoreSearch()
-                                )
-                            }
-                        }).catch((error) => {
-                            showError('스토어를 검색하지 못했어요.', error.message)
-                        })
+                    }
+                    catch (error) {
+                        showError(`
+                            <div style="line-height: 130%">
+                                즐겨찾기를 불러오는데 실패하였어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `, error.message)
                     }
                 }
 
                 optionButton.addEventListener('click', async () => {
-                    fetch('/user', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ idToken: await user.getIdToken() }),
-                    }).then(async (res) => {
-                        let json = await res.json()
-                        if (json.result == 'ok') {
-                            let user = json.user
+                    try {
+                        let json = await postAsync('/user', { idToken: await user.getIdToken() })
 
-                            let loadAll = document.createElement('input')
-                            loadAll.classList.add('form-check-input')
-                            loadAll.setAttribute('type', 'checkbox')
-
-                            let highlightChanges = document.createElement('input')
-                            highlightChanges.classList.add('form-check-input')
-                            highlightChanges.setAttribute('type', 'checkbox')
-
-                            let byRecent = document.createElement('input')
-                            byRecent.classList.add('form-check-input')
-                            byRecent.setAttribute('type', 'radio')
-                            byRecent.setAttribute('name', 'sort-radio')
-
-                            let byPopularity = document.createElement('input')
-                            byPopularity.classList.add('form-check-input')
-                            byPopularity.setAttribute('type', 'radio')
-                            byPopularity.setAttribute('name', 'sort-radio')
-
-                            let loadAllLabel = document.createElement('label')
-                            loadAllLabel.innerText = '전부 로딩하기'
-
-                            let highlightChangesLabel = document.createElement('label')
-                            highlightChangesLabel.innerText = '바뀐 제품을 위로'
-
-                            let byRecentLabel = document.createElement('label')
-                            byRecentLabel.innerText = '최신 순으로'
-
-                            let byPopularityLabel = document.createElement('label')
-                            byPopularityLabel.innerText = '인기 순으로'
-
-                            if (user.loadAll) {
-                                loadAll.checked = true
-                            }
-
-                            if (user.highlightChanges) {
-                                highlightChanges.checked = true
-                            }
-
-                            if (user.sortMethod == 0) {
-                                byRecent.checked = true
-                            }
-                            else {
-                                byPopularity.checked = true
-                            }
-
-                            let loadAllDiv = document.createElement('div')
-                            loadAllDiv.classList.add('form-check', 'form-check-inline')
-                            loadAllDiv.appendChild(loadAll)
-                            loadAllDiv.appendChild(loadAllLabel)
-
-                            let highlightChangesDiv = document.createElement('div')
-                            highlightChangesDiv.classList.add('form-check', 'form-check-inline')
-                            highlightChangesDiv.appendChild(highlightChanges)
-                            highlightChangesDiv.appendChild(highlightChangesLabel)
-
-                            let byRecentDiv = document.createElement('div')
-                            byRecentDiv.classList.add('form-check', 'form-check-inline')
-                            byRecentDiv.appendChild(byRecent)
-                            byRecentDiv.appendChild(byRecentLabel)
-
-                            let byPopularityDiv = document.createElement('div')
-                            byPopularityDiv.classList.add('form-check', 'form-check-inline')
-                            byPopularityDiv.appendChild(byPopularity)
-                            byPopularityDiv.appendChild(byPopularityLabel)
-
-                            let span = document.createElement('span')
-                            span.style = 'line-height: 130%'
-                            span.innerHTML = `
-                                스토어 접속 시 기본 설정이에요.<br>
-                                그때그때 바꾸실 수 있어요.<br><br>
-                            `
-
-                            let space = document.createElement('span')
-                            space.innerHTML = '&nbsp<br>'
-
-                            let form = document.createElement('form')
-                            form.appendChild(span)
-                            form.appendChild(loadAllDiv)
-                            form.appendChild(highlightChangesDiv)
-                            form.appendChild(space)
-                            form.appendChild(byRecentDiv)
-                            form.appendChild(byPopularityDiv)
-
-                            swal.fire({
-                                title: '설정',
-                                html: form,
-                                confirmButtonText: '확인',
-                                cancelButtonText: '안 돼요!',
-                                showCancelButton: true,
-                                heightAuto: false,
-                            }).then(async (res) => {
-                                if (res.isConfirmed) {
-                                    fetch('/user/update', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Accept': 'application/json',
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                            idToken: await user.getIdToken(),
-                                            loadAll: loadAll.checked ? 1 : 0,
-                                            highlightChanges: highlightChanges.checked ? 1 : 0,
-                                            sortMethod: byRecent.checked ? 0 : 1,
-                                        }),
-                                    }).then(async (res) => {
-                                        let json = await res.json()
-
-                                        if (json.result == 'ok') {
-                                            swal.fire({
-                                                title: '설정 변경 성공!',
-                                                icon: 'success',
-                                                heightAuto: false,
-                                                confirmButtonText: '좋네요!',
-                                            })
-                                        }
-                                        else {
-                                            throw new Error(res.error)
-                                        }
-                                    }).catch((error) => {
-                                        showError(`
-                                            <div style="line-height: 130%">
-                                                설정을 변경하는데 실패하였어요.<br>
-                                                다시 시도해주세요.
-                                            </div>
-                                        `, error.message)
-                                    })
-                                }
-                            })
-                        }
-                        else {
+                        if (json.result == 'error') {
                             throw new Error(json.error)
                         }
-                    }).catch((error) => {
+
+                        let loadAll = document.createElement('input')
+                        loadAll.classList.add('form-check-input')
+                        loadAll.setAttribute('type', 'checkbox')
+
+                        let highlightChanges = document.createElement('input')
+                        highlightChanges.classList.add('form-check-input')
+                        highlightChanges.setAttribute('type', 'checkbox')
+
+                        let byRecent = document.createElement('input')
+                        byRecent.classList.add('form-check-input')
+                        byRecent.setAttribute('type', 'radio')
+                        byRecent.setAttribute('name', 'sort-radio')
+
+                        let byPopularity = document.createElement('input')
+                        byPopularity.classList.add('form-check-input')
+                        byPopularity.setAttribute('type', 'radio')
+                        byPopularity.setAttribute('name', 'sort-radio')
+
+                        let loadAllLabel = document.createElement('label')
+                        loadAllLabel.innerText = '전부 로딩하기'
+
+                        let highlightChangesLabel = document.createElement('label')
+                        highlightChangesLabel.innerText = '바뀐 제품을 위로'
+
+                        let byRecentLabel = document.createElement('label')
+                        byRecentLabel.innerText = '최신 순으로'
+
+                        let byPopularityLabel = document.createElement('label')
+                        byPopularityLabel.innerText = '인기 순으로'
+
+                        if (json.user.loadAll) {
+                            loadAll.checked = true
+                        }
+
+                        if (json.user.highlightChanges) {
+                            highlightChanges.checked = true
+                        }
+
+                        if (json.user.sortMethod == 0) {
+                            byRecent.checked = true
+                        }
+                        else {
+                            byPopularity.checked = true
+                        }
+
+                        let loadAllDiv = document.createElement('div')
+                        loadAllDiv.classList.add('form-check', 'form-check-inline')
+                        loadAllDiv.appendChild(loadAll)
+                        loadAllDiv.appendChild(loadAllLabel)
+
+                        let highlightChangesDiv = document.createElement('div')
+                        highlightChangesDiv.classList.add('form-check', 'form-check-inline')
+                        highlightChangesDiv.appendChild(highlightChanges)
+                        highlightChangesDiv.appendChild(highlightChangesLabel)
+
+                        let byRecentDiv = document.createElement('div')
+                        byRecentDiv.classList.add('form-check', 'form-check-inline')
+                        byRecentDiv.appendChild(byRecent)
+                        byRecentDiv.appendChild(byRecentLabel)
+
+                        let byPopularityDiv = document.createElement('div')
+                        byPopularityDiv.classList.add('form-check', 'form-check-inline')
+                        byPopularityDiv.appendChild(byPopularity)
+                        byPopularityDiv.appendChild(byPopularityLabel)
+
+                        let span = document.createElement('span')
+                        span.style = 'line-height: 130%'
+                        span.innerHTML = `
+                            스토어 접속 시 기본 설정이에요.<br>
+                            그때그때 바꾸실 수 있어요.<br><br>
+                        `
+
+                        let space = document.createElement('span')
+                        space.innerHTML = '&nbsp<br>'
+
+                        let form = document.createElement('form')
+                        form.appendChild(span)
+                        form.appendChild(loadAllDiv)
+                        form.appendChild(highlightChangesDiv)
+                        form.appendChild(space)
+                        form.appendChild(byRecentDiv)
+                        form.appendChild(byPopularityDiv)
+
+                        swal.fire({
+                            title: '설정',
+                            html: form,
+                            confirmButtonText: '확인',
+                            cancelButtonText: '안 돼요!',
+                            showCancelButton: true,
+                            heightAuto: false,
+                        }).then(async (res) => {
+                            if (res.isConfirmed) {
+                                try {
+                                    let json = await postAsync('/user/update', {
+                                        idToken: await user.getIdToken(),
+                                        loadAll: loadAll.checked ? 1 : 0,
+                                        highlightChanges: highlightChanges.checked ? 1 : 0,
+                                        sortMethod: byRecent.checked ? 0 : 1,
+                                    })
+
+                                    swal.fire({
+                                        title: '설정 변경 성공!',
+                                        icon: 'success',
+                                        heightAuto: false,
+                                        confirmButtonText: '좋네요!',
+                                    })
+                                }
+                                catch (error) {
+                                    showError(`
+                                        <div style="line-height: 130%">
+                                            설정을 변경하는데 실패하였어요.<br>
+                                            다시 시도해주세요.
+                                        </div>
+                                    `, error.message)
+                                }
+                            }
+                        })
+                    }
+                    catch (error) {
                         showError(`
                             <div style="line-height: 130%">
                                 설정을 불러오는데 실패하였어요.<br>
                                 다시 시도해주세요.
                             </div>
                         `, error.message)
-                    })
+                    }
                 })
 
                 quotaButton.addEventListener('click', async () => {
-                    fetch('/quota', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ idToken: await user.getIdToken() }),
-                    }).then(async (res) => {
-                        let json = await res.json()
-                        if (json.result == 'ok') {
-                            let productListQuota = 0
-                            let updateQuota = 0
-                            let saveQuota = 0
+                    try {
+                        let json = await postAsync('/quota', { idToken: await user.getIdToken() })
 
-                            let productListQueryList = json.quota.filter((query) => query.type == 1)
+                        if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
 
-                            for (let productListQuery of productListQueryList) {
-                                productListQuota += productListQuery.amount
-                            }
+                        let productListQuota = 0
+                        let updateQuota = 0
+                        let saveQuota = 0
 
-                            let updateQueryList = json.quota.filter((query) => query.type == 2)
+                        let productListQueryList = json.quota.filter((query) => query.type == 1)
 
-                            for (let updateQuery of updateQueryList) {
-                                updateQuota += updateQuery.amount
-                            }
+                        for (let productListQuery of productListQueryList) {
+                            productListQuota += productListQuery.amount
+                        }
 
-                            let saveQueryList = json.quota.filter((query) => query.type == 3)
+                        let updateQueryList = json.quota.filter((query) => query.type == 2)
 
-                            for (let saveQuery of saveQueryList) {
-                                saveQuota += saveQuery.amount
-                            }
+                        for (let updateQuery of updateQueryList) {
+                            updateQuota += updateQuery.amount
+                        }
 
-                            swal.fire({
-                                title: '사용량',
-                                html: `
+                        let saveQueryList = json.quota.filter((query) => query.type == 3)
+
+                        for (let saveQuery of saveQueryList) {
+                            saveQuota += saveQuery.amount
+                        }
+
+                        swal.fire({
+                            title: '사용량',
+                            html: `
                                     <span style="line-height: 130%">
                                         오늘의 사용량이에요.<br>
                                         사용량은 자정에 초기화 돼요!<br><br>
@@ -966,21 +915,18 @@
                                         ${json.isAdmin ? '<br><br>(관리자이셔서 영향을 받지 않아요)' : ''}
                                     </span>
                                 `,
-                                confirmButtonText: '알겠어요',
-                                showCancelButton: false,
-                            })
-                        }
-                        else {
-                            throw new Error(json.error)
-                        }
-                    }).catch((error) => {
+                            confirmButtonText: '알겠어요',
+                            showCancelButton: false,
+                        })
+                    }
+                    catch (error) {
                         showError(`
                             <div style="line-height: 130%">
                                 사용량을 불러오는데 실패하였어요.<br>
                                 다시 시도해주세요.
                             </div>
                         `, error.message)
-                    })
+                    }
                 })
 
                 infoButton.addEventListener('click', () => {
