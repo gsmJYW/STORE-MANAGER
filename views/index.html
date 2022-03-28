@@ -1,811 +1,1100 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- Created by CodingLab |www.youtube.com/CodingLabYT-->
+<html lang="en" dir="ltr">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <link href='https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css' rel='stylesheet'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    @import url(//fonts.googleapis.com/earlyaccess/jejugothic.css);
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
 
-    * {
-      font-family: 'Jeju Gothic', serif;
-    }
+    <title>STORE MANAGER</title>
+    <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
 
-    .container {
-      height: 100%;
-    }
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
+    <meta name="google-signin-client_id"
+        content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
+    <meta name="google-signin-cookiepolicy" content="single_host_origin">
+    <meta name="google-signin-scope" content="profile email">
 
-    body {
-      padding: 25px;
-      background-color: white;
-      color: black;
-      font-size: 25px;
-      height: 100vh;
-    }
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.10.2/Sortable.min.js"></script>
 
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
+    <style>
+        @import url(//fonts.googleapis.com/earlyaccess/jejugothic.css);
+        @import url(//fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap);
 
-    .dropdown:after {
-      content: "";
-      position: absolute;
-      left: 0px;
-      bottom: -8px;
-      display: none;
-      vertical-align: bottom;
-      width: 100%;
-      height: 8px;
-      background-color: transparent;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
 
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: white;
-      min-width: 160px;
-      box-shadow: 0px 3px 6px 0px rgba(0, 0, 0, 0.2);
-      z-index: 1;
-      right: 0;
-      margin-top: 8px;
-    }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 78px;
+            background: #11101D;
+            padding: 6px 14px;
+            z-index: 99;
+            transition: all 0.5s ease;
+        }
 
-    .dropdown-content a {
-      color: black;
-      padding: 6px 14px;
-      font-size: 14px;
-      text-decoration: none;
-      display: block;
-    }
+        .sidebar.open {
+            width: 250px;
+        }
 
-    .dropdown-content a:hover {
-      background-color: #ddd;
-    }
+        .sidebar .logo-details {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
 
-    .dropdown:hover .dropdown-content {
-      display: block;
-    }
+        .sidebar .logo-details .icon {
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
 
-    .dropdown:hover:after {
-      display: inline-block;
-    }
+        .sidebar .logo-details .logo_name {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
 
-    .dropdown-available {
-      cursor: pointer;
-    }
-  </style>
+        .sidebar.open .logo-details .icon,
+        .sidebar.open .logo-details .logo_name {
+            opacity: 1;
+        }
 
-  <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+        .sidebar .logo-details #btn {
+            position: absolute;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            font-size: 22px;
+            transition: all 0.4s ease;
+            font-size: 23px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.5s ease;
+        }
 
-  <title>STORE MANAGER</title>
-  <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
+        .sidebar.open .logo-details #btn {
+            text-align: right;
+        }
 
-  <script src="https://apis.google.com/js/platform.js" async defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
-  <meta name="google-signin-client_id"
-    content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
-  <meta name="google-signin-cookiepolicy" content="single_host_origin">
-  <meta name="google-signin-scope" content="profile email">
+        .sidebar i {
+            color: #fff;
+            height: 60px;
+            min-width: 50px;
+            font-size: 28px;
+            text-align: center;
+            line-height: 60px;
+        }
 
-  <script src="https://kit.fontawesome.com/a076d05399.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.10.2/Sortable.min.js"></script>
+        .sidebar .nav-list {
+            margin: 0px;
+            padding: 0px;
+            height: 100%;
+        }
 
+        .sidebar li {
+            position: relative;
+            margin: 8px 0;
+            list-style: none;
+        }
+
+        .sidebar li .tooltip {
+            position: absolute;
+            top: -20px;
+            left: calc(100% + 15px);
+            z-index: 3;
+            background: #fff;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: 400;
+            opacity: 0;
+            white-space: nowrap;
+            pointer-events: none;
+            transition: 0s;
+        }
+
+        .sidebar li:hover .tooltip {
+            opacity: 1;
+            pointer-events: auto;
+            transition: all 0.4s ease;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .sidebar.open li .tooltip {
+            display: none;
+        }
+
+        .sidebar input {
+            font-size: 15px;
+            color: #FFF;
+            font-weight: 400;
+            outline: none;
+            height: 50px;
+            width: 100%;
+            width: 50px;
+            border: none;
+            border-radius: 12px;
+            transition: all 0.5s ease;
+            background: #1d1b31;
+        }
+
+        .sidebar.open input {
+            padding: 0 20px 0 50px;
+            width: 100%;
+        }
+
+        .sidebar .bx-search {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            font-size: 22px;
+            background: #1d1b31;
+            color: #FFF;
+        }
+
+        .sidebar.open .bx-search:hover {
+            background: #1d1b31;
+            color: #FFF;
+        }
+
+        .sidebar .bx-search:hover {
+            background: #FFF;
+            color: #11101d;
+        }
+
+        .sidebar li a {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            border-radius: 12px;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.4s ease;
+            background: #11101D;
+        }
+
+        .sidebar li a:hover {
+            background: #FFF;
+        }
+
+        .sidebar li a .links_name {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 400;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.4s;
+        }
+
+        .sidebar.open li a .links_name {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sidebar li a:hover .links_name,
+        .sidebar li a:hover i {
+            transition: all 0.5s ease;
+            color: #11101D;
+        }
+
+        .sidebar li i {
+            height: 50px;
+            line-height: 50px;
+            font-size: 18px;
+            border-radius: 12px;
+        }
+
+        .sidebar li.profile {
+            position: fixed;
+            height: 60px;
+            width: 78px;
+            left: 0;
+            bottom: -8px;
+            padding: 10px 14px;
+            background: #1d1b31;
+            transition: all 0.5s ease;
+            overflow: hidden;
+        }
+
+        .sidebar.open li.profile {
+            width: 250px;
+        }
+
+        .sidebar li .profile-details {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .sidebar li img {
+            height: 45px;
+            width: 45px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 10px;
+        }
+
+        .sidebar li.profile .name,
+        .sidebar li.profile .email {
+            font-size: 15px;
+            font-weight: 400;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .sidebar li.profile .email {
+            font-size: 7px;
+        }
+
+        .sidebar .profile #signout {
+            position: absolute;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background: #1d1b31;
+            width: 100%;
+            height: 60px;
+            line-height: 60px;
+            border-radius: 0px;
+            transition: all 0.5s ease;
+            cursor: pointer;
+        }
+
+        .sidebar.open .profile #signout {
+            width: 50px;
+            background: none;
+        }
+
+        .home-section {
+            position: relative;
+            background: #E4E9F7;
+            min-height: 100vh;
+            top: 0;
+            left: 78px;
+            width: calc(100% - 78px);
+            transition: all 0.5s ease;
+            z-index: 2;
+        }
+
+        .sidebar.open~.home-section {
+            left: 250px;
+            width: calc(100% - 250px);
+        }
+
+        .home-section .text {
+            display: inline-block;
+            color: #11101d;
+            font-size: 25px;
+            font-weight: 500;
+            margin: 18px
+        }
+
+        .sidebar-icon {
+            width: 10px;
+            height: 10px;
+        }
+
+        @media (max-width: 420px) {
+            .sidebar li .tooltip {
+                display: none;
+            }
+        }
+    </style>
 </head>
 
 <body>
-  <div class="form-check form-check-inline" style="padding: 0px">
-    <div class="d-flex" style="margin: auto">
-      <button id='info-button' type="button" style="background: none; padding: 0px; border: none; outline: none">
-        <i id="info-icon" class="fa fa-info-circle" style="font-size: 30px; margin: auto"></i>
-      </button>
-      <span style="margin: 4px 0px 0px 6px">처음이세요?</span>
-    </div>
-  </div>
-  <div class="d-flex" style="float: right; margin: auto">
-    <div class="dropdown">
-      <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
-      <div id="user-menu" class="dropdown-content" hidden>
-        <a id="dropdown-option" class="dropdown-item dropdown-available">설정</a>
-        <a id="dropdown-quota" class="dropdown-item dropdown-available">사용량</a>
-        <a id="dropdown-email" class="dropdown-item disabled"></a>
-      </div>
-    </div>
-    <div id="search-div" class="container d-flex align-items-center justify-content-center"
-      style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)">
-      <div>
-        <div class="text-center">
-          <a href="http://n09company.com" target="_blank"><img src="https://imgur.com/YPhrrAJ.png" width="160"
-              height="160" style="margin: 120px 0px"></a>
+    <div class="sidebar">
+        <div class="logo-details">
+            <div class="logo_name">&nbsp;&nbsp;STORE MANAGER</div>
+            <i class='bx bx-menu' id="btn"></i>
         </div>
-        <div class="input-group rounded p-2">
-          <input id="search-input" type="search" class="form-control rounded" style="box-shadow: none; width: 518px;"
-            placeholder="스토어 이름 또는 URL" aria-describedby="search-addon" spellcheck="false" />
-          </input>
-          <button id="search-button" class="btn btn-primary fas fa-search"></input>
-        </div>
-        <form action="">
-          <h6 id="search-helper" class="text-center px-2" style="line-height: 130%; font-weight: 100"><br>&nbsp;</h6>
-        </form>
-        <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 66px 0px 77px 0px">
-          해당
-          서비스는 ㈜엔공구의 자회사 공구형에서
-          개발합니다.<br>현재 베타 서비스
-          단계이며 무료로 이용하실 수
-          있습니다.<br>후원금은 서비스
-          운영을 위한 서버 유지 비용에 사용됩니다.
-        </p>
-        <p style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 77px 0px">
-          <b>공구형 고객센터</b> 010-3924-8171<br><b>후원 계좌</b> 광주은행 1121-022-248925 (최만수)<br><br>
-          <b>상호명</b> 공구형 &nbsp; <b>사업자 번호</b> 226-28-19779 <br> <b>주소</b> 광주광역시 광산구
-          하남산단 6번로 57 (지식동 908호)
-        </p>
-        <div class="text-center">
-          <a href="https://09bro.net" target="_blank"><img src="https://imgur.com/7HP4qOb.png" width="72" height="24"
-              style="margin: 0px 8px;"></a>
-          <a href="https://play.google.com/store/apps/details?id=com.n09.fanorama" target="_blank"><img
-              src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto"></a>
-        </div>
-        <div hidden>
-          <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
-          <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
-            <script type="text/javascript"
-              src="//s3.tracemyip.org/tracker/lgUrl.php?random='+Math.random()+'&amp;stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
-            <noscript><a
-                href="https://www.tracemyip.org/tools/website-visitors-counter-traffic-tracker-statistics/"><img
-                  src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/" alt="Web Site Hits Ipv4 Tracer"
-                  style="border:0px;"></a></noscript>
-          </div> <!-- End: TraceMyIP.org Service Code //-->
-        </div>
-      </div>
-    </div>
-    <script type="module">
-      import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
-      import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
-
-      initializeApp({
-        apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
-        authDomain: "store-manager-5d527.firebaseapp.com",
-        projectId: "store-manager-5d527",
-        storageBucket: "store-manager-5d527.appspot.com",
-        messagingSenderId: "36522862962",
-        appId: "1:36522862962:web:8a9e9b88373a19add095eb",
-        measurementId: "G-37DECVWLYX"
-      })
-
-      const auth = getAuth()
-      const userMenu = document.getElementById('user-menu')
-      const dropdownEmail = document.getElementById('dropdown-email')
-      let user
-
-      onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          user = firebaseUser
-
-          let connectedSpan = document.evaluate('/html/body/div[2]/div[1]/div/div/div/span/span[2]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
-          let buttonWrapper = document.querySelector('.abcRioButton.abcRioButtonLightBlue')
-
-          if (connectedSpan != undefined && buttonWrapper != undefined) {
-            connectedSpan.innerText = `${user.displayName} ▼`
-            userMenu.hidden = false
-            buttonWrapper.style = 'min-width: 120px; height: 36px'
-            dropdownEmail.innerText = user.email
-          }
-
-          let idToken = await user.getIdToken()
-
-          fetch('/signin', {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ idToken: idToken }),
-          }).catch()
-
-          fetch('/user', {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ idToken: idToken }),
-          }).then(async (res) => {
-            let json = await res.json()
-            if (json.user.permission == 1) {
-              let dropdownAdmin = document.createElement('a')
-              dropdownAdmin.innerHTML = '관리자'
-              dropdownAdmin.classList.add('dropdown-item', 'dropdown-available')
-              userMenu.insertBefore(dropdownAdmin, dropdownEmail)
-
-              dropdownAdmin.addEventListener('click', () => {
-
-                swal.fire({
-                  title: '관리자 전용',
-                  html: `
-                    <div style="line-height: 130%">
-                      <!--비공개 스토어<br>-->
-                      <button type="button" class="btn btn-primary" onclick="window.open('/n09','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
-                        엔공구 공식 쇼핑몰
-                      </button>
-                      <button type="button" class="btn btn-primary" onclick="window.open('/hyundai/auton','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
-                        카라이프몰
-                      </button>
-                      <button type="button" class="btn btn-primary" onclick="window.open('/autowash','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
-                        오토워시 공식 스토어
-                      </button>
-                      <!--<br><br>
-                      정보 열람<br>
-                      <button type="button" class="btn btn-primary" onclick="window.open('/visitor','_blank')" style="font-size: 16px; padding: 8px; margin: 4px 2px">
-                        유저 접속 기록
-                      </button>
-                      -->
+        <ul class="nav-list">
+            <li>
+                <a id="smartstore-button" href="#">
+                    <img src="https://imgur.com/xpWa0pd.png" style="width: 25px; height: 25px; margin: 12px"></i>
+                    <span class="links_name">스마트스토어</span>
+                </a>
+                <span class="tooltip">스마트스토어</span>
+            </li>
+            <li>
+                <a href="/n09">
+                    <img src="https://imgur.com/YPhrrAJ.png" style="width: 30px; height: 30px; margin: 9px"></i>
+                    <span class="links_name">엔공구</span>
+                </a>
+                <span class="tooltip">엔공구</span>
+            </li>
+            <li>
+                <a href="/autowash">
+                    <img src="https://imgur.com/pZDIKRo.jpg" style="width: 25px; height: 25px; margin: 12px"></i>
+                    <span class="links_name">오토워시</span>
+                </a>
+                <span class="tooltip">오토워시</span>
+            </li>
+            <li>
+                <a href="/hyundai/auton">
+                    <img src="https://imgur.com/6sSNXyV.jpg" style="width: 25px; height: 25px; margin: 12px"></i>
+                    <span class="links_name">카라이프몰</span>
+                </a>
+                <span class="tooltip">카라이프몰</span>
+            </li>
+            <li class="signin-needed">
+                <a id="option-button" href="#">
+                    <i class='bx bx-cog'></i>
+                    <span class="links_name">설정</span>
+                </a>
+                <span class="tooltip">설정</span>
+            </li>
+            <li class="signin-needed">
+                <a id="quota-button" href="#">
+                    <i class='bx bx-pie-chart'></i>
+                    <span class="links_name">사용량</span>
+                </a>
+                <span class="tooltip">사용량</span>
+            </li>
+            <li>
+                <a id="info-button" href="#">
+                    <i class='bx bx-help-circle'></i>
+                    <span class="links_name">처음이세요?</span>
+                </a>
+                <span class="tooltip">처음이세요?</span>
+            </li>
+            <li class="profile">
+                <div class="profile-details">
+                    <div class="email-name">
+                        <div id="name" class="name"></div>
+                        <div id="email" class="email"></div>
                     </div>
-                  `,
-                  showConfirmButton: false,
-                  showCancelButton: true,
-                  cancelButtonText: '취소',
-                });
-              })
-            }
-          }).catch()
-
-          fetch('/bookmarkList', {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ idToken: idToken }),
-          }).then(async (res) => {
-            let json = await res.json()
-            if (json.result == 'ok') {
-              let bookmarkList = json.bookmarkList
-              bookmarkList.sort((a, b) => a.title - b.title)
-
-              if (bookmarkList.length > 0) {
-                searchHelper.innerHTML = ''
-              }
-
-              let isThereNewLine = false
-              let isThereBoomark = false
-
-              for (let bookmark of bookmarkList) {
-                if (isThereBoomark) {
-                  let span = document.createElement('span')
-                  span.innerHTML = '&nbsp&nbsp'
-                  searchHelper.appendChild(span)
-                }
-
-                isThereBoomark = true
-
-                let a = document.createElement('a')
-                a.innerHTML = bookmark.title
-
-                if (bookmark.storeUrl.includes('smartstore.naver.com')) {
-                  let endpoint = bookmark.storeUrl.split('/').pop()
-                  a.setAttribute('href', `/smartstore/${endpoint}`)
-                }
-
-                searchHelper.appendChild(a)
-
-                if (searchHelper.offsetWidth > 575 && !isThereNewLine) {
-                  let br = document.createElement('br')
-                  searchHelper.insertBefore(br, a)
-                  isThereNewLine = true
-                }
-              }
-
-              if (!isThereNewLine) {
-                let br = document.createElement('br')
-                searchHelper.appendChild(br)
-
-                let span = document.createElement('span')
-                span.innerHTML = '&nbsp'
-                searchHelper.appendChild(span)
-              }
-
-              if (!isThereBoomark) {
-                searchHelper.innerHTML = '매번 검색하기 귀찮으시죠? 클릭 한 번으로 스토어에 접속해보세요! '
-
-                let howToBookmark = document.createElement('button')
-                howToBookmark.type = "button"
-                howToBookmark.style = 'background: none; border: none; margin: 0; padding: 0; color: #0066CC'
-                howToBookmark.innerHTML = '즐겨찾기 사용법'
-                howToBookmark.setAttribute('onclick', `
-                  swal.fire({
-                    title: '즐겨찾기 A to Z',
-                    html: \`
-                      <div style="text-align: left; line-height: 130%">
-                      <div class="text-center">
-                        <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
-                      </div>
-                      <div class="text-center" style="margin: 8px 0px">
-                        <img src="https://imgur.com/x13joXj.png" width="454" height="81">
-                      </div><br>
-                        1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>
-                        2. 스토어 이름 옆 노란 별 아이콘을 클릭해주세요.<br>
-                        3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>
-                      <div class="text-center"><img src="https://imgur.com/YtMW1un.png" width="454" height="67"></div><br>
-                        즐겨찾기는 최대 10개까지만 등록하실 수 있어요.<br>
-                        그 이상 등록하려 하셔도 삭제할 즐겨찾기 선택창이 떠요.<br><br>
-                        즐겨찾기는 브라우저에 쿠키를 통해 저장해요.<br>
-                        쿠키를 삭제하시면 즐겨찾기도 삭제돼요.
-                      </div>
-                    \`,
-                    confirmButtonText: '알겠어요',
-                  })
-                `)
-
-                searchHelper.appendChild(howToBookmark)
-                searchHelper.innerHTML += '<br>&nbsp'
-              }
-            }
-            else {
-              throw new Error(json.error)
-            }
-          }).catch((error) => {
-            showError(`
-              <div style="line-height: 130%">
-                즐겨찾기를 불러오는데 실패하였어요.<br>
-                다시 시도해주세요.
-              </div>
-            `, error.message)
-          })
-        }
-      })
-
-      function onSignIn(googleUser) {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          unsubscribe()
-          if (!isUserEqual(googleUser, firebaseUser)) {
-            const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token)
-
-            signInWithCredential(auth, credential).then(async () => {
-              let form = document.createElement('form')
-              form.style.visibility = 'hidden'
-              form.method = 'GET'
-              form.action = '/'
-              document.body.appendChild(form)
-              form.submit()
-            }).catch((error) => {
-              const errorCode = error.code
-              const errorMessage = error.message
-              const email = error.email
-              const credential = GoogleAuthProvider.credentialFromError(error)
-
-              showError(`
-                <div style="line-height: 130%">
-                  로그인에 실패 하셨어요.<br>
-                  다시 시도해주세요.
                 </div>
-              `, error.message)
-            })
-          }
-        })
-      }
-
-      function isUserEqual(googleUser, firebaseUser) {
-        if (firebaseUser) {
-          const providerData = firebaseUser.providerData
-          for (let i = 0; i < providerData.length; i++) {
-            if (providerData[i].providerId === GoogleAuthProvider.PROVIDER_ID &&
-              providerData[i].uid === googleUser.getBasicProfile().getId()) {
-              return true
-            }
-          }
-        }
-        return false
-      }
-
-      window.onSignIn = onSignIn
-
-      const infoButton = document.getElementById('info-button')
-      const searchDiv = document.getElementById('search-div')
-      const searchInput = document.getElementById('search-input')
-      const searchHelper = document.getElementById('search-helper')
-      const searchButton = document.getElementById('search-button')
-      const urlValidator = document.getElementById('url-validator')
-      const mostVisited = document.getElementById('most-visited')
-      const dropdownOption = document.getElementById('dropdown-option')
-      const dropdownQuota = document.getElementById('dropdown-quota')
-
-      dropdownOption.addEventListener('click', async () => {
-        fetch('/user', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ idToken: await user.getIdToken() }),
-        }).then(async (res) => {
-          let json = await res.json()
-          if (json.result == 'ok') {
-            let user = json.user
-
-            let loadAll = document.createElement('input')
-            loadAll.classList.add('form-check-input')
-            loadAll.setAttribute('type', 'checkbox')
-
-            let highlightChanges = document.createElement('input')
-            highlightChanges.classList.add('form-check-input')
-            highlightChanges.setAttribute('type', 'checkbox')
-
-            let byRecent = document.createElement('input')
-            byRecent.classList.add('form-check-input')
-            byRecent.setAttribute('type', 'radio')
-            byRecent.setAttribute('name', 'sort-radio')
-
-            let byPopularity = document.createElement('input')
-            byPopularity.classList.add('form-check-input')
-            byPopularity.setAttribute('type', 'radio')
-            byPopularity.setAttribute('name', 'sort-radio')
-
-            let loadAllLabel = document.createElement('label')
-            loadAllLabel.style = 'padding-top: 5.3px'
-            loadAllLabel.innerText = '전부 로딩하기'
-
-            let highlightChangesLabel = document.createElement('label')
-            highlightChangesLabel.style = 'padding-top: 5.3px'
-            highlightChangesLabel.innerText = '바뀐 제품을 위로'
-
-            let byRecentLabel = document.createElement('label')
-            byRecentLabel.style = 'padding-top: 5.3px'
-            byRecentLabel.innerText = '최신 순으로'
-
-            let byPopularityLabel = document.createElement('label')
-            byPopularityLabel.style = 'padding-top: 5.3px'
-            byPopularityLabel.innerText = '인기 순으로'
-
-            if (user.loadAll) {
-              loadAll.checked = true
-            }
-
-            if (user.highlightChanges) {
-              highlightChanges.checked = true
-            }
-
-            if (user.sortMethod == 0) {
-              byRecent.checked = true
-            }
-            else {
-              byPopularity.checked = true
-            }
-
-            let loadAllDiv = document.createElement('div')
-            loadAllDiv.classList.add('form-check', 'form-check-inline')
-            loadAllDiv.appendChild(loadAll)
-            loadAllDiv.appendChild(loadAllLabel)
-
-            let highlightChangesDiv = document.createElement('div')
-            highlightChangesDiv.classList.add('form-check', 'form-check-inline')
-            highlightChangesDiv.appendChild(highlightChanges)
-            highlightChangesDiv.appendChild(highlightChangesLabel)
-
-            let byRecentDiv = document.createElement('div')
-            byRecentDiv.classList.add('form-check', 'form-check-inline')
-            byRecentDiv.appendChild(byRecent)
-            byRecentDiv.appendChild(byRecentLabel)
-
-            let byPopularityDiv = document.createElement('div')
-            byPopularityDiv.classList.add('form-check', 'form-check-inline')
-            byPopularityDiv.appendChild(byPopularity)
-            byPopularityDiv.appendChild(byPopularityLabel)
-
-            let span = document.createElement('span')
-            span.style = 'line-height: 130%'
-            span.innerHTML = `
-              스토어 접속 시 기본 설정이에요.<br>
-              그때그때 바꾸실 수 있어요.<br><br>
-            `
-
-            let space = document.createElement('span')
-            space.innerHTML = '&nbsp<br>'
-
-            let form = document.createElement('form')
-            form.appendChild(span)
-            form.appendChild(loadAllDiv)
-            form.appendChild(highlightChangesDiv)
-            form.appendChild(space)
-            form.appendChild(byRecentDiv)
-            form.appendChild(byPopularityDiv)
-
-            swal.fire({
-              title: '설정',
-              html: form,
-              confirmButtonText: '확인',
-              cancelButtonText: '안 돼요!',
-              showCancelButton: true,
-              heightAuto: false,
-            }).then(async (res) => {
-              if (res.isConfirmed) {
-                fetch('/user/update', {
-                  method: 'POST',
-                  headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    idToken: await user.getIdToken(),
-                    loadAll: loadAll.checked ? 1 : 0,
-                    highlightChanges: highlightChanges.checked ? 1 : 0,
-                    sortMethod: byRecent.checked ? 0 : 1,
-                  }),
-                }).then(async (res) => {
-                  let json = await res.json()
-
-                  if (json.result == 'ok') {
-                    swal.fire({
-                      title: '설정 변경 성공!',
-                      icon: 'success',
-                      heightAuto: false,
-                      confirmButtonText: '좋네요!',
-                    })
-                  }
-                  else {
-                    throw new Error(res.error)
-                  }
-                }).catch((error) => {
-                  showError(`
-                    <div style="line-height: 130%">
-                      설정을 변경하는데 실패하였어요.<br>
-                      다시 시도해주세요.
+                <i class='bx bx-log-out' id="signout"></i>
+            </li>
+        </ul>
+    </div>
+    <section class="home-section">
+        <div class="d-flex" style="float: right; margin: 15px">
+            <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
+            <div class="container d-flex align-items-center justify-content-center"
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)">
+                <div>
+                    <div class="text-center">
+                        <a href="http://n09company.com" target="_blank"><img src="https://imgur.com/YPhrrAJ.png"
+                                width="160" height="160" style="margin: 0px 0px"></a>
                     </div>
-                  `, error.message)
+                    <p
+                        style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 66px 0px 77px 0px">
+                        해당
+                        서비스는 ㈜엔공구의 자회사 공구형에서
+                        개발합니다.<br>현재 베타 서비스
+                        단계이며 무료로 이용하실 수
+                        있습니다.<br>후원금은 서비스
+                        운영을 위한 서버 유지 비용에 사용됩니다.
+                    </p>
+                    <p
+                        style="text-align: center; line-height: 150%; font-size: 14px; font-weight: 100; margin: 77px 0px">
+                        <b>공구형 고객센터</b> 010-3924-8171<br><b>후원 계좌</b> 광주은행 1121-022-248925 (최만수)<br><br>
+                        <b>상호명</b> 공구형 &nbsp; <b>사업자 번호</b> 226-28-19779 <br> <b>주소</b> 광주광역시 광산구
+                        하남산단 6번로 57 (지식동 908호)
+                    </p>
+                    <div class="text-center">
+                        <a href="https://09bro.net" target="_blank"><img src="https://imgur.com/7HP4qOb.png" width="72"
+                                height="24" style="margin: 0px 8px;"></a>
+                        <a href="https://play.google.com/store/apps/details?id=com.n09.fanorama" target="_blank"><img
+                                src="https://imgur.com/Ranntdk.png" width="36" height="36" style="margin: auto"></a>
+                    </div>
+                    <div hidden>
+                        <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
+                        <div id="elemID031021"
+                            style="line-height:16px;text-align:center;position:relative;z-index:100000;">
+                            <script type="text/javascript"
+                                src="//s3.tracemyip.org/tracker/lgUrl.php?random='+Math.random()+'&amp;stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
+                            <noscript><a
+                                    href="https://www.tracemyip.org/tools/website-visitors-counter-traffic-tracker-statistics/"><img
+                                        src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/"
+                                        alt="Web Site Hits Ipv4 Tracer" style="border:0px;"></a></noscript>
+                        </div> <!-- End: TraceMyIP.org Service Code //-->
+                    </div>
+                </div>
+            </div>
+            <script type="module">
+                import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
+                import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
+
+                initializeApp({
+                    apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+                    authDomain: "store-manager-5d527.firebaseapp.com",
+                    projectId: "store-manager-5d527",
+                    storageBucket: "store-manager-5d527.appspot.com",
+                    messagingSenderId: "36522862962",
+                    appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+                    measurementId: "G-37DECVWLYX"
                 })
-              }
-            })
-          }
-          else {
-            throw new Error(json.error)
-          }
-        }).catch((error) => {
-          showError(`
-            <div style="line-height: 130%">
-              설정을 불러오는데 실패하였어요.<br>
-              다시 시도해주세요.
-            </div>
-          `, error.message)
-        })
-      })
 
-      dropdownQuota.addEventListener('click', async () => {
-        fetch('/quota', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ idToken: await user.getIdToken() }),
-        }).then(async (res) => {
-          let json = await res.json()
-          if (json.result == 'ok') {
-            let productListQuota = 0
-            let updateQuota = 0
-            let saveQuota = 0
+                const auth = getAuth()
+                const name = document.getElementById('name')
+                const email = document.getElementById('email')
+                const signoutButton = document.getElementById('signout')
+                const signinNeededList = document.getElementsByClassName('signin-needed')
+                
+                let user
+                let bookmarkList = []
 
-            let productListQueryList = json.quota.filter((query) => query.type == 1)
+                onAuthStateChanged(auth, async (firebaseUser) => {
+                    if (firebaseUser) {
+                        user = firebaseUser
 
-            for (let productListQuery of productListQueryList) {
-              productListQuota += productListQuery.amount
+                        name.innerText = user.displayName
+                        email.innerText = user.email
+
+                        let idToken = await user.getIdToken()
+
+                        for (let signinNeeded of signinNeededList) {
+                            signinNeeded.hidden = false
+                        }
+
+                        fetch('/signin', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ idToken: idToken }),
+                        }).catch()
+
+                        fetch('/user', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ idToken: idToken }),
+                        }).then(async (res) => {
+                            let json = await res.json()
+                            if (json.user.permission == 1) {
+
+                            }
+                        }).catch()
+
+                        fetch('/bookmarkList', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ idToken: idToken }),
+                        }).then(async (res) => {
+                            let json = await res.json()
+                            if (json.result == 'ok') {
+                                bookmarkList = json.bookmarkList
+                                bookmarkList.sort((a, b) => a.title - b.title)
+                            }
+                            else {
+                                throw new Error(json.error)
+                            }
+                        }).catch((error) => {
+                            showError(`
+                                <div style="line-height: 130%">
+                                    즐겨찾기를 불러오는데 실패하였어요.<br>
+                                    다시 시도해주세요.
+                                </div>
+                            `, error.message)
+                        })
+                    }
+                    else {
+                        for (let signinNeeded of signinNeededList) {
+                            signinNeeded.hidden = true
+                        }
+                    }
+                })
+
+                function refresh() {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                }
+
+                function onSignIn(googleUser) {
+                    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+                        unsubscribe()
+                        if (!isUserEqual(googleUser, firebaseUser)) {
+                            const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token)
+
+                            signInWithCredential(auth, credential).then(() => refresh()).catch((error) => {
+                                const errorCode = error.code
+                                const errorMessage = error.message
+                                const email = error.email
+                                const credential = GoogleAuthProvider.credentialFromError(error)
+
+                                showError(`
+                                    <div style="line-height: 130%">
+                                        로그인에 실패 하셨어요.<br>
+                                        다시 시도해주세요.
+                                    </div>
+                                `, error.message)
+                            })
+                        }
+                    })
+                }
+
+                signoutButton.addEventListener('click', () => {
+                    signOut(auth).then(() => refresh()).catch((error) => {
+                        showError(`
+                            <div style="line-height: 130%">
+                                로그인에 실패 하셨어요.<br>
+                                다시 시도해주세요.
+                            </div>f
+                        `, error.message)
+                    });
+                })
+
+                function isUserEqual(googleUser, firebaseUser) {
+                    if (firebaseUser) {
+                        const providerData = firebaseUser.providerData
+                        for (let i = 0; i < providerData.length; i++) {
+                            if (providerData[i].providerId === GoogleAuthProvider.PROVIDER_ID &&
+                                providerData[i].uid === googleUser.getBasicProfile().getId()) {
+                                return true
+                            }
+                        }
+                    }
+                    return false
+                }
+
+                window.onSignIn = onSignIn
+
+                const searchHelper = document.getElementById('search-helper')
+                const searchButton = document.getElementById('search-button')
+                const urlValidator = document.getElementById('url-validator')
+                const mostVisited = document.getElementById('most-visited')
+                const smartstoreButton = document.getElementById('smartstore-button')
+                const optionButton = document.getElementById('option-button')
+                const quotaButton = document.getElementById('quota-button')
+                const infoButton = document.getElementById('info-button')
+
+                smartstoreButton.addEventListener('click', () => smartstoreSearch())
+
+                function smartstoreSearch() {
+                    let div = document.createElement('div')
+
+                    let searchInput = document.createElement('input')
+                    searchInput.setAttribute('type', 'search')
+                    searchInput.classList.add('form-control', 'rounded', 'p-2')
+                    searchInput.style = 'box-shadow: none;'
+                    searchInput.setAttribute('placeholder', '스토어 이름 또는 URL')
+                    searchInput.setAttribute('spellcheck', 'false')
+
+                    let searchButton = document.createElement('button')
+                    searchButton.classList.add('btn', 'btn-primary', 'fas', 'fa-search')
+
+                    let inputDiv = div.cloneNode(true)
+                    inputDiv.classList.add('input-group', 'rounded', 'p-2')
+                    inputDiv.appendChild(searchInput)
+                    inputDiv.appendChild(searchButton)
+
+                    let searchHelper = document.createElement('h6')
+                    searchHelper.classList.add('text-center', 'px-2')
+                    searchHelper.style = 'line-height: 130%; font-weight: 100'
+
+                    let form = document.createElement('form')
+                    form.appendChild(searchHelper)
+
+                    div.appendChild(inputDiv)
+                    div.appendChild(form)
+
+                    if (bookmarkList.length > 0) {
+                        searchHelper.innerHTML = ''
+                    }
+
+                    let isThereNewLine = false
+                    let isThereBoomark = false
+
+                    for (let bookmark of bookmarkList) {
+                        if (isThereBoomark) {
+                            let span = document.createElement('span')
+                            span.innerHTML = '&nbsp&nbsp'
+                            searchHelper.appendChild(span)
+                        }
+
+                        isThereBoomark = true
+
+                        let a = document.createElement('a')
+                        a.innerHTML = bookmark.title
+
+                        if (bookmark.storeUrl.includes('smartstore.naver.com')) {
+                            let endpoint = bookmark.storeUrl.split('/').pop()
+                            a.setAttribute('href', `/smartstore/${endpoint}`)
+                        }
+
+                        searchHelper.appendChild(a)
+                    }
+
+                    if (!isThereBoomark) {
+                        searchHelper.innerHTML = '매번 검색하기 힘드시죠? 클릭만으로 접속하세요! '
+
+                        let howToBookmark = document.createElement('button')
+                        howToBookmark.type = "button"
+                        howToBookmark.style = 'background: none; border: none; margin: 0; padding: 0; color: #0066CC'
+                        howToBookmark.innerHTML = '즐겨찾기 사용법'
+                        howToBookmark.setAttribute('onclick', `
+                            swal.fire({
+                                title: '즐겨찾기 A to Z',
+                                html: \`
+                                <div style="text-align: left; line-height: 130%">
+                                <div class="text-center">
+                                    <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
+                                </div>
+                                <div class="text-center" style="margin: 8px 0px">
+                                    <img src="https://imgur.com/x13joXj.png" width="454" height="81">
+                                </div><br>
+                                    1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>
+                                    2. 스토어 이름 옆 노란 별 아이콘을 클릭해주세요.<br>
+                                    3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>
+                                <div class="text-center"><img src="https://imgur.com/YtMW1un.png" width="454" height="67"></div><br>
+                                    즐겨찾기는 계정 당 10개까지만 등록하실 수 있어요.<br>
+                                </div>
+                                \`,
+                                confirmButtonText: '알겠어요',
+                            }).then(() => smartstoreSearch())
+                        `)
+
+                        searchHelper.appendChild(howToBookmark)
+                    }
+
+                    swal.fire({
+                        title: '스마트스토어',
+                        html: div,
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: '취소'
+                    })
+
+                    searchInput.addEventListener('keyup', (e) => {
+                        if (e.code == 'Enter') {
+                            search()
+                        }
+                    })
+
+                    searchButton.addEventListener('click', () => {
+                        search()
+                    })
+
+                    function search() {
+                        if (searchInput.value.trim().length == 0) {
+                            return
+                        }
+
+                        swal.fire({
+                            title: '잠시만요!',
+                            text: '스토어에 접속하는 중이에요.',
+                            showCancelButton: false,
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            heightAuto: false,
+                        })
+
+                        fetch('/smartstore/search', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ query: searchInput.value }),
+                        }).then(async (res) => {
+                            let json = await res.json()
+                            swal.close()
+
+                            if (json.result == 'ok') {
+                                swal.fire({
+                                    title: '스토어 발견!',
+                                    html: `'${json.store_title}' 스토어로 진행 하시겠어요?`,
+                                    icon: 'success',
+                                    confirmButtonText: '네',
+                                    cancelButtonText: '이게 아닌데!',
+                                    showCancelButton: true,
+                                    heightAuto: false,
+                                }).then((res) => {
+                                    if (res.isConfirmed) {
+                                        let form = document.createElement('form')
+                                        form.style.visibility = 'hidden'
+                                        form.method = 'GET'
+                                        form.action = `/smartstore/${json.store_url}`
+                                        document.body.appendChild(form)
+                                        form.submit()
+                                    }
+                                    else {
+                                        smartstoreSearch()
+                                    }
+                                })
+                            }
+                            else {
+                                showError(`
+                                    <div style="line-height: 130%">
+                                        스토어를 검색했지만 찾지 못했어요.<br>
+                                        검색어를 다시 한 번 확인해주세요.
+                                    </div>
+                                `, json.error).then(
+                                    smartstoreSearch()
+                                )
+                            }
+                        }).catch((error) => {
+                            showError('스토어를 검색하지 못했어요.', error.message)
+                        })
+                    }
+                }
+
+                optionButton.addEventListener('click', async () => {
+                    fetch('/user', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ idToken: await user.getIdToken() }),
+                    }).then(async (res) => {
+                        let json = await res.json()
+                        if (json.result == 'ok') {
+                            let user = json.user
+
+                            let loadAll = document.createElement('input')
+                            loadAll.classList.add('form-check-input')
+                            loadAll.setAttribute('type', 'checkbox')
+
+                            let highlightChanges = document.createElement('input')
+                            highlightChanges.classList.add('form-check-input')
+                            highlightChanges.setAttribute('type', 'checkbox')
+
+                            let byRecent = document.createElement('input')
+                            byRecent.classList.add('form-check-input')
+                            byRecent.setAttribute('type', 'radio')
+                            byRecent.setAttribute('name', 'sort-radio')
+
+                            let byPopularity = document.createElement('input')
+                            byPopularity.classList.add('form-check-input')
+                            byPopularity.setAttribute('type', 'radio')
+                            byPopularity.setAttribute('name', 'sort-radio')
+
+                            let loadAllLabel = document.createElement('label')
+                            loadAllLabel.innerText = '전부 로딩하기'
+
+                            let highlightChangesLabel = document.createElement('label')
+                            highlightChangesLabel.innerText = '바뀐 제품을 위로'
+
+                            let byRecentLabel = document.createElement('label')
+                            byRecentLabel.innerText = '최신 순으로'
+
+                            let byPopularityLabel = document.createElement('label')
+                            byPopularityLabel.innerText = '인기 순으로'
+
+                            if (user.loadAll) {
+                                loadAll.checked = true
+                            }
+
+                            if (user.highlightChanges) {
+                                highlightChanges.checked = true
+                            }
+
+                            if (user.sortMethod == 0) {
+                                byRecent.checked = true
+                            }
+                            else {
+                                byPopularity.checked = true
+                            }
+
+                            let loadAllDiv = document.createElement('div')
+                            loadAllDiv.classList.add('form-check', 'form-check-inline')
+                            loadAllDiv.appendChild(loadAll)
+                            loadAllDiv.appendChild(loadAllLabel)
+
+                            let highlightChangesDiv = document.createElement('div')
+                            highlightChangesDiv.classList.add('form-check', 'form-check-inline')
+                            highlightChangesDiv.appendChild(highlightChanges)
+                            highlightChangesDiv.appendChild(highlightChangesLabel)
+
+                            let byRecentDiv = document.createElement('div')
+                            byRecentDiv.classList.add('form-check', 'form-check-inline')
+                            byRecentDiv.appendChild(byRecent)
+                            byRecentDiv.appendChild(byRecentLabel)
+
+                            let byPopularityDiv = document.createElement('div')
+                            byPopularityDiv.classList.add('form-check', 'form-check-inline')
+                            byPopularityDiv.appendChild(byPopularity)
+                            byPopularityDiv.appendChild(byPopularityLabel)
+
+                            let span = document.createElement('span')
+                            span.style = 'line-height: 130%'
+                            span.innerHTML = `
+                                스토어 접속 시 기본 설정이에요.<br>
+                                그때그때 바꾸실 수 있어요.<br><br>
+                            `
+
+                            let space = document.createElement('span')
+                            space.innerHTML = '&nbsp<br>'
+
+                            let form = document.createElement('form')
+                            form.appendChild(span)
+                            form.appendChild(loadAllDiv)
+                            form.appendChild(highlightChangesDiv)
+                            form.appendChild(space)
+                            form.appendChild(byRecentDiv)
+                            form.appendChild(byPopularityDiv)
+
+                            swal.fire({
+                                title: '설정',
+                                html: form,
+                                confirmButtonText: '확인',
+                                cancelButtonText: '안 돼요!',
+                                showCancelButton: true,
+                                heightAuto: false,
+                            }).then(async (res) => {
+                                if (res.isConfirmed) {
+                                    fetch('/user/update', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Accept': 'application/json',
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            idToken: await user.getIdToken(),
+                                            loadAll: loadAll.checked ? 1 : 0,
+                                            highlightChanges: highlightChanges.checked ? 1 : 0,
+                                            sortMethod: byRecent.checked ? 0 : 1,
+                                        }),
+                                    }).then(async (res) => {
+                                        let json = await res.json()
+
+                                        if (json.result == 'ok') {
+                                            swal.fire({
+                                                title: '설정 변경 성공!',
+                                                icon: 'success',
+                                                heightAuto: false,
+                                                confirmButtonText: '좋네요!',
+                                            })
+                                        }
+                                        else {
+                                            throw new Error(res.error)
+                                        }
+                                    }).catch((error) => {
+                                        showError(`
+                                            <div style="line-height: 130%">
+                                                설정을 변경하는데 실패하였어요.<br>
+                                                다시 시도해주세요.
+                                            </div>
+                                        `, error.message)
+                                    })
+                                }
+                            })
+                        }
+                        else {
+                            throw new Error(json.error)
+                        }
+                    }).catch((error) => {
+                        showError(`
+                            <div style="line-height: 130%">
+                                설정을 불러오는데 실패하였어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `, error.message)
+                    })
+                })
+
+                quotaButton.addEventListener('click', async () => {
+                    fetch('/quota', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ idToken: await user.getIdToken() }),
+                    }).then(async (res) => {
+                        let json = await res.json()
+                        if (json.result == 'ok') {
+                            let productListQuota = 0
+                            let updateQuota = 0
+                            let saveQuota = 0
+
+                            let productListQueryList = json.quota.filter((query) => query.type == 1)
+
+                            for (let productListQuery of productListQueryList) {
+                                productListQuota += productListQuery.amount
+                            }
+
+                            let updateQueryList = json.quota.filter((query) => query.type == 2)
+
+                            for (let updateQuery of updateQueryList) {
+                                updateQuota += updateQuery.amount
+                            }
+
+                            let saveQueryList = json.quota.filter((query) => query.type == 3)
+
+                            for (let saveQuery of saveQueryList) {
+                                saveQuota += saveQuery.amount
+                            }
+
+                            swal.fire({
+                                title: '사용량',
+                                html: `
+                                    <span style="line-height: 130%">
+                                        오늘의 사용량이에요.<br>
+                                        사용량은 자정에 초기화 돼요!<br><br>
+                                        조회 <b>${productListQuota.toLocaleString('ko-KR')} / 100,000개</b><br>
+                                        업데이트 <b>${updateQuota.toLocaleString('ko-KR')} / 25,000개</b><br>
+                                        엑셀로 저장 <b>${saveQuota.toLocaleString('ko-KR')} / 10회</b>
+                                        ${json.isAdmin ? '<br><br>(관리자이셔서 영향을 받지 않아요)' : ''}
+                                    </span>
+                                `,
+                                confirmButtonText: '알겠어요',
+                                showCancelButton: false,
+                            })
+                        }
+                        else {
+                            throw new Error(json.error)
+                        }
+                    }).catch((error) => {
+                        showError(`
+                            <div style="line-height: 130%">
+                                사용량을 불러오는데 실패하였어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `, error.message)
+                    })
+                })
+
+                infoButton.addEventListener('click', () => {
+                    swal.fire({
+                        title: '어서오세요!',
+                        html: `
+                            <div style="line-height: 130%"><br>
+                                <b>STORE MANAGER</b>입니다.<br>
+                                온라인 스토어의 판매 기록을 수집하실 수 있게 도와드려요!<br>
+                                클릭 몇 번으로 수천수만 제품의 변화를 기록해 보세요!
+                            </div>
+                        `,
+                        confirmButtonText: '어떻게요?',
+                    }).then(() => {
+                        swal.fire({
+                            title: '어떻게요?',
+                            html: `
+                                <div style="line-height: 130%"><br>
+                                    검색창에 스토어의 이름을 치세요, 완벽하게 안 쓰셔도 돼요!<br>
+                                    <div class="text-center">
+                                        <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
+                                    </div><br>
+                                    이름으로 검색이 안 되시나요? 주소로 검색하셔도 괜찮아요!<br>
+                                    <div class="text-center">
+                                        <img src="https://imgur.com/n6njz6V.png" width="454" height="47">
+                                    </div><br>
+                                    현재 지원하는 스토어: <b>NAVER 스마트스토어, 엔공구 공식 쇼핑몰, 오토워시 공식 스토어, 현대 카라이프몰</b>
+                                </div>
+                            `,
+                            confirmButtonText: '그래서요?',
+                        }).then(() => {
+                            swal.fire({
+                                title: '그래서요?',
+                                html: `
+                                    <div style="line-height: 160%">
+                                        성공적으로 스토어에 접속한 결과예요.
+                                        <div class="text-center">
+                                            <img src="https://imgur.com/x13joXj.png" width="454" height="81">
+                                        </div><br>
+                                        <button type="button" class="btn btn-primary" style="font-size: 14px; padding: 4px 8px; margin: 3px 0px 0px 0px">
+                                            업데이트
+                                        </button>
+                                        버튼을 누르면 제품 정보를 수집해요.<br>
+                                        수집된 제품 정보는 다음과 같이 일자로 구분하여 저장돼요.<br><br>
+                                        <div class="text-center">
+                                            <img src="https://imgur.com/yC6YGm5.png" width="454" height="110">
+                                        </div><br>
+                                        단순 확인을 원하시면 아무쪽에서나 선택하세요.<br>
+                                        두 데이터를 비교하고 싶으시면 왼쪽은 과거 시점,<br>
+                                        오른쪽은 왼쪽보다 최근 시점을 선택해주세요.<br>
+                                    </div>
+                                `,
+                                confirmButtonText: '결과는요?',
+                            }).then(() => {
+                                swal.fire({
+                                    title: '결과는요?',
+                                    html: `
+                                        <div style="line-height: 160%">
+                                            데이터를 선택하시면 다음과 같이 표시돼요.<br>
+                                            정렬 기준을 선택하시거나 다운로드 받으실 수도 있어요!<br><br>
+                                            <div class="text-center" style="margin: 8px 0px">
+                                                <img src="https://imgur.com/q1ZDJpG.png" width="454" height="322">
+                                            </div><br>
+                                            데이터 관리에 대해서는 걱정하지 마세요,<br>
+                                            전부 저희 서버에 저장되니까요!<br>
+                                        </div>
+                                    `,
+                                    confirmButtonText: '멋지네요!',
+                                })
+                            })
+                        })
+                    })
+                })
+
+                function showError(html, error) {
+                    swal.fire({
+                        title: '이런!',
+                        html: html,
+                        icon: 'error',
+                        confirmButtonText: '어떻게 된거죠?',
+                        cancelButtonText: '알겠어요',
+                        showCancelButton: true,
+                        heightAuto: false,
+                    }).then((res) => {
+                        if (res.isConfirmed) {
+                            swal.fire({
+                                title: '원인',
+                                html: error,
+                                confirmButtonText: '알겠어요',
+                                showCancelButton: false,
+                                heightAuto: false,
+                            })
+                        }
+                    })
+                }
+            </script>
+    </section>
+    <script>
+        let sidebar = document.querySelector(".sidebar");
+        let closeBtn = document.querySelector("#btn");
+        let searchBtn = document.querySelector(".bx-search");
+
+        closeBtn.addEventListener("click", () => {
+            sidebar.classList.toggle("open");
+            menuBtnChange();
+        });
+
+        function menuBtnChange() {
+            if (sidebar.classList.contains("open")) {
+                closeBtn.classList.replace("bx-menu", "bx-menu-alt-right");
+            } else {
+                closeBtn.classList.replace("bx-menu-alt-right", "bx-menu");
             }
-
-            let updateQueryList = json.quota.filter((query) => query.type == 2)
-
-            for (let updateQuery of updateQueryList) {
-              updateQuota += updateQuery.amount
-            }
-
-            let saveQueryList = json.quota.filter((query) => query.type == 3)
-
-            for (let saveQuery of saveQueryList) {
-              saveQuota += saveQuery.amount
-            }
-
-            swal.fire({
-              title: '사용량',
-              html: `
-                <span style="line-height: 130%">
-                  오늘의 사용량이에요.<br>
-                  사용량은 자정에 초기화 돼요!<br><br>
-                  조회 <b>${productListQuota.toLocaleString('ko-KR')} / 100,000개</b><br>
-                  업데이트 <b>${updateQuota.toLocaleString('ko-KR')} / 25,000개</b><br>
-                  엑셀로 저장 <b>${saveQuota.toLocaleString('ko-KR')} / 10회</b>
-                  ${json.isAdmin ? '<br><br>(관리자이셔서 영향을 받지 않아요)' : ''}
-                </span>
-              `,
-              confirmButtonText: '알겠어요',
-              showCancelButton: false,
-            })
-          }
-          else {
-            throw new Error(json.error)
-          }
-        }).catch((error) => {
-          showError(`
-            <div style="line-height: 130%">
-              사용량을 불러오는데 실패하였어요.<br>
-              다시 시도해주세요.
-            </div>
-          `, error.message)
-        })
-      })
-
-      infoButton.addEventListener('click', () => {
-        let html = `
-          <div style="line-height: 130%"><br>
-            <b>STORE MANAGER</b>입니다.<br>
-            온라인 스토어의 판매 기록을 수집하실 수 있게 도와드려요!<br>
-            클릭 몇 번으로 수천수만 제품의 변화를 기록해 보세요!
-          </div>
-        `
-
-        swal.fire({
-          title: '어서오세요!',
-          html: html,
-          confirmButtonText: '어떻게요?',
-        }).then(() => {
-          swal.fire({
-            title: '어떻게요?',
-            html: `
-              <div style="line-height: 130%"><br>
-                검색창에 스토어의 이름을 치세요, 완벽하게 안 쓰셔도 돼요!<br>
-                <div class="text-center">
-                  <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
-                </div><br>
-                이름으로 검색이 안 되시나요? 주소로 검색하셔도 괜찮아요!<br>
-                <div class="text-center">
-                  <img src="https://imgur.com/n6njz6V.png" width="454" height="47">
-                </div><br>
-                현재 지원하는 스토어: <b>NAVER 스마트스토어</b>
-              </div>
-            `,
-            confirmButtonText: '그래서요?',
-          }).then(() => {
-            swal.fire({
-              title: '그래서요?',
-              html: `
-                <div style="line-height: 160%">
-                  성공적으로 스토어에 접속한 결과예요.
-                  <div class="text-center">
-                    <img src="https://imgur.com/x13joXj.png" width="454" height="81">
-                  </div><br>
-                  <button type="button" class="btn btn-primary" style="font-size: 14px; padding: 4px 8px; margin: 3px 0px 0px 0px">
-                    업데이트
-                  </button>
-                  버튼을 누르면 제품 정보를 수집해요.<br>
-                  수집된 제품 정보는 다음과 같이 일자로 구분하여 저장돼요.<br><br>
-                  <div class="text-center">
-                    <img src="https://imgur.com/yC6YGm5.png" width="454" height="110">
-                  </div><br>
-                  단순 확인을 원하시면 아무쪽에서나 선택하세요.<br>
-                  두 데이터를 비교하고 싶으시면 왼쪽은 과거 시점,<br>
-                  오른쪽은 왼쪽보다 최근 시점을 선택해주세요.<br>
-                </div>
-              `,
-              confirmButtonText: '결과는요?',
-            }).then(() => {
-              swal.fire({
-                title: '결과는요?',
-                html: `
-                  <div style="line-height: 160%">
-                    데이터를 선택하시면 다음과 같이 표시돼요.<br>
-                    정렬 기준을 선택하시거나 다운로드 받으실 수도 있어요!<br><br>
-                    <div class="text-center" style="margin: 8px 0px">
-                      <img src="https://imgur.com/q1ZDJpG.png" width="454" height="322">
-                    </div><br>
-                    데이터 관리에 대해서는 걱정하지 마세요,<br>
-                    전부 저희 서버에 저장되니까요!<br>
-                  </div>
-                `,
-                confirmButtonText: '멋지네요!',
-              })
-            })
-          })
-        })
-      })
-
-      function showError(html, error) {
-        swal.fire({
-          title: '이런!',
-          html: html,
-          icon: 'error',
-          confirmButtonText: '어떻게 된거죠?',
-          cancelButtonText: '알겠어요',
-          showCancelButton: true,
-          heightAuto: false,
-        }).then((res) => {
-          if (res.isConfirmed) {
-            swal.fire({
-              title: '원인',
-              html: error,
-              confirmButtonText: '알겠어요',
-              showCancelButton: false,
-              heightAuto: false,
-            })
-          }
-        })
-      }
-
-      searchInput.addEventListener('keyup', (e) => {
-        if (e.code == 'Enter') {
-          search()
         }
-      })
-
-      searchButton.addEventListener('click', () => {
-        search()
-      })
-
-      function search() {
-        if (searchInput.value.trim().length == 0) {
-          swal.fire({
-            title: '잠시만요!',
-            text: '검색창이 너무 허전해요.',
-            confirmButtonText: '알겠어요',
-            heightAuto: false,
-          })
-
-          return
-        }
-
-        swal.fire({
-          title: '잠시만요!',
-          text: '스토어에 접속하는 중이에요.',
-          showCancelButton: false,
-          showConfirmButton: false,
-          allowOutsideClick: false,
-          heightAuto: false,
-        })
-
-        fetch('/smartstore/search', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: searchInput.value }),
-        }).then(async (res) => {
-          let json = await res.json()
-          swal.close()
-
-          if (json.result == 'ok') {
-            swal.fire({
-              title: '스토어 발견!',
-              html: `'${json.store_title}' 스토어로 진행 하시겠어요?`,
-              icon: 'success',
-              confirmButtonText: '네',
-              cancelButtonText: '이게 아닌데!',
-              showCancelButton: true,
-              heightAuto: false,
-            }).then((res) => {
-              if (res.isConfirmed) {
-                let form = document.createElement('form')
-                form.style.visibility = 'hidden'
-                form.method = 'GET'
-                form.action = `/smartstore/${json.store_url}`
-                document.body.appendChild(form)
-                form.submit()
-              }
-            })
-          }
-          else {
-            showError(`
-              <div style="line-height: 130%">
-                스토어를 검색했지만 찾지 못했어요.<br>
-                검색어를 다시 한 번 확인해주세요.
-              </div>
-            `, json.error)
-          }
-        }).catch((error) => {
-          showError('스토어를 검색하지 못했어요.', error.message)
-        })
-      }
     </script>
 </body>
 
