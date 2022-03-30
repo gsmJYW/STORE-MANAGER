@@ -6,10 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <style>
-        @import url(//fonts.googleapis.com/earlyaccess/jejugothic.css);
+        @import url(//fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap);
+        @import url(//cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-full.css);
+
+        #store-title {
+            font-family: "D2Coding", monospace;
+            letter-spacing: -3px;
+            word-spacing: -3px;
+        }
 
         * {
-            font-family: 'Jeju Gothic', serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
         }
 
         table {
@@ -62,19 +72,18 @@
         <p></p>
         <div class="d-flex" style="width: 680px; margin: auto">
             <form action="/">
-                <button type="submit" style="background: none; padding: 0px; border: none; outline: none">
-                    <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 0px 0px 0px"></i>
+                <button type="submit" style="background: none; border: none; outline: none">
+                    <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 8px 18px 0px"></i>
                 </button>
             </form>
-            <span style="margin: 0px 0px 0px 8px"></span>
-            <h2 style="font-weight: 600">카라이프몰</h2>
+            <h2 style="font-size: 30px; font-weight: 600; margin-bottom: auto">카라이프몰</h2>
         </div>
         <div class="d-flex p-2 border" style="width: 680px; margin: auto">
             <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
                 <option value="0" selected>이전 데이터 선택</option>
             </select>
             <span style="margin: auto"> → </span>
-            <select id="new-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
+            <select id="recent-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
                 <option value="0" selected>최근 데이터 선택</option>
             </select>
             <span style="margin: auto">또는</span>
@@ -83,27 +92,27 @@
         <div class="container" id="result" style="width: 1120px" hidden>
             <p>&nbsp;</p>
             <div id="sort-form">
-                <div class="form-check-inline" style="margin: 0px">
+                <div class="form-check-inline">
                     <button id="filter-button" type="button" class="btn btn-primary"
-                        style="margin: 6px 12px 0px 0px; padding: 4px 8px 4px 10px; font-size: 14px">
+                        style="margin: 6px 0px; padding: 4px 8px 4px 10px; font-size: 14px">
                         필터링&nbsp;
                     </button>
                 </div>
-                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 14px; margin: 0px 8px 0px 0px">
                     <input class="form-check-input" type="checkbox" id="load-all" value="load-all">
                     <label class="form-check-label">전부 로딩하기</label>
                 </div>
-                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
                     <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
-                        checked="checked">
+                        checked>
                     <label class="form-check-label">바뀐 제품을 위로</label>
                 </div>
-                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
                     <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent"
-                        checked="checked">
+                        checked>
                     <label class="form-check-label">최신 순으로</label>
                 </div>
-                <div class="form-check form-check-inline" style="padding: 0px 2px 6px 20px; margin: 0px 8px 6px 0px">
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
                     <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
                         value="by-popularity">
                     <label class="form-check-label">인기 순으로</label>
@@ -111,7 +120,7 @@
                 <div class="d-flex" style="float: right; margin: auto">
                     <span id="product-amount" style="margin: 10px 8px 0px 0px"></span>
                     <button id="excel-export-button" type="button" class="btn btn-primary"
-                        style="margin: 6px 0px 0px 0px; padding: 4px 10px; font-size: 14px">
+                        style="margin: 6px 0px; padding: 4px 10px; font-size: 14px">
                         엑셀 파일 (.xlsx)&nbsp;
                         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
                             viewBox="0 0 16 16" width="16" height="16">
@@ -152,6 +161,16 @@
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
         <script type="module">
+            const storeUrl = 'https://hyundai.auton.kr'
+            const storeTitle = '카라이프몰'
+            const endpoint = storeUrl.split('/').pop()
+
+
+
+            // Auth
+
+            showLoading('제품 기록들 목록을 불러오는 중이에요.')
+
             import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
             import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
 
@@ -165,112 +184,62 @@
                 measurementId: "G-37DECVWLYX"
             })
 
-            const storeUrl = 'https://hyundai.auton.kr'
-            const endpoint = storeUrl.split('/').pop()
-
-            function showError(html, error) {
-                swal.fire({
-                    title: '이런!',
-                    html: html,
-                    icon: 'error',
-                    confirmButtonText: '어떻게 된거죠?',
-                    cancelButtonText: '알겠어요',
-                    showCancelButton: true,
-                    heightAuto: false,
-                }).then((res) => {
-                    if (res.isConfirmed) {
-                        swal.fire({
-                            title: '원인',
-                            html: error,
-                            confirmButtonText: '알겠어요',
-                            showCancelButton: false,
-                            heightAuto: false,
-                        })
-                    }
-                })
-            }
-
-            function showWarning(html) {
-                swal.fire({
-                    title: '잠시만요!',
-                    html: html,
-                    confirmButtonText: '알겠어요',
-                    heightAuto: false,
-                })
-            }
-
-            function showLoading(html) {
-                swal.fire({
-                    title: '잠시만요!',
-                    html: html,
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                    heightAuto: false,
-                })
-            }
+            const loadAll = document.getElementById('load-all')
+            const highlightChanges = document.getElementById('highlight-changes')
+            const byPopularity = document.getElementById('by-popularity')
+            const byRecent = document.getElementById('by-recent')
+            const oldSelect = document.getElementById('old-select')
+            const recentSelect = document.getElementById('recent-select')
 
             const auth = getAuth()
             let user
+            let historyList = []
 
             onAuthStateChanged(auth, async (firebaseUser) => {
                 if (firebaseUser) {
                     user = firebaseUser
 
-                    fetch('/user', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ idToken: await user.getIdToken() }),
-                    }).then(async (res) => {
-                        let json = await res.json()
-                        if (json.result == 'ok') {
-                            if (json.user.loadAll == 1) {
-                                loadAll.checked = true
-                            }
+                    try {
+                        let json = await postAsync('/user', { idToken: await user.getIdToken() })
 
-                            if (json.user.highlightChanges == 0) {
-                                highlightChanges.checked = false
-                            }
-
-                            if (json.user.sortMethod == 1) {
-                                byPopularity.checked = true
-                            }
-                        }
-                        else {
+                        if (json.result == 'error') {
                             throw new Error(json.error)
                         }
-                    }).catch((error) => {
-                        showError(`
-                            <div style="line-height: 130%">
-                                설정을 불러오는데 실패하였어요.<br>
-                                다시 시도해주세요.
-                            </div>
-                        `, error.message)
-                    })
 
-                    fetch(`/history`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
+                        loadAll.checked = json.user.loadAll
+                        highlightChanges.checked = json.user.highlightChanges
+                        byRecent.checked = json.user.sortMethod == 0
+                        byPopularity.checked = json.user.sortMethod == 1
+                    }
+                    catch (error) {
+                        let res = await swalAsync({
+                            title: '이런!',
+                            html: `
+                                <div style="line-height: 130%">
+                                    설정을 불러오는 도중 오류가 발생했어요.<br>
+                                    기본 설정으로 진행할까요?
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: '네',
+                            cancelButtonText: '새로고침',
+                            showCancelButton: true,
+                            heightAuto: false,
+                        })
+
+                        if (!res.isConfirmed) {
+                            location.reload()
+                        }
+                    }
+
+                    try {
+                        let json = await postAsync('/history', {
                             idToken: await user.getIdToken(),
                             storeUrl: storeUrl,
-                        }),
-                    }).then(async (res) => {
-                        let json = await res.json()
+                        })
 
-                        if (json.result != 'ok') {
-                            showError(`
-                                <div style="line-height: 130%">
-                                    제품 기록을 불러오지 못했어요.<br>
-                                    새로고침을 시도해주세요.
-                                </div>
-                            `, json.error)
-                            return
+                        if (json.result == 'error') {
+                            throw new Error(json.error)
                         }
 
                         json.history.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
@@ -278,267 +247,35 @@
                         for (let history of json.history) {
                             let time = new Date(history).getTime()
                             oldSelect.add(getOption(time))
-                            newSelect.add(getOption(time))
+                            recentSelect.add(getOption(time))
                             historyList.push(time)
                         }
 
                         swal.close()
-
-                        if (historyList.length == 0) {
-                            swal.fire({
-                                title: '처음이세요?',
-                                html: `
-                                    <div style="line-height: 130%">
-                                        아직 제품 기록이 없는 스토어에요.<br>
-                                        업데이트 버튼을 눌러 첫 기록을 남겨보세요!
-                                    </div>
-                                `,
-                                confirmButtonText: '알겠어요',
-                                showCancelButton: false,
-                            })
-                        }
-
-                        oldSelect.addEventListener('change', async () => {
-                            if (oldSelect.value == 0) {
-                                oldProductList = []
-                                updateTable()
-                                return
-                            }
-
-                            if (oldSelect.value >= newSelect.value) {
-                                newProductList = []
-                                newSelect.selectedIndex = 0
-                                updateTable()
-                            }
-
-                            showLoading(`
-                                <div style="line-height: 130%">
-                                    제품 기록을 불러오는 중이에요.<br>
-                                    제품이 많을 수록 오래 걸려요!
-                                </div>
-                            `)
-
-                            function showOldSelectError(error) {
-                                oldProductList = []
-                                oldSelect.selectedIndex = 0
-
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        제품 기록을 불러오지 못했어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `, error)
-                            }
-
-                            fetch(`/productList`, {
-                                method: 'POST',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    storeUrl: storeUrl,
-                                    time: new Date(Number(oldSelect.value)),
-                                    idToken: await user.getIdToken(),
-                                }),
-                            }).then(async (res) => {
-                                let json = await res.json()
-
-                                if (json.result != 'ok') {
-                                    if (json.result == 'quota exceeded') {
-                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
-                                    }
-                                    else if (json.result == 'error') {
-                                        showOldSelectError(json.error)
-                                    }
-
-                                    oldSelect.value = 0
-                                    return
-                                }
-
-                                oldProductList = json.productList
-                                updateTable()
-                                swal.close()
-                            }).catch((error) => showOldSelectError(error))
-                        })
-
-                        newSelect.addEventListener('change', async () => {
-                            if (newSelect.value == 0) {
-                                newProductList = []
-                                updateTable()
-                                return
-                            }
-
-                            if (oldSelect.value >= newSelect.value) {
-                                oldProductList = []
-                                oldSelect.selectedIndex = 0
-                                updateTable()
-                            }
-
-                            showLoading(`
-                                <div style="line-height: 130%">
-                                    제품 기록을 불러오는 중이에요.<br>
-                                    제품이 많을 수록 오래 걸려요!
-                                </div>
-                            `)
-
-                            function showNewSelectError(error) {
-                                newProductList = []
-                                newSelect.selectedIndex = 0
-
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        제품 기록을 불러오지 못했어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `, error)
-                            }
-
-                            fetch(`/productList`, {
-                                method: 'POST',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    storeUrl: storeUrl,
-                                    time: new Date(Number(newSelect.value)),
-                                    idToken: await user.getIdToken(),
-                                }),
-                            }).then(async (res) => {
-                                let json = await res.json()
-
-                                if (json.result != 'ok') {
-                                    if (json.result == 'quota exceeded') {
-                                        showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
-                                    }
-                                    else if (json.result == 'error') {
-                                        showNewSelectError(json.error)
-                                    }
-
-                                    newSelect.value = 0
-                                    return
-                                }
-
-                                newProductList = json.productList
-                                updateTable()
-                                swal.close()
-                            }).catch((error) => showNewSelectError(error))
-                        })
-
-                        updateButton.addEventListener('click', async () => {
-                            showLoading(`
-                                <div style="line-height: 130%">
-                                    새로운 제품 기록을 쓰는 중이에요.<br>
-                                    제품이 많을 수록 오래 걸려요!
-                                </div>
-                            `)
-
-                            fetch(`/hyundai/auton/update`, {
-                                method: 'POST',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    idToken: await user.getIdToken(),
-                                }),
-                            }).then(async (res) => {
-                                let json = await res.json()
-                                let html = '확인 하시겠어요?'
-
-                                let time = new Date(json.time).getTime()
-
-                                if (json.result == 'already exists') {
-                                    for (let history of historyList) {
-                                        if (parseInt(time / 1000 / 60) == parseInt(history / 1000 / 60)) {
-                                            showWarning(`
-                                                <div style="line-height: 130%">
-                                                    이미 업데이트 되어있어요.<br>
-                                                    업데이트는 1분 단위로 하실 수 있어요.
-                                                </div>
-                                            `)
-                                            return
-                                        }
-                                    }
-
-                                    html = `
-                                        <span style="line-height: 130%">
-                                            이미 누군가 업데이트 했어요!<br>
-                                            확인 하시겠어요?
-                                        </span>
-                                    `
-                                }
-                                else if (json.result != 'ok') {
-                                    if (json.result == 'quota exceeded') {
-                                        showQuotaExceededError('업데이트한 제품 개수', json.quotaUsed, json.quotaLimit)
-                                    }
-                                    else if (json.result == 'error') {
-                                        showError(`
-                                            <div style="line-height: 130%">
-                                                업데이트에 실패 하였어요.<br>
-                                                다시 시도해주세요.
-                                            </div>
-                                        `, json.error)
-                                    }
-                                    return
-                                }
-
-                                historyList.unshift(time)
-
-                                swal.fire({
-                                    title: '업데이트 성공!',
-                                    html: html,
-                                    icon: 'success',
-                                    heightAuto: false,
-                                    confirmButtonText: '네',
-                                    cancelButtonText: '됐어요!',
-                                    showCancelButton: true,
-                                }).then(async (res) => {
-                                    let oldSelectValue = oldSelect.value
-                                    let newSelectValue = newSelect.value
-
-                                    while (oldSelect.options.length > 1) {
-                                        oldSelect.remove(1)
-                                    }
-
-                                    while (newSelect.options.length > 1) {
-                                        newSelect.remove(1)
-                                    }
-
-                                    for (let history of historyList.sort().reverse()) {
-                                        oldSelect.add(getOption(history))
-                                        newSelect.add(getOption(history))
-                                    }
-
-                                    oldSelect.value = oldSelectValue
-
-                                    if (res.isConfirmed) {
-                                        newSelect.value = time
-                                        newProductList = json.productList
-                                        updateTable()
-                                    }
-                                    else {
-                                        newSelect.value = newSelectValue
-                                    }
-                                })
-                            }).catch((error) => {
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        업데이트에 실패 하였어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `, error.message)
-                            })
-                        })
-                    }).catch((error) => {
+                    }
+                    catch (error) {
                         showError(`
                             <div style="line-height: 130%">
-                                제품 기록을 불러오지 못했어요.<br>
+                                제품 기록을 불러오는 도중 오류가 발생했어요.<br>
                                 새로고침을 시도해주세요.
                             </div>
                         `, error.message)
-                    })
+                        return
+                    }
+
+                    if (historyList.length == 0) {
+                        swal.fire({
+                            title: '처음이세요?',
+                            html: `
+                                <div style="line-height: 130%">
+                                    아직 제품 기록이 없는 스토어에요.<br>
+                                    업데이트 버튼을 눌러 첫 기록을 남겨보세요!
+                                </div>
+                            `,
+                            confirmButtonText: '알겠어요',
+                            showCancelButton: false,
+                        })
+                    }
                 } else {
                     swal.fire({
                         title: '잠시만요!',
@@ -558,14 +295,252 @@
                 }
             })
 
-            let loadCount = 50
 
-            let table = []
-            let loadingTable = []
-            let historyList = []
+
+            // 제품 기록 목록
+
+            let tempOldSelectValue = 0
+            let tempRecentSelectValue = 0
             let oldProductList = []
-            let newProductList = []
-            let sortedProductList = []
+            let recentProductList = []
+
+            oldSelect.addEventListener('change', async () => {
+                if (oldSelect.value == 0) {
+                    oldProductList = []
+                    updateTable()
+                    return
+                }
+
+                if (oldSelect.value >= recentSelect.value) {
+                    recentProductList = []
+                    recentSelect.selectedIndex = 0
+                    updateTable()
+                }
+
+                showLoading(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 중이에요.<br>
+                        제품이 많을 수록 오래 걸려요!
+                    </div>
+                `)
+
+                try {
+                    let json = await postAsync('/product', {
+                        storeUrl: storeUrl,
+                        time: new Date(Number(oldSelect.value)),
+                        idToken: await user.getIdToken(),
+                    })
+
+                    if (json.result == 'ok') {
+                        oldProductList = json.productList
+                        tempOldSelectValue = oldSelect.value
+                        updateTable()
+                        swal.close()
+                    }
+                    else {
+                        oldSelect.value = tempOldSelectValue
+
+                        if (json.result == 'quota exceeded') {
+                            showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
+                        }
+                        else if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+                    }
+                }
+                catch (error) {
+                    showOldSelectError(error.message)
+                }
+            })
+
+            recentSelect.addEventListener('change', async () => {
+                if (recentSelect.value == 0) {
+                    recentProductList = []
+                    updateTable()
+                    return
+                }
+
+                if (oldSelect.value >= recentSelect.value) {
+                    oldProductList = []
+                    oldSelect.selectedIndex = 0
+                    updateTable()
+                }
+
+                showLoading(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 중이에요.<br>
+                        제품이 많을 수록 오래 걸려요!
+                    </div>
+                `)
+
+                try {
+                    let json = await postAsync('/product', {
+                        storeUrl: storeUrl,
+                        time: new Date(Number(recentSelect.value)),
+                        idToken: await user.getIdToken(),
+                    })
+
+                    if (json.result == 'ok') {
+                        recentProductList = json.productList
+                        tempRecentSelectValue = recentSelect.value
+                        updateTable()
+                        swal.close()
+                    }
+                    else {
+                        recentSelect.value = tempRecentSelectValue
+
+                        if (json.result == 'quota exceeded') {
+                            showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
+                        }
+                        else if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+                    }
+                }
+                catch (error) {
+                    showRecentSelectError(error.message)
+                }
+            })
+
+            function showOldSelectError(error) {
+                oldProductList = []
+                oldSelect.selectedIndex = 0
+
+                showError(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 도중 오류가 발생했어요.<br>
+                        다시 시도해주세요.
+                    </div>
+                `, error)
+            }
+
+            function showRecentSelectError(error) {
+                recentProductList = []
+                recentSelect.selectedIndex = 0
+
+                showError(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 도중 오류가 발생했어요.<br>
+                        다시 시도해주세요.
+                    </div>
+                `, error)
+            }
+
+
+
+            // 업데이트
+
+            document.getElementById('update-button').addEventListener('click', async () => {
+                showLoading(`
+                    <div style="line-height: 130%">
+                        새로운 제품 기록을 쓰는 중이에요.<br>
+                        제품이 많을 수록 오래 걸려요!
+                    </div>
+                `)
+
+                try {
+                    let json = await postAsync('/hyundai/auton/update', {
+                        storeUrl: storeUrl,
+                        idToken: await user.getIdToken(),
+                    })
+
+                    let time = new Date(json.time).getTime()
+                    let html = '확인 하시겠어요?'
+
+                    if (json.result == 'already exists') {
+                        for (let history of historyList) {
+                            if (parseInt(time / 1000 / 60) == parseInt(history / 1000 / 60)) {
+                                showWarning(`
+                                    <div style="line-height: 130%">
+                                        이미 업데이트 되어있어요.<br>
+                                        업데이트는 1분 단위로 하실 수 있어요.
+                                    </div>
+                                `)
+                                return
+                            }
+                        }
+
+                        html = `
+                            <span style="line-height: 130%">
+                                이미 누군가 업데이트 했어요!<br>
+                                확인 하시겠어요?
+                            </span>
+                        `
+                    }
+
+                    if (json.result == 'quota exceeded') {
+                        showQuotaExceededError('업데이트한 제품 개수', json.quotaUsed, json.quotaLimit)
+                    }
+                    else if (json.result == 'error') {
+                        showError(`
+                            <div style="line-height: 130%">
+                                업데이트 도중 오류가 발생했어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `, json.error)
+                    }
+                    else {
+                        historyList.unshift(time)
+
+                        swal.fire({
+                            title: '업데이트 성공!',
+                            html: html,
+                            icon: 'success',
+                            heightAuto: false,
+                            confirmButtonText: '네',
+                            cancelButtonText: '됐어요!',
+                            showCancelButton: true,
+                        }).then(async (res) => {
+                            let oldSelectValue = oldSelect.value
+                            let recentSelectValue = recentSelect.value
+
+                            while (oldSelect.options.length > 1) {
+                                oldSelect.remove(1)
+                            }
+
+                            while (recentSelect.options.length > 1) {
+                                recentSelect.remove(1)
+                            }
+
+                            for (let history of historyList.sort().reverse()) {
+                                oldSelect.add(getOption(history))
+                                recentSelect.add(getOption(history))
+                            }
+
+                            oldSelect.value = oldSelectValue
+
+                            if (res.isConfirmed) {
+                                recentSelect.value = new Date(json.time).getTime()
+                                recentProductList = json.productList
+                                updateTable()
+                            }
+                            else {
+                                recentSelect.value = recentSelectValue
+                            }
+                        })
+                    }
+                }
+                catch (error) {
+                    showError(`
+                        <div style="line-height: 130%">
+                            업데이트 도중 오류가 발생했어요.<br>
+                            다시 시도해주세요.
+                        </div>
+                    `, error.message)
+                }
+            })
+
+
+
+            // 필터링
+
+            const minimumCodeSpan = document.getElementById('minimum-code')
+            const maximumCodeSpan = document.getElementById('maximum-code')
+            const titleSearchSpan = document.getElementById('title-search')
+            const minimumPopularitySpan = document.getElementById('minimum-popularity')
+            const maximumPopularitySpan = document.getElementById('maximum-popularity')
+            const minimumPriceSpan = document.getElementById('minimum-price')
+            const maximumPriceSpan = document.getElementById('maximum-price')
 
             let minimumCode = -Infinity
             let maximumCode = Infinity
@@ -576,47 +551,7 @@
             let maximumPrice = Infinity
             let statusList = ['신규', '판매중', '품절', '판매중단']
 
-            const homeIcon = document.getElementById('home-icon')
-            const oldSelect = document.getElementById('old-select')
-            const newSelect = document.getElementById('new-select')
-            const updateButton = document.getElementById('update-button')
-            const result = document.getElementById('result')
-            const resultTable = document.getElementById('result-table')
-            const sortForm = document.getElementById('sort-form')
-            const minimumCodeSpan = document.getElementById('minimum-code')
-            const maximumCodeSpan = document.getElementById('maximum-code')
-            const titleSearchSpan = document.getElementById('title-search')
-            const minimumPopularitySpan = document.getElementById('minimum-popularity')
-            const maximumPopularitySpan = document.getElementById('maximum-popularity')
-            const minimumPriceSpan = document.getElementById('minimum-price')
-            const maximumPriceSpan = document.getElementById('maximum-price')
-            const loadAll = document.getElementById('load-all')
-            const highlightChanges = document.getElementById('highlight-changes')
-            const byPopularity = document.getElementById('by-popularity')
-            const byRecent = document.getElementById('by-recent')
-            const productAmount = document.getElementById('product-amount')
-            const filterButton = document.getElementById('filter-button')
-            const excelExportButton = document.getElementById('excel-export-button')
-
-            showLoading('제품 기록들 목록을 불러오는 중이에요.')
-
-            function getOption(time) {
-                let value = time
-                let date = new Date(time)
-                let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
-                return new Option(text, value)
-            }
-
-            function showQuotaExceededError(quotaDesc, quota, maxQuota) {
-                showWarning(`
-                    <span style="line-height: 130%">
-                        하루 사용량을 초과했어요!<br>
-                        ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
-                    </span>
-                `)
-            }
-
-            filterButton.addEventListener('click', () => {
+            document.getElementById('filter-button').addEventListener('click', () => {
                 let codeInput = document.createElement('input')
                 codeInput.classList.add('form-control')
                 codeInput.style = 'display: inline-block; box-shadow: none; width: 25%'
@@ -709,15 +644,12 @@
                 let soldOut = checkBox.cloneNode(true)
 
                 let newProductLabel = document.createElement('label')
-                newProductLabel.style = 'padding-top: 5.3px'
                 newProductLabel.innerText = '신규'
 
                 let sellingLabel = document.createElement('label')
-                sellingLabel.style = 'padding-top: 5.3px'
                 sellingLabel.innerText = '판매중'
 
                 let soldOutLabel = document.createElement('label')
-                soldOutLabel.style = 'padding-top: 5.3px'
                 soldOutLabel.innerText = '품절 & 판매중단'
 
                 let codeDiv = document.createElement('div')
@@ -868,15 +800,28 @@
                 })
             })
 
-            sortForm.addEventListener('input', () => {
+
+
+            // 테이블
+
+            const result = document.getElementById('result')
+            const resultTable = document.getElementById('result-table')
+            const productAmount = document.getElementById('product-amount')
+
+            let loadCount = 50
+            let table = []
+            let loadingTable = []
+            let sortedProductList = []
+
+            document.getElementById('sort-form').addEventListener('input', () => {
                 updateTable()
             })
 
             function updateTable() {
                 resultTable.innerHTML = ''
-                productAmount.textContent = '제품 수량: '
+                productAmount.textContent = ''
 
-                if (newProductList.length == 0 && oldProductList.length == 0) {
+                if (recentProductList.length == 0 && oldProductList.length == 0) {
                     result.hidden = true
                     return
                 }
@@ -885,22 +830,26 @@
 
                 table = []
                 let deletedProductList = []
-                let productList = newProductList.length > 0 ? newProductList : oldProductList
+                let productList = recentProductList.length > 0 ? recentProductList : oldProductList
 
-                if (oldProductList.length > 0 & newProductList.length > 0) {
-                    let deletedProductList = [...oldProductList]
+                let newProductAmount = 0
+                let deletedProductAmount = 0
+
+                if (oldProductList.length > 0 & recentProductList.length > 0) {
+                    deletedProductList = [...oldProductList]
                     let recentProductId = Math.max.apply(Math, oldProductList.map((product) => product.id))
 
                     productAmount.textContent += `${oldProductList.length.toLocaleString('ko-KR')}개 → `
+                    let sum = 0
 
-                    for (let product of newProductList) {
-                        let oldProduct = deletedProductList.find((element) => element.id == product.id)
+                    for (let product of recentProductList) {
+                        let oldProduct = oldProductList.find((element) => element.id == product.id)
                         deletedProductList = deletedProductList.filter((element) => element.id != product.id)
 
                         let row = {
                             id: product.id,
                             title: product.title,
-                            popularityRank: `${product.popularityIndex + 1} (${product.category})`,
+                            popularityRank: product.popularityIndex + 1,
                             prevPrice: '',
                             price: product.price,
                             prevStatus: '',
@@ -915,8 +864,10 @@
                             }
                             else {
                                 row.status = `신규, ${row.status}`
-                                row.isChanged = true
                             }
+
+                            row.isChanged = true
+                            newProductAmount++
 
                             table.push(row)
                             continue
@@ -944,11 +895,11 @@
                         let row = {
                             id: deletedProduct.id,
                             title: deletedProduct.title,
-                            popularityRank: `${deletedProduct.popularityIndex + 1} (${deletedProduct.category})`,
+                            popularityRank: deletedProduct.popularityIndex + 1,
                             prevPrice: deletedProduct.price,
                             price: '',
                             prevStatus: deletedProduct.isSoldOut ? '품절' : '판매중',
-                            status: '',
+                            status: '판매중단',
                             isChanged: true,
                         }
                         table.push(row)
@@ -959,7 +910,7 @@
                         let row = {
                             id: product.id,
                             title: product.title,
-                            popularityRank: `${product.popularityIndex + 1} (${product.category})`,
+                            popularityRank: product.popularityIndex + 1,
                             prevPrice: '',
                             price: product.price,
                             prevStatus: '',
@@ -975,30 +926,10 @@
                     table.sort((a, b) => b.id - a.id)
                 }
                 else if (byPopularity.checked) {
-                    table.sort((a, b) => {
-                        let aSplit = a.popularityRank.split(' ')
-                        let bSplit = b.popularityRank.split(' ')
-
-                        if (Number(aSplit[0]) > Number(bSplit[0])) {
-                            return 1;
-                        }
-
-                        if (Number(aSplit[0]) < Number(bSplit[0])) {
-                            return -1;
-                        }
-
-                        if (aSplit[1] > bSplit[1]) {
-                            return 1;
-                        }
-
-                        if (aSplit[1] < bSplit[1]) {
-                            return -1;
-                        }
-                    })
+                    table.sort((a, b) => a.popularityRank - b.popularityRank)
                 }
 
-                if (oldProductList.length > 0 & newProductList.length > 0) {
-                    let newProductAmount = newProductList.length - oldProductList.length + deletedProductList.length
+                if (newProductAmount > 0 || deletedProductList.length > 0) {
                     productAmount.innerHTML += `(<span style="color: green">+${newProductAmount}</span><span style="color: red"> -${deletedProductList.length}</span>)`
 
                     if (highlightChanges.checked) {
@@ -1089,10 +1020,16 @@
                     th3.innerHTML = row.popularityRank
 
                     let th4 = document.createElement('th')
-                    th4.innerHTML = row.prevPrice.toString().length > 0 ? `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ` : ''
-                    th4.innerHTML += `${row.price.toLocaleString('ko-KR')}원`
+
+                    if (row.prevPrice.toString().length > 0 && row.price.toString().length > 0) {
+                        th4.innerHTML = `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ${row.price.toLocaleString('ko-KR')}원`
+                    }
+                    else {
+                        th4.innerHTML += `${Number(row.prevPrice + row.price).toLocaleString('ko-KR')}원`
+                    }
 
                     let th5 = document.createElement('th')
+
                     th5.innerHTML = row.prevStatus.length > 0 ? `${row.prevStatus.toLocaleString('ko-KR')}<br>→ ` : ''
                     th5.innerHTML += row.status
 
@@ -1145,7 +1082,11 @@
                 }
             }
 
-            excelExportButton.addEventListener('click', async () => {
+
+
+            // 엑셀
+
+            document.getElementById('excel-export-button').addEventListener('click', async () => {
                 fetch(`/save`, {
                     method: 'POST',
                     headers: {
@@ -1166,7 +1107,7 @@
                         else if (json.result == 'error') {
                             showError(`
                                 <div style="line-height: 130%">
-                                    다운로드에 실패 하였어요.<br>
+                                    다운로드 도중 오류가 발생했어요.<br>
                                     다시 시도해주세요.
                                 </div>
                             `, json.error)
@@ -1183,8 +1124,8 @@
                         dateList.push(text)
                     }
 
-                    if (newProductList.length > 0) {
-                        let date = new Date(Number(newSelect.value))
+                    if (recentProductList.length > 0) {
+                        let date = new Date(Number(recentSelect.value))
                         let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
                         dateList.push(text)
                     }
@@ -1207,20 +1148,101 @@
                     }
 
                     let wb = XLSX.utils.book_new()
-                    XLSX.utils.book_append_sheet(wb, ws, '카라이프몰')
-                    XLSX.writeFile(wb, `카라이프몰 ${filename}.xlsx`)
+                    XLSX.utils.book_append_sheet(wb, ws, storeTitle)
+                    XLSX.writeFile(wb, `${storeTitle} ${filename}.xlsx`)
                 })
             })
 
-            function s2ab(s) {
-                var buf = new ArrayBuffer(s.length)
-                var view = new Uint8Array(buf)
 
-                for (var i = 0; i < s.length; i++) {
-                    view[i] = s.charCodeAt(i) & 0xFF
-                }
 
-                return buf
+            // 자주 사용하는 함수
+
+            function showError(html, error) {
+                swal.fire({
+                    title: '이런!',
+                    html: html,
+                    icon: 'error',
+                    confirmButtonText: '어떻게 된거죠?',
+                    cancelButtonText: '알겠어요',
+                    showCancelButton: true,
+                    heightAuto: false,
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        swal.fire({
+                            title: '원인',
+                            html: error,
+                            confirmButtonText: '알겠어요',
+                            showCancelButton: false,
+                            heightAuto: false,
+                        })
+                    }
+                })
+            }
+
+            function showWarning(html) {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: html,
+                    confirmButtonText: '알겠어요',
+                    heightAuto: false,
+                })
+            }
+
+            function showLoading(html) {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: html,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    heightAuto: false,
+                })
+                swal.showLoading()
+            }
+
+            function postAsync(url, params = {}) {
+                return new Promise((resolve, reject) => {
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(params),
+                    }).then(async (res) => {
+                        resolve(await res.json())
+                    }).catch((error) => reject(error.message))
+                })
+            }
+
+            function refresh() {
+                let form = document.createElement('form')
+                form.style.visibility = 'hidden'
+                form.method = 'GET'
+                form.action = '/'
+                document.body.appendChild(form)
+                form.submit()
+            }
+
+            function getOption(time) {
+                let value = time
+                let date = new Date(time)
+                let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
+                return new Option(text, value)
+            }
+
+            function showQuotaExceededError(quotaDesc, quota, maxQuota) {
+                showWarning(`
+                    <span style="line-height: 130%">
+                        하루 사용량을 초과했어요!<br>
+                        ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
+                    </span>
+                `)
+            }
+
+            function swalAsync(params) {
+                return new Promise((resolve, reject) => {
+                    swal.fire(params).then((res) => resolve(res))
+                })
             }
         </script>
 </body>
