@@ -27,7 +27,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.10.2/Sortable.min.js"></script>
 
     <style>
-        @import url(//fonts.googleapis.com/earlyaccess/jejugothic.css);
         @import url(//fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap);
 
         * {
@@ -438,6 +437,10 @@
                 </div>
             </div>
             <script type="module">
+                // Auth
+
+                showLoading('유저 정보를 불러오는 중이에요.')
+
                 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
                 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
 
@@ -452,29 +455,11 @@
                 })
 
                 const auth = getAuth()
-                const name = document.getElementById('name')
-                const email = document.getElementById('email')
-                const signoutButton = document.getElementById('signout')
+
                 const signinNeededList = document.getElementsByClassName('signin-needed')
                 const signinNotNeededList = document.getElementsByClassName('signin-not-needed')
 
                 let user
-                let bookmarkList = []
-
-                function postAsync(url, params = {}) {
-                    return new Promise((resolve, reject) => {
-                        fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(params),
-                        }).then(async (res) => {
-                            resolve(await res.json())
-                        }).catch((error) => reject(error.message))
-                    })
-                }
 
                 onAuthStateChanged(auth, async (firebaseUser) => {
                     for (let signinNotNeeded of signinNotNeededList) {
@@ -484,8 +469,8 @@
                     if (firebaseUser) {
                         user = firebaseUser
 
-                        name.innerText = user.displayName
-                        email.innerText = user.email
+                        document.getElementById('name').innerText = user.displayName
+                        document.getElementById('email').innerText = user.email
 
                         for (let signinNeeded of signinNeededList) {
                             signinNeeded.hidden = false
@@ -501,7 +486,7 @@
                         catch (error) {
                             showError(`
                                 <div style="line-height: 130%">
-                                    로그인에 실패 하셨어요.<br>
+                                    로그인 도중 오류가 발생했어요.<br>
                                     다시 시도해주세요.
                                 </div>
                             `, error.message)
@@ -512,16 +497,9 @@
                             signinNeeded.hidden = true
                         }
                     }
-                })
 
-                function refresh() {
-                    let form = document.createElement('form')
-                    form.style.visibility = 'hidden'
-                    form.method = 'GET'
-                    form.action = '/'
-                    document.body.appendChild(form)
-                    form.submit()
-                }
+                    swal.close()
+                })
 
                 function onSignIn(googleUser) {
                     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -530,14 +508,9 @@
                             const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token)
 
                             signInWithCredential(auth, credential).then(() => refresh()).catch((error) => {
-                                const errorCode = error.code
-                                const errorMessage = error.message
-                                const email = error.email
-                                const credential = GoogleAuthProvider.credentialFromError(error)
-
                                 showError(`
                                     <div style="line-height: 130%">
-                                        로그인에 실패 하셨어요.<br>
+                                        로그인 도중 오류가 발생했어요.<br>
                                         다시 시도해주세요.
                                     </div>
                                 `, error.message)
@@ -546,13 +519,13 @@
                     })
                 }
 
-                signoutButton.addEventListener('click', () => {
+                document.getElementById('signout').addEventListener('click', () => {
                     signOut(auth).then(() => refresh()).catch((error) => {
                         showError(`
                             <div style="line-height: 130%">
-                                로그인에 실패 하셨어요.<br>
+                                로그아웃 도중 오류가 발생했어요.<br>
                                 다시 시도해주세요.
-                            </div>f
+                            </div>
                         `, error.message)
                     });
                 })
@@ -572,40 +545,15 @@
 
                 window.onSignIn = onSignIn
 
+
+
+                // 스마트스토어
+
                 const searchHelper = document.getElementById('search-helper')
-                const searchButton = document.getElementById('search-button')
-                const urlValidator = document.getElementById('url-validator')
-                const mostVisited = document.getElementById('most-visited')
-                const smartstoreButton = document.getElementById('smartstore-button')
-                const optionButton = document.getElementById('option-button')
-                const quotaButton = document.getElementById('quota-button')
-                const infoButton = document.getElementById('info-button')
+                
+                document.getElementById('smartstore-button').addEventListener('click', () => smartstoreSearchPopup())
 
-                smartstoreButton.addEventListener('click', () => smartstoreSearch())
-
-                async function search() {
-                    if (searchInput.value.trim().length == 0) {
-                        return
-                    }
-
-                    swal.fire({
-                        title: '잠시만요!',
-                        text: '스토어에 접속하는 중이에요.',
-                        showCancelButton: false,
-                        showConfirmButton: false,
-                        allowOutsideClick: false,
-                        heightAuto: false,
-                    })
-
-                    try {
-                        await postAsync('/smartstore/search', { query: searchInput.value })
-                    }
-                    catch (error) {
-                        showError('스토어를 검색하지 못했어요.', error.message)
-                    }
-                }
-
-                async function smartstoreSearch() {
+                async function smartstoreSearchPopup() {
                     let div = document.createElement('div')
 
                     let searchInput = document.createElement('input')
@@ -617,6 +565,13 @@
 
                     let searchButton = document.createElement('button')
                     searchButton.classList.add('btn', 'btn-primary', 'fas', 'fa-search')
+
+                    searchInput.addEventListener('keyup', (e) => {
+                        if (e.code == 'Enter') {
+                            smartstoreSearch(searchInput.value)
+                        }
+                    })
+                    searchButton.addEventListener('click', () => smartstoreSearch(searchInput.value))
 
                     let inputDiv = div.cloneNode(true)
                     inputDiv.classList.add('input-group', 'rounded', 'p-2')
@@ -642,23 +597,22 @@
                     })
 
                     try {
-                        let json = await postAsync('/bookmarkList', { idToken: await user.getIdToken() })
+                        let json = await postAsync('/bookmark', { idToken: await user.getIdToken() })
 
                         if (json.result == 'error') {
                             throw new Error(json.error)
                         }
 
-                        bookmarkList = json.bookmarkList
-                        bookmarkList.sort((a, b) => a.title - b.title)
+                        json.bookmarkList.sort((a, b) => a.title - b.title)
 
-                        if (bookmarkList.length > 0) {
+                        if (json.bookmarkList.length > 0) {
                             searchHelper.innerHTML = ''
                         }
 
                         let isThereBoomark = false
                         let recentHeight = Infinity
 
-                        for (let bookmark of bookmarkList) {
+                        for (let bookmark of json.bookmarkList) {
                             if (isThereBoomark) {
                                 let span = document.createElement('span')
                                 span.innerHTML = '&nbsp&nbsp'
@@ -693,51 +647,144 @@
                             howToBookmark.style = 'background: none; border: none; margin: 0; padding: 0; color: #0066CC'
                             howToBookmark.innerHTML = '즐겨찾기 사용법'
                             howToBookmark.setAttribute('onclick', `
-                            swal.fire({
-                                title: '즐겨찾기 A to Z',
-                                html: \`
-                                <div style="text-align: left; line-height: 130%">
-                                <div class="text-center">
-                                    <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
-                                </div>
-                                <div class="text-center" style="margin: 8px 0px">
-                                    <img src="https://imgur.com/x13joXj.png" width="454" height="81">
-                                </div><br>
-                                    1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>
-                                    2. 스토어 이름 옆 노란 별 아이콘을 클릭해주세요.<br>
-                                    3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>
-                                <div class="text-center"><img src="https://imgur.com/YtMW1un.png" width="454" height="67"></div><br>
-                                    즐겨찾기는 계정 당 10개까지만 등록하실 수 있어요.<br>
-                                </div>
-                                \`,
-                                confirmButtonText: '알겠어요',
-                            }).then(() => smartstoreSearch())
-                        `)
+                                swal.fire({
+                                    title: '즐겨찾기 A to Z',
+                                    html: \`
+                                    <div style="text-align: left; line-height: 130%">
+                                    <div class="text-center">
+                                        <img src="https://imgur.com/zbj1mBU.png" width="454" height="47">
+                                    </div>
+                                    <div class="text-center" style="margin: 8px 0px">
+                                        <img src="https://imgur.com/x13joXj.png" width="454" height="81">
+                                    </div><br>
+                                        1. 최초 한 번은 검색창을 통해 스토어에 접속해주세요.<br>
+                                        2. 스토어 이름 옆 노란 별 아이콘을 클릭해주세요.<br>
+                                        3. 메인 페이지로 돌아가면 바로가기 링크가 생겨요!<br><br>
+                                    <div class="text-center"><img src="https://imgur.com/YtMW1un.png" width="454" height="67"></div><br>
+                                        즐겨찾기는 계정 당 10개까지만 등록하실 수 있어요.<br>
+                                    </div>
+                                    \`,
+                                    confirmButtonText: '알겠어요',
+                                }).then(() => smartstoreSearchPopup())
+                            `)
 
                             searchHelper.appendChild(howToBookmark)
                         }
-
-                        searchInput.addEventListener('keyup', (e) => {
-                            if (e.code == 'Enter') {
-                                search()
-                            }
-                        })
-
-                        searchButton.addEventListener('click', () => {
-                            search()
-                        })
                     }
                     catch (error) {
                         showError(`
                             <div style="line-height: 130%">
-                                즐겨찾기를 불러오는데 실패하였어요.<br>
+                                즐겨찾기를 불러오는 도중 오류가 발생했어요.<br>
                                 다시 시도해주세요.
                             </div>
                         `, error.message)
                     }
                 }
 
-                optionButton.addEventListener('click', async () => {
+                window.smartstoreSearchPopup = smartstoreSearchPopup
+
+                async function smartstoreSearch(query) {
+                    if (query.trim().length == 0) {
+                        return
+                    }
+
+                    swal.fire({
+                        title: '잠시만요!',
+                        text: '스토어에 접속하는 중이에요.',
+                        showCancelButton: false,
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        heightAuto: false,
+                    })
+
+                    try {
+                        let json = await postAsync('/smartstore/search', { query: query })
+
+                        if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+
+                        if (json.result == 'ok') {
+                            swal.fire({
+                                title: '스토어 발견!',
+                                html: `'${json.storeTitle}' 스토어로 진행 하시겠어요?`,
+                                icon: 'success',
+                                confirmButtonText: '네',
+                                cancelButtonText: '이게 아닌데!',
+                                showCancelButton: true,
+                                heightAuto: false,
+                            }).then((res) => {
+                                if (res.isConfirmed) {
+                                    let form = document.createElement('form')
+                                    form.style.visibility = 'hidden'
+                                    form.method = 'GET'
+                                    form.action = `/smartstore/${json.storeUrl}`
+                                    document.body.appendChild(form)
+                                    form.submit()
+                                }
+                                else {
+                                    smartstoreSearchPopup()
+                                }
+                            })
+                        }
+                        else if (json.result == 'zeroResult') {
+                            swal.fire({
+                                title: '잠시만요!',
+                                html: `
+                                    <div style="line-height: 130%">
+                                        스토어를 검색했지만 찾지 못했어요.<br>
+                                        검색어를 다시 한 번 확인해주세요.
+                                    </div>
+                                `,
+                                confirmButtonText: '알겠어요',
+                                heightAuto: false,
+                            }).then(() => smartstoreSearchPopup())
+                        }
+                        else if (json.result == 'notSmartstoreUrl') {
+                            swal.fire({
+                                title: '잠시만요!',
+                                html: `
+                                    <div style="line-height: 130%">
+                                        주소를 입력받았지만<br>
+                                        스마트스토어 주소가 아니에요.<br>
+                                    </div>
+                                `,
+                                confirmButtonText: '알겠어요',
+                                heightAuto: false,
+                            }).then(() => smartstoreSearchPopup())
+                        }
+                    }
+                    catch (error) {
+                        swal.fire({
+                            title: '이런!',
+                            html: '스토어를 검색하는 도중 오류가 발생했어요.',
+                            icon: 'error',
+                            confirmButtonText: '어떻게 된거죠?',
+                            cancelButtonText: '알겠어요',
+                            showCancelButton: true,
+                            heightAuto: false,
+                        }).then((res) => {
+                            if (res.isConfirmed) {
+                                swal.fire({
+                                    title: '원인',
+                                    html: error,
+                                    confirmButtonText: '알겠어요',
+                                    showCancelButton: false,
+                                    heightAuto: false,
+                                }).then(() => smartstoreSearchPopup())
+                            }
+                            else {
+                                smartstoreSearchPopup()
+                            }
+                        })
+                    }
+                }
+
+
+                
+                // 설정
+
+                document.getElementById('option-button').addEventListener('click', async () => {
                     try {
                         let json = await postAsync('/user', { idToken: await user.getIdToken() })
 
@@ -786,7 +833,7 @@
                         if (json.user.sortMethod == 0) {
                             byRecent.checked = true
                         }
-                        else {
+                        else if (json.user.sortMethod == 1) {
                             byPopularity.checked = true
                         }
 
@@ -855,7 +902,7 @@
                                 catch (error) {
                                     showError(`
                                         <div style="line-height: 130%">
-                                            설정을 변경하는데 실패하였어요.<br>
+                                            설정을 변경하는 도중 오류가 발생했어요.<br>
                                             다시 시도해주세요.
                                         </div>
                                     `, error.message)
@@ -866,14 +913,18 @@
                     catch (error) {
                         showError(`
                             <div style="line-height: 130%">
-                                설정을 불러오는데 실패하였어요.<br>
+                                설정을 불러오는 도중 오류가 발생했어요.<br>
                                 다시 시도해주세요.
                             </div>
                         `, error.message)
                     }
                 })
 
-                quotaButton.addEventListener('click', async () => {
+
+
+                // 사용량
+                
+                document.getElementById('quota-button').addEventListener('click', async () => {
                     try {
                         let json = await postAsync('/quota', { idToken: await user.getIdToken() })
 
@@ -922,14 +973,18 @@
                     catch (error) {
                         showError(`
                             <div style="line-height: 130%">
-                                사용량을 불러오는데 실패하였어요.<br>
+                                사용량을 불러오는 도중 오류가 발생했어요.<br>
                                 다시 시도해주세요.
                             </div>
                         `, error.message)
                     }
                 })
 
-                infoButton.addEventListener('click', () => {
+
+
+                // 도움말
+
+                document.getElementById('info-button').addEventListener('click', () => {
                     swal.fire({
                         title: '어서오세요!',
                         html: `
@@ -1001,6 +1056,10 @@
                     })
                 })
 
+
+
+                // 자주 사용하는 함수
+
                 function showError(html, error) {
                     swal.fire({
                         title: '이런!',
@@ -1022,12 +1081,55 @@
                         }
                     })
                 }
+
+                function showWarning(html) {
+                    swal.fire({
+                        title: '잠시만요!',
+                        html: html,
+                        confirmButtonText: '알겠어요',
+                        heightAuto: false,
+                    })
+                }
+
+                function showLoading(html) {
+                    swal.fire({
+                        title: '잠시만요!',
+                        html: html,
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        heightAuto: false,
+                    })
+                    swal.showLoading()
+                }
+
+                function postAsync(url, params = {}) {
+                    return new Promise((resolve, reject) => {
+                        fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(params),
+                        }).then(async (res) => {
+                            resolve(await res.json())
+                        }).catch((error) => reject(error.message))
+                    })
+                }
+
+                function refresh() {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                }
             </script>
     </section>
     <script>
-        let sidebar = document.querySelector(".sidebar");
-        let closeBtn = document.querySelector("#btn");
-        let searchBtn = document.querySelector(".bx-search");
+        const sidebar = document.querySelector(".sidebar");
+        const closeBtn = document.querySelector("#btn");
 
         closeBtn.addEventListener("click", () => {
             sidebar.classList.toggle("open");
