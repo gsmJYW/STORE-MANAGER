@@ -1,5 +1,4 @@
 import { exit } from 'process'
-import dateFormat from 'dateformat'
 import fs from 'fs'
 import bodyParser from 'body-parser'
 import http from 'http'
@@ -9,7 +8,6 @@ import express from 'express'
 import mysql from 'mysql2/promise'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import NTPClient from '@destinationstransfers/ntp'
 
 const app = express()
 const __filename = fileURLToPath(import.meta.url)
@@ -236,7 +234,7 @@ app.post('/user/update', async (req, res) => {
   }
 })
 
-app.post('/bookmarkList', async (req, res) => {
+app.post('/bookmark', async (req, res) => {
   let idToken = req.body.idToken
   let storeUrl = req.body.storeUrl
   let conn
@@ -399,6 +397,15 @@ app.post('/smartstore/search', async (req, res) => {
   else {
     try {
       endpoint = await searchNaver(query)
+
+      if (endpoint == null) {
+        res.json({
+          result: 'zeroResult',
+          query: query,
+        })
+        return
+      }
+
       storeUrl = `https://smartstore.naver.com/${endpoint}`
     }
     catch (error) {
@@ -415,6 +422,14 @@ app.post('/smartstore/search', async (req, res) => {
   try {
     let storeTitle = await searchSmartstore(storeUrl)
 
+    if (storeTitle == null) {
+      res.json({
+        result: 'notSmartstoreUrl',
+        url: storeUrl,
+      })
+      return
+    }
+
     endpoint = storeUrl.slice(storeUrl.indexOf('smartstore.naver.com') + 21)
     if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
       endpoint.slice(0, new RegExp('[^a-z0-9_-]+').exec(endpoint).index)
@@ -428,8 +443,8 @@ app.post('/smartstore/search', async (req, res) => {
 
     res.json({
       result: 'ok',
-      store_url: endpoint,
-      store_title: storeTitle
+      storeUrl: endpoint,
+      storeTitle: storeTitle
     })
   }
   catch (error) {
@@ -491,7 +506,7 @@ app.post('/history', async (req, res) => {
   }
 })
 
-app.post('/productList', async (req, res) => {
+app.post('/product', async (req, res) => {
   let idToken = req.body.idToken
   let storeUrl = req.body.storeUrl
   let time = req.body.time
@@ -575,6 +590,11 @@ app.get('/smartstore/:endpoint', async (req, res) => {
     }
     else {
       storeTitle = await searchSmartstore(storeUrl)
+
+      if (storeTitle == null) {
+        throw new Error()
+      }
+
       await conn.query(`
         INSERT INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')
         ON DUPLICATE KEY UPDATE title = '${storeTitle}'
@@ -771,7 +791,7 @@ app.post('/n09/update', async (req, res) => {
 })
 
 app.get('/hyundai/auton', async (req, res) => {
-  res.sendFile(__dirname + '/views/carLifeMall.html')
+  res.sendFile(__dirname + '/views/carlifemall.html')
 })
 
 app.post('/hyundai/auton/update', async (req, res) => {
@@ -813,10 +833,10 @@ app.post('/hyundai/auton/update', async (req, res) => {
     let categoryIdList = []
 
     while (categoryIdList <= 0) {
-      categoryIdList = await getCarLifeMallCategoryIdList()
+      categoryIdList = await getCarlifemallCategoryIdList()
     }
 
-    let categoryList = await getCarLifeMallCategoryList(categoryIdList)
+    let categoryList = await getCarlifemallCategoryList(categoryIdList)
 
     while (true) {
       let tempCategoryIdList = []
@@ -830,7 +850,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
       }
 
       if (tempCategoryIdList.length > 0) {
-        let tempCategoryList = await getCarLifeMallCategoryList(tempCategoryIdList)
+        let tempCategoryList = await getCarlifemallCategoryList(tempCategoryIdList)
 
         for (let tempCategory of tempCategoryList) {
           for (let category of categoryList) {
@@ -857,7 +877,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
       }
     }
 
-    pageList = await getCarLifeMallProductList(pageList)
+    pageList = await getCarlifemallProductList(pageList)
 
     while (true) {
       let tempPageList = []
@@ -869,7 +889,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
       }
 
       if (tempPageList.length > 0) {
-        tempPageList = await getCarLifeMallProductList(tempPageList)
+        tempPageList = await getCarlifemallProductList(tempPageList)
 
         for (let tempPage of tempPageList) {
           for (let page of pageList) {
@@ -1016,7 +1036,8 @@ function getDay(date) {
 }
 
 async function getKST() {
-  let now = await NTPClient.getNetworkTime()
+  // let now = await NTPClient.getNetworkTime(setTimeout(() => {}, 3000), 'ntp.ubuntu.com')
+  let now = new Date()
   return new Date(now.getTime() + 1000 * 60 * 60 * 9)
 }
 
@@ -1041,7 +1062,7 @@ function searchNaver(query) {
             resolve(endpoint)
           }
         }
-        reject('검색된 스토어가 없습니다.')
+        resolve(null)
       })
     }).on('error', (error) => reject(error))
   })
@@ -1070,7 +1091,7 @@ function searchSmartstore(storeUrl) {
           }
           resolve(storeTitle)
         }
-        reject('스마트스토어 주소가 아닙니다.')
+        resolve(null)
       })
     }).on('error', (error) => reject(error))
   })
@@ -1127,7 +1148,7 @@ function getSmartstoreProductList(storeUrl, productAmount) {
                 isSoldOut: false,
               }
 
-              if (item.querySelectorAll('_3Btky8fCyp').length > 0) {
+              if (item.querySelectorAll('._3Btky8fCyp').length > 0) {
                 product.isSoldOut = true
               }
 
@@ -1150,7 +1171,7 @@ function getSmartstoreProductList(storeUrl, productAmount) {
   })
 }
 
-function getCarLifeMallCategoryIdList() {
+function getCarlifemallCategoryIdList() {
   return new Promise((resolve, reject) => {
     https.get('https://hyundai.auton.kr/product/category/category_main?pcid=3478&rootid=3439', (res) => {
       let data = ''
@@ -1191,7 +1212,7 @@ function getCarLifeMallCategoryIdList() {
   })
 }
 
-function getCarLifeMallCategoryList(categoryIdList) {
+function getCarlifemallCategoryList(categoryIdList) {
   return new Promise((resolve, reject) => {
     let categoryList = []
 
@@ -1246,7 +1267,7 @@ function getCarLifeMallCategoryList(categoryIdList) {
   })
 }
 
-function getCarLifeMallProductList(pageList) {
+function getCarlifemallProductList(pageList) {
   return new Promise((resolve, reject) => {
     let pages = 0
 
