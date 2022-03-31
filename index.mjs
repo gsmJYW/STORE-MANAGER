@@ -120,12 +120,12 @@ app.post('/signin', async (req, res) => {
     let user = await auth.getUser(uid)
 
     conn = await pool.getConnection()
-    
+
     await conn.query(`
       INSERT INTO user (uid, email, name) VALUES ('${uid}', '${user.email}', '${user.displayName}')
       ON DUPLICATE KEY UPDATE user.email = '${user.email}', name = '${user.displayName}'
     `)
-    
+
     let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
 
     res.json({
@@ -1397,10 +1397,9 @@ function getN09ProductList(productAmount) {
                 if (style.includes('font-size:13px;color:#242424;font-weight:bold;')) {
                   product.title = span.innerText.trim()
                 }
-              }
-
-              if (span.innerText.endsWith('원')) {
-                product.price = Number(span.innerText.replace(/[^\d.]/g, ''))
+                else if (style.includes('font-size:15px;color:#242424;font-weight:bold;')) {
+                  product.price = Number(span.innerText.replace(/[^\d.]/g, ''))
+                }
               }
             }
 
