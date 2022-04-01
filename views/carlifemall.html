@@ -849,6 +849,7 @@
                         let row = {
                             id: product.id,
                             title: product.title,
+                            category: product.category,
                             popularityRank: product.popularityIndex + 1,
                             prevPrice: '',
                             price: product.price,
@@ -895,6 +896,7 @@
                         let row = {
                             id: deletedProduct.id,
                             title: deletedProduct.title,
+                            category: deletedProduct.category,
                             popularityRank: deletedProduct.popularityIndex + 1,
                             prevPrice: deletedProduct.price,
                             price: '',
@@ -910,6 +912,7 @@
                         let row = {
                             id: product.id,
                             title: product.title,
+                            category: product.category,
                             popularityRank: product.popularityIndex + 1,
                             prevPrice: '',
                             price: product.price,
@@ -926,7 +929,23 @@
                     table.sort((a, b) => b.id - a.id)
                 }
                 else if (byPopularity.checked) {
-                    table.sort((a, b) => a.popularityRank - b.popularityRank)
+                    table.sort((a, b) => {
+                        if (a.popularityRank > b.popularityRank) {
+                            return 1;
+                        }
+
+                        if (a.popularityRank < b.popularityRank) {
+                            return -1;
+                        }
+
+                        if (a.category > b.category) {
+                            return 1;
+                        }
+
+                        if (a.category < b.category) {
+                            return -1;
+                        }
+                    })
                 }
 
                 if (newProductAmount > 0 || deletedProductList.length > 0) {
@@ -1017,7 +1036,7 @@
                     th2.appendChild(a)
 
                     let th3 = document.createElement('th')
-                    th3.innerHTML = row.popularityRank
+                    th3.innerHTML = `${row.popularityRank} (${row.category})`
 
                     let th4 = document.createElement('th')
 
@@ -1134,11 +1153,12 @@
 
                     ws.A1.v = '상품 코드'
                     ws.B1.v = '상품명'
-                    ws.C1.v = '인기 순위'
-                    ws.D1.v = '이전 가격'
-                    ws.E1.v = '현재 가격'
-                    ws.F1.v = '이전 상태'
-                    ws.G1.v = '현재 상태'
+                    ws.C1.v = '카테고리'
+                    ws.D1.v = '인기 순위'
+                    ws.E1.v = '이전 가격'
+                    ws.F1.v = '현재 가격'
+                    ws.G1.v = '이전 상태'
+                    ws.H1.v = '현재 상태'
 
                     for (let index = 1; index <= table.length; index++) {
                         let idCell = ws[`A${index}`]
