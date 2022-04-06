@@ -858,7 +858,7 @@
                             isChanged: false,
                         }
 
-                        if (oldProduct == undefined) {
+                        if (!oldProduct) {
                             if (recentProductId > product.id) {
                                 row.prevStatus = '판매중단'
                                 row.status = product.isSoldOut ? '품절' : '판매중'
@@ -1230,7 +1230,7 @@
                         body: JSON.stringify(params),
                     }).then(async (res) => {
                         resolve(await res.json())
-                    }).catch((error) => reject(error.message))
+                    }).catch((error) => reject(error))
                 })
             }
 

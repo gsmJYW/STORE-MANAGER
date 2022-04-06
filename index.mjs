@@ -65,51 +65,6 @@ app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 })
 
-app.get('/visitor', async (req, res) => {
-  res.sendFile(__dirname + '/views/visitor.html')
-})
-
-app.post('/recentVisitorList', async (req, res) => {
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0].length > 0) {
-      if (result[0][0].permission == 1) {
-        result = await conn.query(`SELECT *, MAX(second) as second FROM query GROUP BY uid`)
-        let visitorList = result[0]
-
-        for (let visitor of visitorList) {
-          let user = await auth.getUser(visitor.uid)
-          visitor.email = user.email
-          visitor.displayName = user.displayName
-        }
-
-        res.json({
-          result: 'ok',
-          visitorList: visitorList,
-        })
-
-        return
-      }
-    }
-
-    res.json({ result: 'no permission' })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-})
-
 app.post('/signin', async (req, res) => {
   let idToken = req.body.idToken
   let conn
@@ -139,6 +94,11 @@ app.post('/signin', async (req, res) => {
       error: error.message,
     })
   }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
 })
 
 app.post('/user', async (req, res) => {
@@ -160,7 +120,7 @@ app.post('/user', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -195,7 +155,7 @@ app.post('/quota', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -224,7 +184,7 @@ app.post('/user/update', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -245,7 +205,7 @@ app.post('/bookmark', async (req, res) => {
 
     let query = `SELECT bookmark.storeUrl, store.title FROM bookmark INNER JOIN store WHERE uid = '${uid}' AND bookmark.storeUrl = store.url`
 
-    if (storeUrl != undefined) {
+    if (storeUrl) {
       query += ` AND storeUrl = '${storeUrl}'`
     }
 
@@ -260,7 +220,7 @@ app.post('/bookmark', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -289,7 +249,7 @@ app.post('/bookmark/update', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -318,7 +278,7 @@ app.post('/bookmark/delete', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -369,7 +329,7 @@ app.post('/save', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -398,7 +358,7 @@ app.post('/smartstore/search', async (req, res) => {
     try {
       endpoint = await searchNaver(query)
 
-      if (endpoint == null) {
+      if (!endpoint) {
         res.json({
           result: 'zeroResult',
           query: query,
@@ -411,7 +371,7 @@ app.post('/smartstore/search', async (req, res) => {
     catch (error) {
       res.json({
         result: 'error',
-        error: error.message == undefined ? error : error.message,
+        error: error.message,
       })
       return
     }
@@ -422,7 +382,7 @@ app.post('/smartstore/search', async (req, res) => {
   try {
     let storeTitle = await searchSmartstore(storeUrl)
 
-    if (storeTitle == null) {
+    if (!storeTitle) {
       res.json({
         result: 'notSmartstoreUrl',
         url: storeUrl,
@@ -450,7 +410,7 @@ app.post('/smartstore/search', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -500,7 +460,7 @@ app.post('/history', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
     return
   }
@@ -559,7 +519,7 @@ app.post('/product', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -591,7 +551,7 @@ app.get('/smartstore/:endpoint', async (req, res) => {
     else {
       storeTitle = await searchSmartstore(storeUrl)
 
-      if (storeTitle == null) {
+      if (!storeTitle) {
         throw new Error()
       }
 
@@ -602,10 +562,10 @@ app.get('/smartstore/:endpoint', async (req, res) => {
     }
 
     fs.readFile(__dirname + '/views/smartstore.html', (error, data) => {
-      if (error != null) {
+      if (error) {
         res.json({
           result: 'error',
-          error: error.message == undefined ? error : error.message,
+          error: error.message,
         })
         return
       }
@@ -702,7 +662,7 @@ app.post('/smartstore/update', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -780,7 +740,7 @@ app.post('/n09/update', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -934,7 +894,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -1013,7 +973,7 @@ app.post('/autowash/update', async (req, res) => {
   catch (error) {
     res.json({
       result: 'error',
-      error: error.message == undefined ? error : error.message,
+      error: error.message,
     })
   }
   finally {
@@ -1086,8 +1046,8 @@ function searchSmartstore(storeUrl) {
         if (titleElements.length > 0) {
           let storeTitle = titleElements[0].innerText
 
-          if (errorElement != undefined) {
-            reject(errorElement.innerHTML)
+          if (errorElement) {
+            reject(new Error(errorElement.innerHTML))
           }
           resolve(storeTitle)
         }
@@ -1189,7 +1149,7 @@ function getCarlifemallCategoryIdList() {
         for (let link of links) {
           let href = link.getAttribute('href')
 
-          if (href == undefined) {
+          if (!href) {
             continue
           }
 
@@ -1293,7 +1253,7 @@ function getCarlifemallProductList(pageList) {
           for (let idElement of idElements) {
             let href = idElement.getAttribute('href')
 
-            if (href == undefined) {
+            if (!href) {
               continue
             }
 
@@ -1393,7 +1353,7 @@ function getN09ProductList(productAmount) {
             for (let span of spanList) {
               let style = span.getAttribute('style')
 
-              if (style != undefined) {
+              if (style) {
                 if (style.includes('font-size:13px;color:#242424;font-weight:bold;')) {
                   product.title = span.innerText.trim()
                 }
@@ -1403,7 +1363,7 @@ function getN09ProductList(productAmount) {
               }
             }
 
-            if (product.price == undefined) {
+            if (!product.price) {
               product.price = 0
             }
 
@@ -1437,7 +1397,7 @@ function getAutowashCategoryIdList() {
         for (let link of links) {
           let categoryId = link.getAttribute('data-cate')
 
-          if (categoryId == undefined) {
+          if (!categoryId) {
             let href = link.getAttribute('href')
 
             if (href.includes('cateCd=')) {
