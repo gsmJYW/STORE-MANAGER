@@ -65,6 +65,178 @@ app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 })
 
+app.get('/carWash', async (req, res) => {
+  res.sendFile(__dirname + '/views/carWash.html')
+})
+
+app.post('/siDo', async (req, res) => {
+  let conn
+
+  try {
+    conn = await pool.getConnection()
+    let result = await conn.query('SELECT siDo FROM carWash GROUP BY siDo')
+
+    let siDoList = []
+
+    for (let row of result[0]) {
+      siDoList.push(row.siDo)
+    }
+
+    res.json({
+      result: 'ok',
+      siDo: siDoList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/siGunGu', async (req, res) => {
+  let siDo = req.body.siDo
+  let conn
+
+  try {
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT siGunGu FROM carWash WHERE siDo = '${siDo}' GROUP BY siGunGu`)
+
+    let siGunGuList = []
+
+    for (let row of result[0]) {
+      siGunGuList.push(row.siGunGu)
+    }
+
+    res.json({
+      result: 'ok',
+      siGunGu: siGunGuList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/eupMyeonDong', async (req, res) => {
+  let siDo = req.body.siDo
+  let siGunGu = req.body.siGunGu
+  let conn
+
+  try {
+    conn = await pool.getConnection()
+
+    let query = 'SELECT eupMyeonDong FROM carWash'
+    let whereClause = []
+
+    if (siDo) {
+      whereClause.push(`siDo = '${siDo}'`)
+    }
+
+    if (siGunGu) {
+      whereClause.push(`siGunGu = '${siGunGu}'`)
+    }
+  
+    if (whereClause.length > 0) {
+      query += ` WHERE ${whereClause.join(' AND ')}`
+    }
+
+    query += ' GROUP BY eupMyeonDong'
+    let result = await conn.query(query)
+
+    let eupMyeonDongList = []
+
+    for (let row of result[0]) {
+      eupMyeonDongList.push(row.eupMyeonDong)
+    }
+
+    res.json({
+      result: 'ok',
+      eupMyeonDong: eupMyeonDongList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/carWash', async (req, res) => {
+  let siDo = req.body.siDo
+  let siGunGu = req.body.siGunGu
+  let eupMyeonDong = req.body.eupMyeonDong
+  let conn
+
+  try {
+    conn = await pool.getConnection()
+
+    let query = 'SELECT * FROM carWash'
+    let whereClause = []
+
+    if (siDo) {
+      whereClause.push(`siDo = '${siDo}'`)
+    }
+
+    if (siGunGu) {
+      whereClause.push(`siGunGu = '${siGunGu}'`)
+    }
+
+    if (eupMyeonDong) {
+      whereClause.push(`eupMyeonDong = '${eupMyeonDong}'`)
+    }
+  
+    if (whereClause.length > 0) {
+      query += ` WHERE ${whereClause.join(' AND ')}`
+    }
+
+    let result = await conn.query(query)
+    let carWashList = result[0]
+
+    query = query.replace('*', 'AVG(lat) as lat, AVG(lon) as lon')
+    result = await conn.query(query)
+    let center = result[0][0]
+
+    res.json({
+      result: 'ok',
+      carWash: carWashList,
+      center: center,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
 app.post('/signin', async (req, res) => {
   let idToken = req.body.idToken
   let conn
@@ -214,7 +386,7 @@ app.post('/bookmark', async (req, res) => {
 
     res.json({
       result: 'ok',
-      bookmarkList: result[0],
+      bookmark: result[0],
     })
   }
   catch (error) {
@@ -513,7 +685,7 @@ app.post('/product', async (req, res) => {
 
     res.json({
       result: 'ok',
-      productList: productList,
+      product: productList,
     })
   }
   catch (error) {
@@ -629,7 +801,7 @@ app.post('/smartstore/update', async (req, res) => {
       res.json({
         result: 'already exists',
         time: new Date(history.minute * 60 * 1000),
-        productList: productList,
+        product: productList,
       })
       return
     }
@@ -656,7 +828,7 @@ app.post('/smartstore/update', async (req, res) => {
     res.json({
       result: 'ok',
       time: new Date(getMinute(now) * 60 * 1000),
-      productList: productList,
+      product: productList,
     })
   }
   catch (error) {
@@ -707,7 +879,7 @@ app.post('/n09/update', async (req, res) => {
       res.json({
         result: 'already exists',
         time: new Date(history.minute * 60 * 1000),
-        productList: productList,
+        product: productList,
       })
       return
     }
@@ -734,7 +906,7 @@ app.post('/n09/update', async (req, res) => {
     res.json({
       result: 'ok',
       time: new Date(getMinute(now) * 60 * 1000),
-      productList: productList,
+      product: productList,
     })
   }
   catch (error) {
@@ -785,7 +957,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
       res.json({
         result: 'already exists',
         time: new Date(history.minute * 60 * 1000),
-        productList: productList,
+        product: productList,
       })
       return
     }
@@ -888,7 +1060,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
     res.json({
       result: 'ok',
       time: new Date(getMinute(now) * 60 * 1000),
-      productList: productList,
+      product: productList,
     })
   }
   catch (error) {
@@ -939,7 +1111,7 @@ app.post('/autowash/update', async (req, res) => {
       res.json({
         result: 'already exists',
         time: new Date(history.minute * 60 * 1000),
-        productList: productList,
+        product: productList,
       })
       return
     }
@@ -967,7 +1139,7 @@ app.post('/autowash/update', async (req, res) => {
     res.json({
       result: 'ok',
       time: new Date(getMinute(now) * 60 * 1000),
-      productList: productList,
+      product: productList,
     })
   }
   catch (error) {

@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        @import url(//fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap);
+        @import url(//cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-full.css);
+
+        #store-title {
+            font-family: "D2Coding", monospace;
+            letter-spacing: -3px;
+            word-spacing: -3px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        table {
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 16px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2
+        }
+
+        .swal-option {
+            display: grid !important;
+        }
+
+        .container {
+            height: 100%;
+        }
+
+        body {
+            background-color: white;
+            color: black;
+            font-size: 25px;
+            height: 100vh;
+        }
+    </style>
+
+    <title>STORE MANAGER - 전국 세차장</title>
+    <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+
+    <meta name="google-signin-client_id"
+        content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
+    <meta name="google-signin-cookiepolicy" content="single_host_origin">
+    <meta name="google-signin-scope" content="profile email">
+</head>
+
+<body>
+    <div class="container align-items-center justify-content-center">
+        <p></p>
+        <div class="d-flex" style="width: 680px; margin: auto">
+            <form action="/">
+                <button type="submit" style="background: none; border: none; outline: none">
+                    <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 8px 18px 0px"></i>
+                </button>
+            </form>
+            <h2 style="font-size: 30px; font-weight: 600; margin-bottom: auto">전국 세차장</h2>
+        </div>
+        <div class="d-flex p-2 border" style="width: 680px; margin: auto">
+            <select id="si-do-select" class="form-select w-auto" style="width: 215px !important; margin: auto;">
+                <option value="0" selected>시·도</option>
+            </select>
+            <select id="si-gun-gu-select" class="form-select w-auto" style="width: 215px !important; margin: auto">
+                <option value="0" selected>시·군·구</option>
+            </select>
+            <select id="eup-myeon-dong-select" class="form-select w-auto" style="width: 215px !important; margin: auto">
+                <option value="0" selected>읍·면·동</option>
+            </select>
+        </div>
+        <div class="p-2"></div>
+        <div id="map" style="width:680px; height:400px; margin: auto;"></div>
+        <div class="container" id="result" style="width: 1120px" hidden>
+            <div class="p-1"></div>
+            <div id="filter-form">
+                <div class="form-check form-check-inline" style="padding: 0px 0px 0px 24px; margin: 10px 8px 0px 0px">
+                    <input class="form-check-input" type="checkbox" id="exclude-charging-station"
+                        value="exclude-charging-station" checked>
+                    <label class="form-check-label">주유소 & 충전소 제외</label>
+                </div>
+                <div class="form-check form-check-inline" style="padding: 0px 0px 0px 24px; margin: 10px 8px 0px 0px">
+                    <input class="form-check-input" type="checkbox" id="exclude-service-center"
+                        value="exclude-service-center" checked>
+                    <label class="form-check-label">정비소 제외</label>
+                </div>
+                <div class="d-flex" style="float: right; margin: auto">
+                    <span id="car-wash-amount" style="margin: 10px 8px 0px 0px"></span>
+                    <button id="excel-export-button" type="button" class="btn btn-primary"
+                        style="margin: 6px 0px; padding: 4px 10px; font-size: 14px">
+                        엑셀 파일 (.xlsx)&nbsp;
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
+                            viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
+                            </path>
+                            <path
+                                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <table id="result-table"></table>
+            <span>&nbsp;<br>&nbsp;<br></span>
+        </div>
+    </div>
+    <div id="hidden-div" hidden>
+        <span id="minimum-code"></span>
+        <span id="maximum-code"></span>
+        <span id="title-search"></span>
+        <span id="minimum-popularity"></span>
+        <span id="maximum-popularity"></span>
+        <span id="minimum-price"></span>
+        <span id="maximum-price"></span>
+        <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
+        <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
+            <script type="text/javascript"
+                src="//s3.tracemyip.org/tracker/lgUrl.php?random='+Math.random()+'&amp;stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
+            <noscript><a
+                    href="https://www.tracemyip.org/tools/website-visitors-counter-traffic-tracker-statistics/"><img
+                        src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/"
+                        alt="Web Site Hits Ipv4 Tracer" style="border:0px;"></a></noscript>
+        </div> <!-- End: TraceMyIP.org Service Code //-->
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=49ed5a0f94a9a5afc59823d45c4d1894"></script>
+    <script type="module">
+        // 세차장
+
+        let carWashList
+        let center
+
+        showLoading('세차장 정보를 불러오는 중이에요.')
+
+        try {
+            let json = await postAsync('/carWash')
+
+            if (json.result != 'ok') {
+                throw new Error(json.error)
+            }
+
+            carWashList = json.carWash
+            center = json.center
+
+            swal.close()
+        }
+        catch (error) {
+            showErrorWithRefresh('세차장 정보를 불러오는 도중 오류가 발생했어요.', error.message)
+        }
+
+
+
+        // 지도
+
+        let container = document.getElementById('map');
+        let options = {
+            center: new kakao.maps.LatLng(center.lat, center.lon),
+            level: 14
+        };
+
+        let map = new kakao.maps.Map(container, options);
+
+
+
+        // Auth
+
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
+        import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
+
+        initializeApp({
+            apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+            authDomain: "store-manager-5d527.firebaseapp.com",
+            projectId: "store-manager-5d527",
+            storageBucket: "store-manager-5d527.appspot.com",
+            messagingSenderId: "36522862962",
+            appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+            measurementId: "G-37DECVWLYX"
+        })
+
+        const gasStation = document.getElementById('gas-station')
+        const highlightChanges = document.getElementById('highlight-changes')
+        const byPopularity = document.getElementById('by-popularity')
+        const byRecent = document.getElementById('by-recent')
+
+        const auth = getAuth()
+        let user
+
+        onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                user = firebaseUser
+            } else {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: '이용하기 전에 로그인 해주세요!',
+                    confirmButtonText: '메인으로',
+                    allowOutsideClick: false,
+                    showCancelButton: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                })
+            }
+        })
+
+
+
+        // 행정 구역
+
+        let carWashListInRegion = []
+        let markerList = []
+        let infoWindowList = []
+
+        const siDoSelect = document.getElementById('si-do-select')
+        const siGunGuSelect = document.getElementById('si-gun-gu-select')
+        const eupMyeonDongSelect = document.getElementById('eup-myeon-dong-select')
+
+        const excludeChargingStation = document.getElementById('exclude-charging-station')
+        const excludeServiceCenter = document.getElementById('exclude-service-center')
+        const selfWash = document.getElementById('self-wash')
+        const handWash = document.getElementById('hand-wash')
+
+        try {
+            let json = await postAsync('/siDo')
+
+            if (json.result != 'ok') {
+                throw new Error(json.error)
+            }
+
+            let siDoList = json.siDo
+            siDoList.sort()
+
+            for (let siDo of siDoList) {
+                let option = new Option(siDo, siDo)
+                siDoSelect.add(option)
+            }
+        }
+        catch (error) {
+            showErrorWithRefresh('지역을 불러오는 도중 오류가 발생했어요.', error.message)
+        }
+
+        siDoSelect.addEventListener('change', async () => {
+            while (siGunGuSelect.options.length > 1) {
+                siGunGuSelect.remove(1)
+            }
+
+            while (eupMyeonDongSelect.options.length > 1) {
+                eupMyeonDongSelect.remove(1)
+            }
+
+            if (siDoSelect.value != 0) {
+                try {
+                    let json = await postAsync('/siGunGu', { siDo: siDoSelect.value })
+
+                    if (json.result != 'ok') {
+                        throw new Error(json.error)
+                    }
+
+                    let siGunGuList = json.siGunGu
+                    siGunGuList.sort()
+
+                    if (!siGunGuList[0]) {
+                        try {
+                            await getEupMyeonDong()
+                        }
+                        catch (error) {
+                            showError('지역을 불러오는 도중 오류가 발생했어요.', error.message)
+                            return
+                        }
+                    }
+                    else {
+                        for (let siGunGu of siGunGuList) {
+                            let option = new Option(siGunGu, siGunGu)
+                            siGunGuSelect.add(option)
+                        }
+                    }
+                }
+                catch (error) {
+                    showError('지역을 불러오는 도중 오류가 발생했어요.', error.message)
+                    return
+                }
+            }
+
+            updateRegion()
+        })
+
+        siGunGuSelect.addEventListener('change', async () => {
+            while (eupMyeonDongSelect.options.length > 1) {
+                eupMyeonDongSelect.remove(1)
+            }
+
+            if (siGunGuSelect.value != 0) {
+                try {
+                    await getEupMyeonDong()
+                }
+                catch (error) {
+                    showError('지역을 불러오는 도중 오류가 발생했어요.', error.message)
+                    return
+                }
+            }
+
+            updateRegion()
+        })
+
+        eupMyeonDongSelect.addEventListener('change', () => {
+            updateRegion()
+        })
+
+        async function getEupMyeonDong() {
+            try {
+                let params = { siDo: siDoSelect.value }
+
+                if (siGunGuSelect.value != 0) {
+                    params.siGunGu = siGunGuSelect.value
+                }
+
+                let json = await postAsync('/eupMyeonDong', params)
+
+                if (json.result != 'ok') {
+                    throw new Error(json.error)
+                }
+
+                let eupMyeonDongList = json.eupMyeonDong
+                eupMyeonDongList.sort()
+
+                for (let eupMyeonDong of eupMyeonDongList) {
+                    let option = new Option(eupMyeonDong, eupMyeonDong)
+                    eupMyeonDongSelect.add(option)
+                }
+            }
+            catch (error) {
+                throw (error)
+            }
+        }
+
+        function updateRegion() {
+            carWashListInRegion = carWashList
+
+            if (siDoSelect.value != 0) {
+                carWashListInRegion = carWashListInRegion.filter((carWash) => carWash.siDo == siDoSelect.value)
+            }
+
+            if (siGunGuSelect.value != 0) {
+                carWashListInRegion = carWashListInRegion.filter((carWash) => carWash.siGunGu == siGunGuSelect.value)
+            }
+
+            if (eupMyeonDongSelect.value != 0) {
+                carWashListInRegion = carWashListInRegion.filter((carWash) => carWash.eupMyeonDong == eupMyeonDongSelect.value)
+            }
+
+            let bannedWordList = []
+
+            if (excludeChargingStation.checked) {
+                bannedWordList.push('주유', '충전')
+            }
+
+            if (excludeServiceCenter.checked) {
+                bannedWordList.push('사업', '공업', '정비', '카센터')
+            }
+
+            for (let i = carWashListInRegion.length - 1; i >= 0; i--) {
+                let carWash = carWashListInRegion[i]
+                let banned = false
+
+                for (let bannedWord of bannedWordList) {
+                    if (carWash.name.includes(bannedWord)) {
+                        banned = true
+                    }
+                    else if (carWash.category.includes(bannedWord)) {
+                        banned = true
+                    }
+                    else if (carWash.type) {
+                        if (carWash.type.includes(bannedWord)) {
+                            banned = true
+                        }
+                    }
+                }
+
+                if (banned) {
+                    carWashListInRegion.splice(i, 1)
+                }
+            }
+
+            updateTable()
+
+            for (let i = markerList.length - 1; i >= 0; i--) {
+                markerList.pop().setMap(null)
+            }
+
+            let bounds = new kakao.maps.LatLngBounds();
+
+            for (let carWash of carWashListInRegion) {
+                let position = new kakao.maps.LatLng(carWash.lat, carWash.lon)
+                bounds.extend(position)
+            }
+
+            map.setBounds(bounds)
+
+            closeInfoWindow()
+            infoWindowList = []
+            markerList = []
+
+            if (siDoSelect.value != 0) {
+                for (let carWash of carWashListInRegion) {
+                    let position = new kakao.maps.LatLng(carWash.lat, carWash.lon)
+
+                    let marker = new kakao.maps.Marker({
+                        map: map,
+                        position: position,
+                        title: carWash.name,
+                        clickable: true,
+                    })
+
+                    let div = document.createElement('div')
+                    div.style = 'line-height: 130%'
+
+                    let infoWindow = new kakao.maps.InfoWindow({
+                        content: carWash.name.match(/.{1,8}/g).join('<br>'),
+                        removable: true,
+                    });
+
+                    let address = getAddress(carWash)
+
+                    infoWindow.address = address
+                    infoWindowList.push(infoWindow)
+
+                    kakao.maps.event.addListener(marker, 'click', async () => {
+                        closeInfoWindow()
+                        infoWindow.open(map, marker);
+                    });
+
+                    marker.address = address
+                    markerList.push(marker)
+                }
+            }
+        }
+
+        function closeInfoWindow() {
+            for (let infoWindow of infoWindowList) {
+                infoWindow.close()
+            }
+        }
+
+
+
+        // 테이블
+
+        const result = document.getElementById('result')
+        const resultTable = document.getElementById('result-table')
+        const carWashAmount = document.getElementById('car-wash-amount')
+
+        let table = []
+
+        document.getElementById('filter-form').addEventListener('input', () => {
+            updateRegion()
+        })
+
+        function updateTable() {
+            resultTable.innerHTML = ''
+
+            if (siDoSelect.value == 0) {
+                result.hidden = true
+                return
+            }
+
+            result.hidden = false
+
+            table = []
+
+            for (let carWash of carWashListInRegion) {
+                let category = carWash.category
+
+                if (carWash.type) {
+                    category += `(${carWash.type})`
+                }
+
+                let openAt = null
+                let closeAt = null
+                let weekendOpenAt = null
+                let weekendCloseAt = null
+
+                if (carWash.openAt && carWash.closeAt) {
+                    openAt = carWash.openAt.slice(0, 5)
+                    closeAt = carWash.closeAt.slice(0, 5)
+                }
+
+                if (carWash.weekendOpenAt && carWash.weekendCloseAt) {
+                    weekendOpenAt = carWash.weekendOpenAt.slice(0, 5)
+                    weekendCloseAt = carWash.weekendCloseAt.slice(0, 5)
+                }
+
+                if (carWash.phone == carWash.dayoff) {
+                    carWash.dayoff = null
+                }
+
+                let row = {
+                    name: carWash.name,
+                    category: category,
+                    address: getAddress(carWash),
+                    phone: carWash.phone,
+                    openAt: openAt,
+                    closeAt: closeAt,
+                    weekendOpenAt: weekendOpenAt,
+                    weekendCloseAt: weekendCloseAt,
+                    dayoff: carWash.dayoff,
+                }
+                table.push(row)
+            }
+
+            carWashAmount.textContent = `${carWashListInRegion.length.toLocaleString('ko-KR')}곳`
+
+            let tr = document.createElement('tr')
+            resultTable.appendChild(tr)
+
+            let th1 = document.createElement('th')
+            th1.innerHTML = '이름 (클릭 시 지도에서 자세히 보기)'
+
+            let th2 = document.createElement('th')
+            th2.innerHTML = '업종'
+
+            let th3 = document.createElement('th')
+            th3.innerHTML = '주소'
+
+            for (let th of [th1, th2, th3]) {
+                th.setAttribute('style', 'font-weight: 600')
+                tr.appendChild(th)
+            }
+
+            for (let row of table) {
+                let tr = document.createElement('tr')
+                resultTable.appendChild(tr)
+
+                let th1 = document.createElement('th')
+
+                let a = document.createElement('a')
+                a.innerHTML = row.name
+                a.setAttribute('href', '#')
+                a.addEventListener('click', () => {
+                    closeInfoWindow()
+
+                    let carWash = carWashListInRegion.filter((carWash) => getAddress(carWash) == row.address)[0]
+                    let position = new kakao.maps.LatLng(carWash.lat, carWash.lon)
+                    
+                    let infoWindow = infoWindowList.filter((infoWindow) => infoWindow.address == row.address)[0]
+                    let marker = markerList.filter((marker) => marker.address == row.address)[0]
+                    
+                    infoWindow.open(map, marker);
+
+                    map.setLevel(1)
+                    map.setCenter(position)
+                })
+
+                th1.appendChild(a)
+
+                let th2 = document.createElement('th')
+                th2.innerHTML = row.category
+
+                let th3 = document.createElement('th')
+                th3.innerHTML = row.address
+
+                for (let th of [th1, th2, th3]) {
+                    th.setAttribute('style', 'font-weight: 400')
+                    tr.appendChild(th)
+                }
+            }
+        }
+
+        function getAddress(carWash) {
+            let address = [carWash.siDo]
+
+            if (carWash.siGunGu) {
+                address.push(carWash.siGunGu)
+            }
+
+            address.push(carWash.eupMyeonDong)
+
+            if (carWash.ri) {
+                address.push(carWash.ri)
+            }
+
+            address.push(carWash.roadName, carWash.buildingNo)
+
+            if (carWash.buildingName) {
+                address.push(`(${carWash.buildingName})`)
+            }
+
+            return address.join(' ')
+        }
+
+
+
+        // 엑셀
+
+        document.getElementById('excel-export-button').addEventListener('click', async () => {
+            let ws = XLSX.utils.json_to_sheet(table)
+
+            ws.A1.v = '이름'
+            ws.B1.v = '업종'
+            ws.C1.v = '주소'
+            ws.D1.v = '연락처'
+            ws.E1.v = '평일 개업 시각'
+            ws.F1.v = '평일 폐업 시각'
+            ws.G1.v = '주말 개업 시각'
+            ws.H1.v = '주말 폐업 시각'
+            ws.I1.v = '휴무일'
+
+            let regionList = []
+
+            if (siDoSelect.value != 0) {
+                regionList.push(siDoSelect.value)
+            }
+
+            if (siGunGuSelect.value != 0) {
+                regionList.push(siGunGuSelect.value)
+            }
+
+            if (eupMyeonDongSelect.value != 0) {
+                regionList.push(eupMyeonDongSelect.value)
+            }
+
+            let region = regionList.join(' ')
+
+            let wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, region)
+            XLSX.writeFile(wb, `${region} 세차장.xlsx`)
+        })
+
+
+
+        // 자주 사용하는 함수
+
+        function showErrorWithRefresh(html, errorMessage) {
+            swal.fire({
+                title: '이런!',
+                html: html,
+                icon: 'error',
+                confirmButtonText: '어떻게 된거죠?',
+                cancelButtonText: '새로고침',
+                showCancelButton: true,
+                allowOutsideClick: false,
+                heightAuto: false,
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    swal.fire({
+                        title: '원인',
+                        html: errorMessage,
+                        confirmButtonText: '새로고침',
+                        showCancelButton: false,
+                        allowOutsideClick: false,
+                        heightAuto: false,
+                    }).then(() => location.reload())
+                }
+            })
+        }
+
+        function showError(html, errorMessage) {
+            swal.fire({
+                title: '이런!',
+                html: html,
+                icon: 'error',
+                confirmButtonText: '어떻게 된거죠?',
+                cancelButtonText: '알겠어요',
+                showCancelButton: true,
+                heightAuto: false,
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    swal.fire({
+                        title: '원인',
+                        html: errorMessage,
+                        confirmButtonText: '알겠어요',
+                        showCancelButton: false,
+                        heightAuto: false,
+                    })
+                }
+            })
+        }
+
+        function showWarning(html) {
+            swal.fire({
+                title: '잠시만요!',
+                html: html,
+                confirmButtonText: '알겠어요',
+                heightAuto: false,
+            })
+        }
+
+        function showLoading(html) {
+            swal.fire({
+                title: '잠시만요!',
+                html: html,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                heightAuto: false,
+            })
+            swal.showLoading()
+        }
+
+        function postAsync(url, params = {}) {
+            return new Promise((resolve, reject) => {
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(params),
+                }).then(async (res) => {
+                    resolve(await res.json())
+                }).catch((error) => reject(error))
+            })
+        }
+
+        function getOption(time) {
+            let value = time
+            let date = new Date(time)
+            let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
+            return new Option(text, value)
+        }
+
+        function showQuotaExceededError(quotaDesc, quota, maxQuota) {
+            showWarning(`
+                    <span style="line-height: 130%">
+                        하루 사용량을 초과했어요!<br>
+                        ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
+                    </span>
+                `)
+        }
+
+        function swalAsync(params) {
+            return new Promise((resolve, reject) => {
+                swal.fire(params).then((res) => resolve(res))
+            })
+        }
+    </script>
+</body>
+
+</html>
