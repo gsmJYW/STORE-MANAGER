@@ -294,12 +294,7 @@
                         swal.close()
                     }
                     catch (error) {
-                        showError(`
-                            <div style="line-height: 130%">
-                                제품 기록을 불러오는 도중 오류가 발생했어요.<br>
-                                새로고침을 시도해주세요.
-                            </div>
-                        `, error.message)
+                        showErrorWithRefresh('제품 기록을 불러오는 도중 오류가 발생했어요.', error.message)
                         return
                     }
 
@@ -443,7 +438,7 @@
                     throw new Error(json.error)
                 }
 
-                bookmarkList = json.bookmarkList
+                bookmarkList = json.bookmark
                 bookmarkList.sort((a, b) => a.title - b.title)
             }
 
@@ -528,7 +523,7 @@
                     })
 
                     if (json.result == 'ok') {
-                        oldProductList = json.productList
+                        oldProductList = json.product
                         tempOldSelectValue = oldSelect.value
                         updateTable()
                         swal.close()
@@ -577,7 +572,7 @@
                     })
 
                     if (json.result == 'ok') {
-                        recentProductList = json.productList
+                        recentProductList = json.product
                         tempRecentSelectValue = recentSelect.value
                         updateTable()
                         swal.close()
@@ -707,7 +702,7 @@
 
                             if (res.isConfirmed) {
                                 recentSelect.value = new Date(json.time).getTime()
-                                recentProductList = json.productList
+                                recentProductList = json.product
                                 updateTable()
                             }
                             else {
@@ -1353,7 +1348,31 @@
 
             // 자주 사용하는 함수
 
-            function showError(html, error) {
+            function showErrorWithRefresh(html, errorMessage) {
+                swal.fire({
+                    title: '이런!',
+                    html: html,
+                    icon: 'error',
+                    confirmButtonText: '어떻게 된거죠?',
+                    cancelButtonText: '새로고침',
+                    showCancelButton: true,
+                    allowOutsideClick: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        swal.fire({
+                            title: '원인',
+                            html: errorMessage,
+                            confirmButtonText: '새로고침',
+                            showCancelButton: false,
+                            allowOutsideClick: false,
+                            heightAuto: false,
+                        }).then(() => location.reload())
+                    }
+                })
+            }
+
+            function showError(html, errorMessage) {
                 swal.fire({
                     title: '이런!',
                     html: html,
@@ -1366,7 +1385,7 @@
                     if (res.isConfirmed) {
                         swal.fire({
                             title: '원인',
-                            html: error,
+                            html: errerrorMessageor,
                             confirmButtonText: '알겠어요',
                             showCancelButton: false,
                             heightAuto: false,
@@ -1408,15 +1427,6 @@
                         resolve(await res.json())
                     }).catch((error) => reject(error))
                 })
-            }
-
-            function refresh() {
-                let form = document.createElement('form')
-                form.style.visibility = 'hidden'
-                form.method = 'GET'
-                form.action = '/'
-                document.body.appendChild(form)
-                form.submit()
             }
 
             function getOption(time) {

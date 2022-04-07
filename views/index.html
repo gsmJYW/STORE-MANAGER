@@ -507,7 +507,7 @@
                         if (!isUserEqual(googleUser, firebaseUser)) {
                             const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token)
 
-                            signInWithCredential(auth, credential).then(() => refresh()).catch((error) => {
+                            signInWithCredential(auth, credential).then(() => location.reload()).catch((error) => {
                                 showError(`
                                     <div style="line-height: 130%">
                                         로그인 도중 오류가 발생했어요.<br>
@@ -520,7 +520,7 @@
                 }
 
                 document.getElementById('signout').addEventListener('click', () => {
-                    signOut(auth).then(() => refresh()).catch((error) => {
+                    signOut(auth).then(() => location.reload()).catch((error) => {
                         showError(`
                             <div style="line-height: 130%">
                                 로그아웃 도중 오류가 발생했어요.<br>
@@ -603,16 +603,17 @@
                             throw new Error(json.error)
                         }
 
-                        json.bookmarkList.sort((a, b) => a.title - b.title)
+                        let bookmarkList = json.bookmark
+                        bookmarkList.sort((a, b) => a.title - b.title)
 
-                        if (json.bookmarkList.length > 0) {
+                        if (bookmarkList.length > 0) {
                             searchHelper.innerHTML = ''
                         }
 
                         let isThereBoomark = false
                         let recentHeight = Infinity
 
-                        for (let bookmark of json.bookmarkList) {
+                        for (let bookmark of bookmarkList) {
                             if (isThereBoomark) {
                                 let span = document.createElement('span')
                                 span.innerHTML = '&nbsp&nbsp'
@@ -1060,7 +1061,7 @@
 
                 // 자주 사용하는 함수
 
-                function showError(html, error) {
+                function showError(html, errorMessage) {
                     swal.fire({
                         title: '이런!',
                         html: html,
@@ -1073,7 +1074,7 @@
                         if (res.isConfirmed) {
                             swal.fire({
                                 title: '원인',
-                                html: error,
+                                html: errorMessage,
                                 confirmButtonText: '알겠어요',
                                 showCancelButton: false,
                                 heightAuto: false,
@@ -1113,17 +1114,8 @@
                             body: JSON.stringify(params),
                         }).then(async (res) => {
                             resolve(await res.json())
-                        }).catch((error) => reject(error.message))
+                        }).catch((error) => reject(error))
                     })
-                }
-
-                function refresh() {
-                    let form = document.createElement('form')
-                    form.style.visibility = 'hidden'
-                    form.method = 'GET'
-                    form.action = '/'
-                    document.body.appendChild(form)
-                    form.submit()
                 }
             </script>
     </section>
