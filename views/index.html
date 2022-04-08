@@ -331,33 +331,40 @@
             <i class='bx bx-menu' id="btn"></i>
         </div>
         <ul class="nav-list">
-            <li class="signin-not-needed" hidden>
+            <li class="signin-needed" hidden>
                 <a id="smartstore-button" href="#">
                     <img src="https://imgur.com/xpWa0pd.png" style="width: 25px; height: 25px; margin: 12px"></i>
                     <span class="links_name">스마트스토어</span>
                 </a>
                 <span class="tooltip">스마트스토어</span>
             </li>
-            <li class="signin-not-needed" hidden>
+            <li class="permission-needed" hidden>
                 <a href="/n09">
                     <img src="https://imgur.com/YPhrrAJ.png" style="width: 30px; height: 30px; margin: 9px"></i>
                     <span class="links_name">엔공구</span>
                 </a>
                 <span class="tooltip">엔공구</span>
             </li>
-            <li class="signin-not-needed" hidden>
+            <li class="permission-needed" hidden>
                 <a href="/autowash">
                     <img src="https://imgur.com/pZDIKRo.jpg" style="width: 25px; height: 25px; margin: 12px"></i>
                     <span class="links_name">오토워시</span>
                 </a>
                 <span class="tooltip">오토워시</span>
             </li>
-            <li class="signin-not-needed" hidden>
+            <li class="permission-needed" hidden>
                 <a href="/hyundai/auton">
                     <img src="https://imgur.com/6sSNXyV.jpg" style="width: 25px; height: 25px; margin: 12px"></i>
                     <span class="links_name">카라이프몰</span>
                 </a>
                 <span class="tooltip">카라이프몰</span>
+            </li>
+            <li class="signin-needed" hidden>
+                <a id="car-wash-button" href="/carwash">
+                    <i class='bx bx-droplet'></i>
+                    <span class="links_name">전국 세차장</span>
+                </a>
+                <span class="tooltip">전국 세차장</span>
             </li>
             <li class="signin-needed" hidden>
                 <a id="option-button" href="#">
@@ -383,8 +390,8 @@
             <li class="profile">
                 <div class="profile-details">
                     <div class="email-name">
-                        <div id="name" class="name"></div>
-                        <div id="email" class="email"></div>
+                        <div id="name" class="name">계정 없음</div>
+                        <div id="email" class="email">기능을 열기 위해 로그인 해주세요</div>
                     </div>
                 </div>
                 <i class='bx bx-log-out' id="signout"></i>
@@ -458,6 +465,7 @@
 
                 const signinNeededList = document.getElementsByClassName('signin-needed')
                 const signinNotNeededList = document.getElementsByClassName('signin-not-needed')
+                const permissionNeededList = document.getElementsByClassName('permission-needed')
 
                 let user
 
@@ -482,6 +490,12 @@
                             if (json.result == 'error') {
                                 throw new Error(json.error)
                             }
+
+                            if (json.user.permission == 1) {
+                                for (let permissionNeeded of permissionNeededList) {
+                                    permissionNeeded.hidden = false
+                                }
+                            }
                         }
                         catch (error) {
                             showError(`
@@ -490,11 +504,6 @@
                                     다시 시도해주세요.
                                 </div>
                             `, error.message)
-                        }
-                    }
-                    else {
-                        for (let signinNeeded of signinNeededList) {
-                            signinNeeded.hidden = true
                         }
                     }
 
@@ -550,7 +559,7 @@
                 // 스마트스토어
 
                 const searchHelper = document.getElementById('search-helper')
-                
+
                 document.getElementById('smartstore-button').addEventListener('click', () => smartstoreSearchPopup())
 
                 async function smartstoreSearchPopup() {
@@ -782,7 +791,7 @@
                 }
 
 
-                
+
                 // 설정
 
                 document.getElementById('option-button').addEventListener('click', async () => {
@@ -924,7 +933,7 @@
 
 
                 // 사용량
-                
+
                 document.getElementById('quota-button').addEventListener('click', async () => {
                     try {
                         let json = await postAsync('/quota', { idToken: await user.getIdToken() })
@@ -1009,7 +1018,7 @@
                                     <div class="text-center">
                                         <img src="https://imgur.com/n6njz6V.png" width="454" height="47">
                                     </div><br>
-                                    현재 지원하는 스토어: <b>NAVER 스마트스토어, 엔공구 공식 쇼핑몰, 오토워시 공식 스토어, 현대 카라이프몰</b>
+                                    현재 지원하는 스토어: <b>NAVER 스마트스토어</b>
                                 </div>
                             `,
                             confirmButtonText: '그래서요?',
