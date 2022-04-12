@@ -198,6 +198,11 @@
                     }
                 }
 
+                if (invcNoList.length <= 0) {
+                    showWarning('송장번호를 찾지 못했어요.')
+                    return
+                }
+
                 try {
                     let json = await postAsync('/cjTracking', { invcNo: invcNoList })
 
@@ -207,13 +212,11 @@
 
                     trackingList = json.cjTracking
                     updateTable()
+                    swal.close()
                 }
                 catch (error) {
                     console.log(error)
                     showError('배송 조회를 하는 도중 요류가 발생했어요.')
-                }
-                finally {
-                    swal.close()
                 }
             })
 
@@ -378,6 +381,15 @@
                             heightAuto: false,
                         })
                     }
+                })
+            }
+
+            function showWarning(html) {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: html,
+                    confirmButtonText: '알겠어요',
+                    heightAuto: false,
                 })
             }
 
