@@ -65,6 +65,28 @@ app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 })
 
+app.get('/cjShip', async (req, res) => {
+  res.sendFile(__dirname + '/views/cjShip.html')
+})
+
+app.post('/cjTracking', async (req, res) => {
+  let invcNo = req.body.invcNo
+
+  try {
+    let cjTrackingList = await getCJTrackingList(invcNo)
+    res.json({
+      result: 'ok',
+      cjTracking: cjTrackingList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+})
+
 app.get('/carWash', async (req, res) => {
   res.sendFile(__dirname + '/views/carWash.html')
 })
@@ -151,7 +173,7 @@ app.post('/eupMyeonDong', async (req, res) => {
     if (siGunGu) {
       whereClause.push(`siGunGu = '${siGunGu}'`)
     }
-  
+
     if (whereClause.length > 0) {
       query += ` WHERE ${whereClause.join(' AND ')}`
     }
@@ -206,7 +228,7 @@ app.post('/carWash', async (req, res) => {
     if (eupMyeonDong) {
       whereClause.push(`eupMyeonDong = '${eupMyeonDong}'`)
     }
-  
+
     if (whereClause.length > 0) {
       query += ` WHERE ${whereClause.join(' AND ')}`
     }
@@ -1171,6 +1193,75 @@ async function getKST() {
   // let now = await NTPClient.getNetworkTime(setTimeout(() => {}, 3000), 'ntp.ubuntu.com')
   let now = new Date()
   return new Date(now.getTime() + 1000 * 60 * 60 * 9)
+}
+
+function getCJTrackingList(invcNoList) {
+  return new Promise((resolve, reject) => {
+    let trackingList = []
+
+    for (let invcNo of invcNoList) {
+      let tracking = {
+        id: invcNo,
+        noData: false,
+      }
+
+      https.get(`https://www.doortodoor.co.kr/parcel/doortodoor.do?fsp_action=PARC_ACT_002&fsp_cmd=retrieveInvNoACT&invc_no=${invcNo}`, (res) => {
+        let data = ''
+
+        res.on('error', (error) => reject(error))
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          let document = parser.parse(data)
+
+          let contList = document.querySelectorAll('.cont')
+          for (let cont of contList) {
+            let contTit = cont.querySelector('.cont_tit')
+            let tdList = cont.getElementsByTagName('td')
+
+            if (contTit.innerText.trim() == '조회결과') {
+              tracking.receiver = tdList[2].innerText.trim()
+              tracking.product = tdList[3].innerText.trim()
+            }
+            else if (contTit.innerText.trim() == '상품상태 확인') {
+              if (tdList.length > 1) {
+                let trList = cont.getElementsByTagName('tr')
+                trList.shift()
+
+                let progress = []
+
+                for (let tr of trList) {
+                  tdList = tr.getElementsByTagName('td')
+                  
+                  if (tdList.length < 4) {
+                    continue
+                  }
+
+                  progress.push({
+                    step: tdList[0].innerText.trim(),
+                    time: tdList[1].innerText.trim(),
+                    place: tdList[3].innerText.trim(),
+                  })
+                }
+
+                tracking.progress = progress
+              }
+              else {
+                tracking.noData = true
+              }
+            }
+          }
+
+          trackingList.push(tracking)
+
+          if (trackingList.length >= invcNoList.length) {
+            resolve(trackingList)
+          }
+        })
+      }).on('error', (error) => reject(error))
+    }
+  })
 }
 
 function searchNaver(query) {
