@@ -210,13 +210,12 @@
                         throw new Error(json.error)
                     }
 
-                    trackingList = json.cjTracking
+                    trackingList = json.cjTracking.filter((tracking) => tracking.available == true)
                     updateTable()
                     swal.close()
                 }
                 catch (error) {
-                    console.log(error)
-                    showError('배송 조회를 하는 도중 요류가 발생했어요.')
+                    showError('배송 조회를 하는 도중 오류가 발생했어요.')
                 }
             })
 
@@ -247,20 +246,14 @@
                         lastUpdate: '',
                     }
 
-                    if (row.noData) {
-                        row.progress = '정보 없음'
-                    }
-                    else {
-                        // let step = []
-
-                        // for (let progress of tracking.progress) {
-                        //     step.push(progress.step)
-                        // }
-
-                        // row.progress = step.join(' - ')
+                    if (tracking.progress.length > 0) {
                         let lastTracking = tracking.progress.pop()
                         row.progress = lastTracking.step
                         row.lastUpdate = new Date(lastTracking.time).toLocaleString('ko-KR')
+                    }
+                    else {
+                        row.progress = '정보없음'
+                        row.lastUpdate = ''
                     }
 
                     table.push(row)
@@ -338,7 +331,6 @@
             // 엑셀
 
             document.getElementById('excel-export-button').addEventListener('click', async () => {
-                console.log(table)
                 let ws = XLSX.utils.json_to_sheet(table)
 
                 ws.A1.v = '송장번호'

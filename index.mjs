@@ -70,13 +70,33 @@ app.get('/cjTracking', async (req, res) => {
 })
 
 app.post('/cjTracking', async (req, res) => {
-  let invcNo = req.body.invcNo
+  let invcNoList = req.body.invcNo
 
   try {
-    let cjTrackingList = await getCJTrackingList(invcNo)
+    let trackingList = await getCJTrackingList(invcNoList)
+
+    while (true) {
+      let errorList = trackingList.filter((tracking) => tracking.error == true)
+
+      if (errorList.length <= 0) {
+        break
+      }
+
+      let tempInvcNoList = []
+
+      for (let error of errorList) {
+        tempInvcNoList.push(error.id)
+      }
+
+      let tempTrackingList = await getCJTrackingList(tempInvcNoList)
+
+      trackingList = trackingList.filter((tracking) => tracking.error == false)
+      trackingList.concat(tempTrackingList)
+    }
+
     res.json({
       result: 'ok',
-      cjTracking: cjTrackingList,
+      cjTracking: trackingList,
     })
   }
   catch (error) {
@@ -1198,17 +1218,20 @@ async function getKST() {
 function getCJTrackingList(invcNoList) {
   return new Promise((resolve, reject) => {
     let trackingList = []
+    let trackingAmount = invcNoList.length
+    let i = 0
 
     for (let invcNo of invcNoList) {
       let tracking = {
         id: invcNo,
-        noData: false,
+        available: true,
+        error: false,
       }
 
       https.get(`https://www.doortodoor.co.kr/parcel/doortodoor.do?fsp_action=PARC_ACT_002&fsp_cmd=retrieveInvNoACT&invc_no=${invcNo}`, (res) => {
         let data = ''
 
-        res.on('error', (error) => reject(error))
+        res.on('error', (error) => console.log(error))
         res.on('data', (chunk) => {
           data += chunk
         })
@@ -1226,46 +1249,48 @@ function getCJTrackingList(invcNoList) {
                 tracking.product = tdList[3].innerText.trim()
               }
               else if (contTit.innerText.trim() == '상품상태 확인') {
-                if (tdList.length > 1) {
-                  let trList = cont.getElementsByTagName('tr')
-                  trList.shift()
+                let progress = []
 
-                  let progress = []
+                let trList = cont.getElementsByTagName('tr')
+                trList.shift()
 
-                  for (let tr of trList) {
-                    tdList = tr.getElementsByTagName('td')
+                for (let tr of trList) {
+                  tdList = tr.getElementsByTagName('td')
 
-                    if (tdList.length < 4) {
-                      continue
-                    }
-
-                    progress.push({
-                      step: tdList[0].innerText.trim(),
-                      time: tdList[1].innerText.trim(),
-                      place: tdList[3].innerText.trim(),
-                    })
+                  if (tdList.length < 4) {
+                    continue
                   }
 
-                  tracking.progress = progress
+                  progress.push({
+                    step: tdList[0].innerText.trim(),
+                    time: tdList[1].innerText.trim(),
+                    place: tdList[3].innerText.trim(),
+                  })
                 }
-                else {
-                  tracking.noData = true
-                }
+
+                tracking.progress = progress
               }
             }
-
-            trackingList.push(tracking)
           }
           catch {
-            invcNoList = invcNoList.filter((tempInvcNo) => tempInvcNo != invcNo)
+            tracking.available = false
           }
           finally {
+            trackingList.push(tracking)
+
             if (trackingList.length >= invcNoList.length) {
               resolve(trackingList)
             }
           }
         })
-      }).on('error', (error) => reject(error))
+      }).on('error', () => {
+        tracking.error = true
+        trackingList.push(tracking)
+
+        if (trackingList.length >= invcNoList.length) {
+          resolve(trackingList)
+        }
+      })
     }
   })
 }
