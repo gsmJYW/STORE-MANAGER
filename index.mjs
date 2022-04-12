@@ -1214,49 +1214,55 @@ function getCJTrackingList(invcNoList) {
         })
         res.on('end', () => {
           let document = parser.parse(data)
-
           let contList = document.querySelectorAll('.cont')
-          for (let cont of contList) {
-            let contTit = cont.querySelector('.cont_tit')
-            let tdList = cont.getElementsByTagName('td')
 
-            if (contTit.innerText.trim() == '조회결과') {
-              tracking.receiver = tdList[2].innerText.trim()
-              tracking.product = tdList[3].innerText.trim()
-            }
-            else if (contTit.innerText.trim() == '상품상태 확인') {
-              if (tdList.length > 1) {
-                let trList = cont.getElementsByTagName('tr')
-                trList.shift()
+          try {
+            for (let cont of contList) {
+              let contTit = cont.querySelector('.cont_tit')
+              let tdList = cont.getElementsByTagName('td')
 
-                let progress = []
+              if (contTit.innerText.trim() == '조회결과') {
+                tracking.receiver = tdList[2].innerText.trim()
+                tracking.product = tdList[3].innerText.trim()
+              }
+              else if (contTit.innerText.trim() == '상품상태 확인') {
+                if (tdList.length > 1) {
+                  let trList = cont.getElementsByTagName('tr')
+                  trList.shift()
 
-                for (let tr of trList) {
-                  tdList = tr.getElementsByTagName('td')
-                  
-                  if (tdList.length < 4) {
-                    continue
+                  let progress = []
+
+                  for (let tr of trList) {
+                    tdList = tr.getElementsByTagName('td')
+
+                    if (tdList.length < 4) {
+                      continue
+                    }
+
+                    progress.push({
+                      step: tdList[0].innerText.trim(),
+                      time: tdList[1].innerText.trim(),
+                      place: tdList[3].innerText.trim(),
+                    })
                   }
 
-                  progress.push({
-                    step: tdList[0].innerText.trim(),
-                    time: tdList[1].innerText.trim(),
-                    place: tdList[3].innerText.trim(),
-                  })
+                  tracking.progress = progress
                 }
-
-                tracking.progress = progress
-              }
-              else {
-                tracking.noData = true
+                else {
+                  tracking.noData = true
+                }
               }
             }
+
+            trackingList.push(tracking)
           }
-
-          trackingList.push(tracking)
-
-          if (trackingList.length >= invcNoList.length) {
-            resolve(trackingList)
+          catch {
+            invcNoList = invcNoList.filter((tempInvcNo) => tempInvcNo != invcNo)
+          }
+          finally {
+            if (trackingList.length >= invcNoList.length) {
+              resolve(trackingList)
+            }
           }
         })
       }).on('error', (error) => reject(error))
