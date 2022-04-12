@@ -65,8 +65,8 @@ app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 })
 
-app.get('/cjShip', async (req, res) => {
-  res.sendFile(__dirname + '/views/cjShip.html')
+app.get('/cjTracking', async (req, res) => {
+  res.sendFile(__dirname + '/views/cjTracking.html')
 })
 
 app.post('/cjTracking', async (req, res) => {
