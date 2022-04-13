@@ -176,18 +176,6 @@
 
 
 
-        // 지도
-
-        let container = document.getElementById('map');
-        let options = {
-            center: new kakao.maps.LatLng(center.lat, center.lon),
-            level: 14
-        };
-
-        let map = new kakao.maps.Map(container, options);
-
-
-
         // Auth
 
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
@@ -203,17 +191,21 @@
             measurementId: "G-37DECVWLYX"
         })
 
-        const gasStation = document.getElementById('gas-station')
-        const highlightChanges = document.getElementById('highlight-changes')
-        const byPopularity = document.getElementById('by-popularity')
-        const byRecent = document.getElementById('by-recent')
-
         const auth = getAuth()
         let user
+        let map
 
         onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 user = firebaseUser
+
+                let container = document.getElementById('map');
+                let options = {
+                    center: new kakao.maps.LatLng(center.lat, center.lon),
+                    level: 14
+                };
+
+                map = new kakao.maps.Map(container, options);
             } else {
                 swal.fire({
                     title: '잠시만요!',
@@ -279,6 +271,8 @@
             }
 
             if (siDoSelect.value != 0) {
+                showLoading('세차장 정보를 불러오는 중이에요.')
+
                 try {
                     let json = await postAsync('/siGunGu', { siDo: siDoSelect.value })
 
@@ -441,13 +435,44 @@
                         clickable: true,
                     })
 
-                    let div = document.createElement('div')
-                    div.style = 'line-height: 130%'
+                    let content = `<b>사업장명</b> ${carWash.name}<br>`
+                    content += `<b>업종</b> ${carWash.category}<br>`
+
+                    if (carWash.type) {
+                        content += `<b>세차유형</b> ${carWash.type}<br>`
+                    }
+
+                    if (carWash.phone) {
+                        content += `<b>연락처</b> ${carWash.phone}<br>`
+                    }
+
+                    if (carWash.openAt && carWash.closeAt) {
+                        content += `<b>평일</b> ${carWash.openAt.slice(0, 5)} - ${carWash.closeAt.slice(0, 5)}<br>`
+                    }
+
+                    if (carWash.weekendOpenAt && carWash.weekendCloseAt) {
+                        content += `<b>주말</b> ${carWash.weekendOpenAt.slice(0, 5)} - ${carWash.weekendCloseAt.slice(0, 5)}<br>`
+                    }
+
+                    if (carWash.dayoff) {
+                        content += `<b>휴일</b> ${carWash.dayoff}<br>`
+                    }
+
+                    let span = document.createElement('span')
+                    span.innerHTML = content
+                    document.body.appendChild(span)
+                    let width = span.offsetWidth + 32
 
                     let infoWindow = new kakao.maps.InfoWindow({
-                        content: carWash.name.match(/.{1,8}/g).join('<br>'),
+                        content: `
+                            <div style="width: ${width}px; padding:5px;">
+                                ${content}
+                            </div>
+                        `,
                         removable: true,
                     });
+
+                    span.remove()
 
                     let address = getAddress(carWash)
 
@@ -570,13 +595,13 @@
 
                     let carWash = carWashListInRegion.filter((carWash) => getAddress(carWash) == row.address)[0]
                     let position = new kakao.maps.LatLng(carWash.lat, carWash.lon)
-                    
+
                     let infoWindow = infoWindowList.filter((infoWindow) => infoWindow.address == row.address)[0]
                     let marker = markerList.filter((marker) => marker.address == row.address)[0]
-                    
+
                     infoWindow.open(map, marker);
 
-                    map.setLevel(1)
+                    map.setLevel(2)
                     map.setCenter(position)
                 })
 
@@ -596,25 +621,25 @@
         }
 
         function getAddress(carWash) {
-            let address = [carWash.siDo]
+            let address = carWash.siDo
 
             if (carWash.siGunGu) {
-                address.push(carWash.siGunGu)
+                address += ` ${carWash.siGunGu}`
             }
-
-            address.push(carWash.eupMyeonDong)
 
             if (carWash.ri) {
-                address.push(carWash.ri)
+                address += ` ${carWash.ri}`
             }
 
-            address.push(carWash.roadName, carWash.buildingNo)
+            address += ` ${carWash.roadName} ${carWash.buildingNo}`
 
             if (carWash.buildingName) {
-                address.push(`(${carWash.buildingName})`)
+                address += `, ${carWash.buildingName}`
             }
 
-            return address.join(' ')
+            address += ` (${carWash.eupMyeonDong})`
+
+            return address
         }
 
 
