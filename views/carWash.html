@@ -167,8 +167,6 @@
 
             carWashList = json.carWash
             center = json.center
-
-            swal.close()
         }
         catch (error) {
             showErrorWithRefresh('세차장 정보를 불러오는 도중 오류가 발생했어요.', error.message)
@@ -206,6 +204,7 @@
                 };
 
                 map = new kakao.maps.Map(container, options);
+                swal.close()
             } else {
                 swal.fire({
                     title: '잠시만요!',
