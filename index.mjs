@@ -1218,7 +1218,6 @@ async function getKST() {
 function getCJTrackingList(invcNoList) {
   return new Promise((resolve, reject) => {
     let trackingList = []
-    let trackingAmount = invcNoList.length
     let i = 0
 
     for (let invcNo of invcNoList) {
