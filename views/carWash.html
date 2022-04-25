@@ -446,16 +446,16 @@
                         content += `<b>연락처</b> ${carWash.phone}<br>`
                     }
 
-                    if (carWash.openAt && carWash.closeAt) {
-                        content += `<b>평일</b> ${carWash.openAt.slice(0, 5)} - ${carWash.closeAt.slice(0, 5)}<br>`
-                    }
+                    if (carWash.businessHours != 'null' && carWash.businessHours) {
+                        content += '<b>영업시간</b> '
 
-                    if (carWash.weekendOpenAt && carWash.weekendCloseAt) {
-                        content += `<b>주말</b> ${carWash.weekendOpenAt.slice(0, 5)} - ${carWash.weekendCloseAt.slice(0, 5)}<br>`
-                    }
+                        let businessHours = carWash.businessHours.replace(/(?:\r\n|\r|\n)/g, '<br>')
 
-                    if (carWash.dayoff) {
-                        content += `<b>휴일</b> ${carWash.dayoff}<br>`
+                        if (businessHours.includes('<br>')) {
+                            content += '<br>'
+                        }
+
+                        content += businessHours
                     }
 
                     let span = document.createElement('span')
@@ -576,7 +576,10 @@
             let th3 = document.createElement('th')
             th3.innerHTML = '주소'
 
-            for (let th of [th1, th2, th3]) {
+            let th4 = document.createElement('th')
+            th4.innerHTML = '연락처'
+
+            for (let th of [th1, th2, th3, th4]) {
                 th.setAttribute('style', 'font-weight: 600')
                 tr.appendChild(th)
             }
@@ -611,9 +614,12 @@
                 th2.innerHTML = row.category
 
                 let th3 = document.createElement('th')
-                th3.innerHTML = row.address
+                th3.innerHTML = row.address.split(',')[0]
 
-                for (let th of [th1, th2, th3]) {
+                let th4 = document.createElement('th')
+                th4.innerHTML = row.phone
+
+                for (let th of [th1, th2, th3, th4]) {
                     th.setAttribute('style', 'font-weight: 400')
                     tr.appendChild(th)
                 }
