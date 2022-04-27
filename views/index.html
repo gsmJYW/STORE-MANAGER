@@ -380,6 +380,13 @@
                 </a>
                 <span class="tooltip">사용량</span>
             </li>
+            <li class="permission-needed" hidden>
+                <a id="admin-button" href="/admin">
+                    <i class='bx bx-user'></i>
+                    <span class="links_name">관리자</span>
+                </a>
+                <span class="tooltip">관리자</span>
+            </li>
             <li class="signin-not-needed" hidden>
                 <a id="info-button" href="#">
                     <i class='bx bx-help-circle'></i>
@@ -496,9 +503,11 @@
                                     permissionNeeded.hidden = false
                                 }
                             }
+
+                            swal.close()
                         }
                         catch (error) {
-                            showError(`
+                            showErrorWithRefresh(`
                                 <div style="line-height: 130%">
                                     로그인 도중 오류가 발생했어요.<br>
                                     다시 시도해주세요.
@@ -506,8 +515,6 @@
                             `, error.message)
                         }
                     }
-
-                    swal.close()
                 })
 
                 function onSignIn(googleUser) {
@@ -1069,6 +1076,30 @@
 
 
                 // 자주 사용하는 함수
+
+                function showErrorWithRefresh(html, errorMessage) {
+                    swal.fire({
+                        title: '이런!',
+                        html: html,
+                        icon: 'error',
+                        confirmButtonText: '어떻게 된거죠?',
+                        cancelButtonText: '새로고침',
+                        showCancelButton: true,
+                        allowOutsideClick: false,
+                        heightAuto: false,
+                    }).then((res) => {
+                        if (res.isConfirmed) {
+                            swal.fire({
+                                title: '원인',
+                                html: errorMessage,
+                                confirmButtonText: '새로고침',
+                                showCancelButton: false,
+                                allowOutsideClick: false,
+                                heightAuto: false,
+                            }).then(() => location.reload())
+                        }
+                    })
+                }
 
                 function showError(html, errorMessage) {
                     swal.fire({

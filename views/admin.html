@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        @import url(//fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap);
+        @import url(//cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-full.css);
+
+        #store-title {
+            font-family: "D2Coding", monospace;
+            letter-spacing: -3px;
+            word-spacing: -3px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        table {
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 16px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2
+        }
+
+        .swal-option {
+            display: grid !important;
+        }
+
+        .container {
+            height: 100%;
+        }
+
+        body {
+            background-color: white;
+            color: black;
+            font-size: 25px;
+            height: 100vh;
+        }
+    </style>
+
+    <title>STORE MANAGER - 관리자 페이지</title>
+    <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+
+    <meta name="google-signin-client_id"
+        content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
+    <meta name="google-signin-cookiepolicy" content="single_host_origin">
+    <meta name="google-signin-scope" content="profile email">
+</head>
+
+<body>
+    <div class="container align-items-center justify-content-center">
+        <p></p>
+        <div class="d-flex" style="width: 680px; margin: auto">
+            <form action="/">
+                <button type="submit" style="background: none; border: none; outline: none">
+                    <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 8px 18px 0px"></i>
+                </button>
+            </form>
+            <h2 style="font-size: 30px; font-weight: 600; margin-bottom: auto">관리자 페이지</h2>
+        </div>
+        <div class="d-flex p-2 border" style="width: 680px; margin: auto">
+            <input id="email-input" class="form-control rounded" placeholder="이메일 주소"
+                style="width: 430px !important; margin: auto;">
+            </input>
+            <button id="add-button" type="button" class="btn btn-primary" style="margin: auto">관리자 추가</button>
+            <button id="remove-button" type="button" class="btn btn-primary" style="margin: auto">관리자 해제</button>
+        </div>
+        <div class="p-2"></div>
+        <div class="container" id="result" style="width: 1120px" hidden>
+            <div class="p-1"></div>
+            <div id="sort-form">
+                <div class="d-flex" style="float: right; margin: auto">
+                    <span id="admin-amount" style="margin: 10px 8px 0px 0px"></span>
+                    <button id="excel-export-button" type="button" class="btn btn-primary"
+                        style="margin: 6px 0px; padding: 4px 10px; font-size: 14px">
+                        엑셀 파일 (.xlsx)&nbsp;
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
+                            viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
+                            </path>
+                            <path
+                                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <table id="result-table"></table>
+            <span>&nbsp;<br>&nbsp;<br></span>
+        </div>
+    </div>
+    <div id="hidden-div" hidden>
+        <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
+        <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
+            <script type="text/javascript"
+                src="//s3.tracemyip.org/tracker/lgUrl.php?random='+Math.random()+'&amp;stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
+            <noscript><a
+                    href="https://www.tracemyip.org/tools/website-visitors-counter-traffic-tracker-statistics/"><img
+                        src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/"
+                        alt="Web Site Hits Ipv4 Tracer" style="border:0px;"></a></noscript>
+        </div> <!-- End: TraceMyIP.org Service Code //-->
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=49ed5a0f94a9a5afc59823d45c4d1894"></script>
+    <script type="module">
+        showLoading('관리자 정보를 불러오는 중이에요.')
+
+
+
+        // Auth
+
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
+        import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
+
+        initializeApp({
+            apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+            authDomain: "store-manager-5d527.firebaseapp.com",
+            projectId: "store-manager-5d527",
+            storageBucket: "store-manager-5d527.appspot.com",
+            messagingSenderId: "36522862962",
+            appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+            measurementId: "G-37DECVWLYX"
+        })
+
+        const auth = getAuth()
+        let user
+
+        onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                user = firebaseUser
+
+                try {
+                    let json = await postAsync('/user', { idToken: await user.getIdToken() })
+
+                    if (json.result == 'error') {
+                        throw new Error(json.error)
+                    }
+
+                    if (json.user.permission == 0) {
+                        showNoPermissionError()
+                        return
+                    }
+
+                    await updateAdminList()
+                    swal.close()
+                }
+                catch (error) {
+                    showErrorWithRefresh('관리자 정보를 불러오는 도중 오류가 발생했어요.', error.message)
+                }
+            } else {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: '이용하기 전에 로그인 해주세요!',
+                    confirmButtonText: '메인으로',
+                    allowOutsideClick: false,
+                    showCancelButton: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                })
+            }
+        })
+
+
+
+        // 관리자 추가
+
+        let emailInput = document.getElementById('email-input')
+
+        document.getElementById('add-button').addEventListener('click', async () => {
+            try {
+                let email = emailInput.value
+
+                if (!validateEmail(email)) {
+                    showWarning('이메일 형식이 잘못됐어요!')
+                    return
+                }
+
+                let json = await postAsync('/user/permission', { idToken: await user.getIdToken(), email: email, permission: 1 })
+
+                if (json.result == 'error') {
+                    throw new Error(json.error)
+                }
+                else if (json.result == 'self assignment not allowed') {
+                    showWarning('자기 자신의 권한은 수정할 수 없어요!')
+                    return
+                }
+                else if (json.result == 'no permission') {
+                    showNoPermissionError()
+                    return
+                }
+                else if (json.result == 'user not found') {
+                    showWarning('유저를 찾지 못했어요!')
+                    return
+                }
+                else if (json.result == 'not changed') {
+                    showWarning('이미 관리자이세요!')
+                    return
+                }
+
+                await updateAdminList()
+
+                swal.fire({
+                    title: '관리자 추가 성공!',
+                    icon: 'success',
+                    heightAuto: false,
+                    confirmButtonText: '좋네요!',
+                })
+            }
+            catch (error) {
+                showError('관리자를 추가하는 도중 오류가 발생했어요.', error.message)
+            }
+        })
+
+        document.getElementById('remove-button').addEventListener('click', async () => {
+            try {
+                let email = emailInput.value
+
+                if (!validateEmail(email)) {
+                    showWarning('이메일 형식이 잘못됐어요!')
+                    return
+                }
+
+                let json = await postAsync('/user/permission', { idToken: await user.getIdToken(), email: email, permission: 0 })
+
+                if (json.result == 'error') {
+                    throw new Error(json.error)
+                }
+                else if (json.result == 'self assignment not allowed') {
+                    showWarning('자기 자신의 권한은 수정할 수 없어요!')
+                    return
+                }
+                else if (json.result == 'no permission') {
+                    showNoPermissionError()
+                    return
+                }
+                else if (json.result == 'user not found') {
+                    showWarning('유저를 찾지 못했어요!')
+                    return
+                }
+                else if (json.result == 'not changed') {
+                    showWarning('이미 관리자가 아니세요!')
+                    return
+                }
+
+                await updateAdminList()
+
+                swal.fire({
+                    title: '관리자 해제 성공!',
+                    icon: 'success',
+                    heightAuto: false,
+                    confirmButtonText: '좋네요!',
+                })
+            }
+            catch (error) {
+                showError('관리자를 해제하는 도중 오류가 발생했어요.', error.message)
+            }
+        })
+
+        function validateEmail(email) {
+            let emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+            return email.toLowerCase().match(emailRegex)
+        }
+
+
+
+        // 테이블
+
+        const result = document.getElementById('result')
+        const resultTable = document.getElementById('result-table')
+        const adminAmount = document.getElementById('admin-amount')
+
+        let table = []
+        let adminList = []
+
+        document.getElementById('sort-form').addEventListener('input', () => {
+            updateTable()
+        })
+
+        function updateAdminList() {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    let json = await postAsync('/user/admin', { idToken: await user.getIdToken() })
+
+                    if (json.result == 'error') {
+                        throw new Error(json.error)
+                    }
+                    else if (json.result == 'no permission') {
+                        showNoPermissionError()
+                        throw new Error(json.error)
+                    }
+
+                    adminList = json.admin
+                    updateTable()
+                    resolve()
+                }
+                catch (error) {
+                    reject(error)
+                }
+            })
+        }
+
+        function toDateString(date) {
+            return `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}.`
+        }
+
+        function updateTable() {
+            resultTable.innerHTML = ''
+            result.hidden = false
+
+            table = []
+
+            for (let admin of adminList) {
+                let firstLoginAt = new Date(admin.firstLoginSecond * 1000)
+                let lastLoginAt = new Date(admin.lastLoginSecond * 1000)
+
+                let row = {
+                    name: admin.name,
+                    email: admin.email,
+                    firstLoginAt: toDateString(firstLoginAt),
+                    lastLoginAt: toDateString(lastLoginAt),
+                }
+                table.push(row)
+            }
+
+            adminAmount.textContent = `${adminList.length.toLocaleString('ko-KR')}명`
+
+            let tr = document.createElement('tr')
+            resultTable.appendChild(tr)
+
+            let th1 = document.createElement('th')
+            th1.innerHTML = '이름'
+
+            let th2 = document.createElement('th')
+            th2.innerHTML = '이메일'
+
+            let th3 = document.createElement('th')
+            th3.innerHTML = '가입 일자'
+
+            let th4 = document.createElement('th')
+            th4.innerHTML = '접속 일자'
+
+            for (let th of [th1, th2, th3, th4]) {
+                th.setAttribute('style', 'font-weight: 600')
+                tr.appendChild(th)
+            }
+
+            for (let row of table) {
+                let tr = document.createElement('tr')
+                resultTable.appendChild(tr)
+
+                let th1 = document.createElement('th')
+                th1.innerHTML = row.name
+
+                let th2 = document.createElement('th')
+                th2.innerHTML = row.email
+
+                let th3 = document.createElement('th')
+                th3.innerHTML = row.firstLoginAt
+
+                let th4 = document.createElement('th')
+                th4.innerHTML = row.lastLoginAt
+
+                for (let th of [th1, th2, th3, th4]) {
+                    th.setAttribute('style', 'font-weight: 400')
+                    tr.appendChild(th)
+                }
+            }
+        }
+
+
+
+        // 엑셀
+
+        document.getElementById('excel-export-button').addEventListener('click', async () => {
+            let ws = XLSX.utils.json_to_sheet(table)
+
+            ws.A1.v = '이름'
+            ws.B1.v = '이메일'
+            ws.C1.v = '가입 일자'
+            ws.D1.v = '접속 일자'
+
+            let wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'STORE MANAGER 관리자 목록')
+            XLSX.writeFile(wb, `STORE MANAGER 관리자 목록.xlsx`)
+        })
+
+
+
+        // 자주 사용하는 함수
+
+        function showErrorWithRefresh(html, errorMessage) {
+            swal.fire({
+                title: '이런!',
+                html: html,
+                icon: 'error',
+                confirmButtonText: '어떻게 된거죠?',
+                cancelButtonText: '새로고침',
+                showCancelButton: true,
+                allowOutsideClick: false,
+                heightAuto: false,
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    swal.fire({
+                        title: '원인',
+                        html: errorMessage,
+                        confirmButtonText: '새로고침',
+                        showCancelButton: false,
+                        allowOutsideClick: false,
+                        heightAuto: false,
+                    }).then(() => location.reload())
+                }
+            })
+        }
+
+        function showError(html, errorMessage) {
+            swal.fire({
+                title: '이런!',
+                html: html,
+                icon: 'error',
+                confirmButtonText: '어떻게 된거죠?',
+                cancelButtonText: '알겠어요',
+                showCancelButton: true,
+                heightAuto: false,
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    swal.fire({
+                        title: '원인',
+                        html: errorMessage,
+                        confirmButtonText: '알겠어요',
+                        showCancelButton: false,
+                        heightAuto: false,
+                    })
+                }
+            })
+        }
+
+        function showWarning(html, fontSize = 20) {
+            swal.fire({
+                icon: 'warning',
+                html: `
+                    <div style="font-size: ${fontSize}px">
+                        ${html}
+                    </div>
+                `,
+                confirmButtonText: '알겠어요',
+                heightAuto: false,
+            })
+        }
+
+        function showLoading(html) {
+            swal.fire({
+                title: '잠시만요!',
+                html: html,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                heightAuto: false,
+            })
+            swal.showLoading()
+        }
+
+        function postAsync(url, params = {}) {
+            return new Promise((resolve, reject) => {
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(params),
+                }).then(async (res) => {
+                    resolve(await res.json())
+                }).catch((error) => reject(error))
+            })
+        }
+
+        function getOption(time) {
+            let value = time
+            let date = new Date(time)
+            let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
+            return new Option(text, value)
+        }
+
+        function showQuotaExceededError(quotaDesc, quota, maxQuota) {
+            showWarning(`
+                <span style="line-height: 130%">
+                    하루 사용량을 초과했어요!<br>
+                    ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
+                </span>
+            `)
+        }
+
+        function showNoPermissionError() {
+            swal.fire({
+                title: '잠시만요!',
+                html: '관리자만 접근할 수 있어요!',
+                confirmButtonText: '메인으로',
+                allowOutsideClick: false,
+                showCancelButton: false,
+                heightAuto: false,
+            }).then((res) => {
+                let form = document.createElement('form')
+                form.style.visibility = 'hidden'
+                form.method = 'GET'
+                form.action = '/'
+                document.body.appendChild(form)
+                form.submit()
+            })
+        }
+
+        function swalAsync(params) {
+            return new Promise((resolve, reject) => {
+                swal.fire(params).then((res) => resolve(res))
+            })
+        }
+    </script>
+</body>
+
+</html>

@@ -65,6 +65,10 @@ app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 })
 
+app.get('/admin', async (req, res) => {
+  res.sendFile(__dirname + '/views/admin.html')
+})
+
 app.get('/cjTracking', async (req, res) => {
   res.sendFile(__dirname + '/views/cjTracking.html')
 })
@@ -288,11 +292,12 @@ app.post('/signin', async (req, res) => {
     let uid = decodedToken.uid
     let user = await auth.getUser(uid)
 
-    conn = await pool.getConnection()
+    let now = await getKST()
 
+    conn = await pool.getConnection()
     await conn.query(`
-      INSERT INTO user (uid, email, name) VALUES ('${uid}', '${user.email}', '${user.displayName}')
-      ON DUPLICATE KEY UPDATE user.email = '${user.email}', name = '${user.displayName}'
+      INSERT INTO user (uid, email, name, firstLoginSecond, lastLoginSecond) VALUES ('${uid}', '${user.email}', '${user.displayName}', ${getSecond(now)}, ${getSecond(now)})
+      ON DUPLICATE KEY UPDATE user.email = '${user.email}', name = '${user.displayName}', lastLoginSecond = ${getSecond(now)}
     `)
 
     let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
@@ -391,9 +396,95 @@ app.post('/user/update', async (req, res) => {
     let uid = decodedToken.uid
 
     conn = await pool.getConnection()
-    await conn.query(`REPLACE INTO user (uid, loadAll, highlightChanges, sortMethod) VALUES ('${uid}', ${loadAll}, ${highlightChanges}, ${sortMethod})`)
+    await conn.query(`UPDATE user SET loadAll = ${loadAll}, highlightChanges = ${highlightChanges}, sortMethod = ${sortMethod} WHERE uid = '${uid}'`)
 
     res.json({ result: 'ok' })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/user/permission', async (req, res) => {
+  let idToken = req.body.idToken
+  let email = req.body.email
+  let permission = req.body.permission
+  let conn
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    if (decodedToken.email == email) {
+      res.json({ result: 'self assignment not allowed' })
+      return
+    }
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return
+    }
+
+    result = await conn.query(`SELECT * FROM user WHERE email = '${email}'`)
+
+    if (result[0].length <= 0) {
+      res.json({ result: 'user not found' })
+      return
+    }
+    else if (result[0][0].permission == permission) {
+      res.json({ result: 'not changed' })
+      return
+    }
+
+    result = await conn.query(`UPDATE user SET permission = ${permission} WHERE email = '${email}'`)
+    res.json({ result: 'ok' })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/user/admin', async (req, res) => {
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return
+    }
+
+    result = await conn.query('SELECT * FROM user WHERE permission = 1')
+
+    res.json({
+      result: 'ok',
+      admin: result[0],
+    })
   }
   catch (error) {
     res.json({
