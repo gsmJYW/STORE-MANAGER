@@ -515,6 +515,25 @@
                             `, error.message)
                         }
                     }
+                    else {
+                        let res = await swalAsync({
+                            title: '환영합니다!',
+                            html: '기능을 열기 위해 회원가입 또는 로그인 해주세요!',
+                            icon: 'success',
+                            showCancelButton: true,
+                            confirmButtonText: '어떻게요?',
+                            cancelButtonText: '알겠어요',
+                        })
+
+                        if (res.isConfirmed) {
+                            await swalAsync({
+                                title: '회원가입 및 로그인',
+                                html: '우측 상단의 <img src="https://imgur.com/7l7Kakh.png"></img> 버튼을 통해 할 수 있습니다.<br>Google을 통해 로그인 하시면 회원가입 및 로그인이 끝나요!',
+                                icon: 'info',
+                                confirmButtonText: '멋지네요!',
+                            })
+                        }
+                    }
                 })
 
                 function onSignIn(googleUser) {
@@ -1155,6 +1174,12 @@
                         }).then(async (res) => {
                             resolve(await res.json())
                         }).catch((error) => reject(error))
+                    })
+                }
+
+                function swalAsync(params) {
+                    return new Promise((resolve, reject) => {
+                        swal.fire(params).then((res) => resolve(res))
                     })
                 }
             </script>
