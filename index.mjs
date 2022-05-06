@@ -946,7 +946,7 @@ app.post('/smartstore/update', async (req, res) => {
 
     for (let product of productList) {
       let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
     }
 
     query = query.substring(0, query.length - 2)
@@ -1024,7 +1024,7 @@ app.post('/n09/update', async (req, res) => {
 
     for (let product of productList) {
       let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
     }
 
     query = query.substring(0, query.length - 2)
@@ -1155,7 +1155,6 @@ app.post('/hyundai/auton/update', async (req, res) => {
 
       if (tempPageList.length > 0) {
         tempPageList = await getCarlifemallProductList(tempPageList)
-        console.log(tempPageList)
 
         for (let tempPage of tempPageList) {
           for (let page of pageList) {
@@ -1184,12 +1183,12 @@ app.post('/hyundai/auton/update', async (req, res) => {
 
     for (let product of productList) {
       let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
     }
 
     query = query.substring(0, query.length - 2)
     await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', '${getMinute(now)}')`)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
 
     res.json({
       result: 'ok',
@@ -1258,7 +1257,163 @@ app.post('/autowash/update', async (req, res) => {
 
     for (let product of productList) {
       let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', '${getMinute(now)}', ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+    }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+
+    await conn.query(`
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
+    `)
+
+    res.json({
+      result: 'ok',
+      minute: getMinute(now),
+      product: productList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.get('/theclass', async (req, res) => {
+  res.sendFile(__dirname + '/views/theclass.html')
+})
+
+app.post('/theclass/update', async (req, res) => {
+  let storeUrl = 'https://theclasskorea.co.kr'
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let now = await getKST()
+
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return;
+    }
+
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+    let productList
+
+    if (result[0].length > 0) {
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+      productList = result[0]
+
+      res.json({
+        result: 'already exists',
+        minute: history.minute,
+        product: productList,
+      })
+      return
+    }
+
+    let productAmount = await getTheClassProductAmount()
+    productList = await getTheClassProductList(productAmount)
+
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
+
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+    }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+
+    await conn.query(`
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
+    `)
+
+    res.json({
+      result: 'ok',
+      minute: getMinute(now),
+      product: productList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.get('/autowax', async (req, res) => {
+  res.sendFile(__dirname + '/views/autowax.html')
+})
+
+app.post('/autowax/update', async (req, res) => {
+  let storeUrl = 'https://autowax.co.kr'
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let now = await getKST()
+
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return;
+    }
+
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+    let productList
+
+    if (result[0].length > 0) {
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+      productList = result[0]
+
+      res.json({
+        result: 'already exists',
+        minute: history.minute,
+        product: productList,
+      })
+      return
+    }
+
+    let productAmount = await getAutowaxProductAmount()
+    productList = await getAutowaxProductList(productAmount)
+
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
+
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
     }
 
     query = query.substring(0, query.length - 2)
@@ -1912,6 +2067,154 @@ function getAutowashProductList(categoryList) {
           })
         }).on('error', (error) => reject(error))
       }
+    }
+  })
+}
+
+function getTheClassProductAmount() {
+  return new Promise((resolve, reject) => {
+    https.get('https://theclasskorea.co.kr/product/list.html?cate_no=43', (res) => {
+      let data = ''
+
+      res.on('error', (error) => reject(error))
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      res.on('end', () => {
+        let document = parser.parse(data)
+        let productAmountDiv = document.querySelector('.prdCount')
+        let productAmountElement = productAmountDiv.getElementsByTagName('strong')[0]
+        let productAmount = Number(productAmountElement.innerText)
+        resolve(productAmount)
+      })
+    }).on('error', (error) => reject(error))
+  })
+}
+
+function getTheClassProductList(productAmount) {
+  return new Promise((resolve, reject) => {
+    let productList = []
+
+    for (let page = 1; page <= Math.ceil(productAmount / 30); page++) {
+      https.get(`https://theclasskorea.co.kr/product/list.html?cate_no=43&sort_method=6&page=${page}`, (res) => {
+        let data = ''
+
+        res.on('error', (error) => reject(error))
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          let document = parser.parse(data)
+          let normalProductDiv = document.querySelector('.xans-element-.xans-product.xans-product-normalpackage')
+
+          normalProductDiv.querySelectorAll('.item.xans-record-').forEach((productElement, index) => {
+            let titleElement = productElement.querySelector('.name')
+
+            let linkElement = titleElement.getElementsByTagName('a')[0]
+            let id = Number(linkElement.getAttribute('href').split('=')[1].split('&')[0])
+            let title = linkElement.innerText.split(':')[1].trim()
+
+            let priceElementList = productElement.querySelectorAll('.xans-record-')
+            let priceElement = priceElementList.find(priceElement => priceElement.getAttribute('rel') == '판매가')
+            let price = Number(priceElement.innerText.replace(/[^\d.]/g, ''))
+
+            let product = {
+              id: id,
+              title: title,
+              popularityIndex: (page - 1) * 30 + index,
+              price: price,
+              isSoldOut: false,
+            }
+
+            productList.push(product)
+          })
+
+          if (productList.length >= productAmount) {
+            resolve(productList)
+          }
+        })
+      }).on('error', (error) => reject(error))
+    }
+  })
+}
+
+function getAutowaxProductAmount() {
+  return new Promise((resolve, reject) => {
+    https.get('https://www.autowax.co.kr/goods/goods_list.php?cateCd=001', (res) => {
+      let data = ''
+
+      res.on('error', (error) => reject(error))
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      res.on('end', () => {
+        let document = parser.parse(data)
+        let productAmountSpan = document.querySelector('.tc')
+        let productAmountElement = productAmountSpan.getElementsByTagName('strong')[0]
+        let productAmount = Number(productAmountElement.innerText.replace(/[^\d.]/g, ''))
+        resolve(productAmount)
+      })
+    }).on('error', (error) => reject(error))
+  })
+}
+
+function getAutowaxProductList(productAmount) {
+  return new Promise((resolve, reject) => {
+    let productList = []
+    let progress = productAmount
+
+    for (let page = 1; page <= Math.ceil(productAmount / 40); page++) {
+      https.get(`https://www.autowax.co.kr/goods/goods_list.php?page=${page}&cateCd=001&sort=orderCnt%20desc%2Cg.regDt%20desc&pageNum=40`, (res) => {
+        let data = ''
+
+        res.on('error', (error) => reject(error))
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          let document = parser.parse(data)
+          let productElementList = document.querySelectorAll('.space')
+
+          productElementList.forEach((productElement, index) => {
+            try {
+              let titleElement = productElement.querySelector('.txt')
+
+              let linkElement = titleElement.getElementsByTagName('a')[0]
+              let id = Number(linkElement.getAttribute('href').split('=')[1])
+              let title = linkElement.getElementsByTagName('strong')[0].innerText
+
+              let priceElement = productElement.querySelector('.cost')
+              let price = Number(priceElement.innerText.replace(/[^\d.]/g, ''))
+
+              if (!price) {
+                throw new Error()
+              }
+
+              let product = {
+                id: id,
+                title: title,
+                popularityIndex: (page - 1) * 40 + index,
+                price: price,
+                isSoldOut: false,
+              }
+
+              if (productElement.querySelector('ico-soldout-box')) {
+                product.isSoldOut = true
+              }
+
+              productList.push(product)
+            }
+            catch {
+              progress--
+            }
+            finally {
+              if (productList.length >= progress) {
+                resolve(productList)
+              }
+            }
+          })
+        })
+      }).on('error', (error) => reject(error))
     }
   })
 }
