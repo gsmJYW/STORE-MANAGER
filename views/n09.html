@@ -54,7 +54,7 @@
         }
     </style>
 
-    <title>STORE MANAGER - 엔공구 공식 쇼핑몰</title>
+    <title>STORE MANAGER - 엔공구</title>
     <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
 
     <link rel="stylesheet"
@@ -76,7 +76,7 @@
                     <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 8px 18px 0px"></i>
                 </button>
             </form>
-            <h2 style="font-size: 30px; font-weight: 600; margin-bottom: auto">엔공구 공식 쇼핑몰</h2>
+            <h2 style="font-size: 30px; font-weight: 600; margin-bottom: auto">엔공구</h2>
         </div>
         <div class="d-flex p-2 border" style="width: 680px; margin: auto">
             <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
@@ -162,7 +162,7 @@
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
         <script type="module">
             const storeUrl = 'https://n09.co.kr'
-            const storeTitle = '엔공구 공식 쇼핑몰'
+            const storeTitle = '엔공구'
             const endpoint = storeUrl.split('/').pop()
 
 
@@ -1002,7 +1002,7 @@
 
                     a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
                     a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,40}/g).join('<br>')
+                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
 
                     let th2 = document.createElement('th')
                     th2.appendChild(a)
@@ -1043,7 +1043,7 @@
 
                     a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
                     a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,40}/g).join('<br>')
+                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
 
                     let th2 = document.createElement('th')
                     th2.appendChild(a)

@@ -1199,7 +1199,7 @@
 
                     a.setAttribute('href', `${storeUrl}/products/${row.id}`)
                     a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,40}/g).join('<br>')
+                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
 
                     let th2 = document.createElement('th')
                     th2.appendChild(a)
@@ -1240,7 +1240,7 @@
 
                     a.setAttribute('href', `${storeUrl}/products/${row.id}`)
                     a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,40}/g).join('<br>')
+                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
 
                     let th2 = document.createElement('th')
                     th2.appendChild(a)
