@@ -242,13 +242,12 @@
                             throw new Error(json.error)
                         }
 
-                        json.history.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+                        json.history.sort((a, b) => b - a)
+                        historyList = json.history
 
-                        for (let history of json.history) {
-                            let time = new Date(history).getTime()
-                            oldSelect.add(getOption(time))
-                            recentSelect.add(getOption(time))
-                            historyList.push(time)
+                        for (let history of historyList) {
+                            oldSelect.add(getOption(history))
+                            recentSelect.add(getOption(history))
                         }
 
                         swal.close()
@@ -322,7 +321,7 @@
                 try {
                     let json = await postAsync('/product', {
                         storeUrl: storeUrl,
-                        time: new Date(Number(oldSelect.value)),
+                        minute: oldSelect.value,
                         idToken: await user.getIdToken(),
                     })
 
@@ -371,7 +370,7 @@
                 try {
                     let json = await postAsync('/product', {
                         storeUrl: storeUrl,
-                        time: new Date(Number(recentSelect.value)),
+                        minute: recentSelect.value,
                         idToken: await user.getIdToken(),
                     })
 
@@ -439,17 +438,14 @@
                         idToken: await user.getIdToken(),
                     })
 
-                    let time = new Date(json.time).getTime()
                     let html = '확인 하시겠어요?'
 
                     if (json.result == 'already exists') {
                         for (let history of historyList) {
-                            if (parseInt(time / 1000 / 60) == parseInt(history / 1000 / 60)) {
+                            if (json.minute == history) {
                                 showWarning(`
-                                    <div style="line-height: 130%">
-                                        이미 업데이트 되어있어요.<br>
-                                        업데이트는 1분 단위로 하실 수 있어요.
-                                    </div>
+                                    이미 업데이트 되어있어요.<br>
+                                    업데이트는 1분 단위로 하실 수 있어요.
                                 `)
                                 return
                             }
@@ -475,7 +471,7 @@
                         `, json.error)
                     }
                     else {
-                        historyList.unshift(time)
+                        historyList.unshift(json.minute)
 
                         swal.fire({
                             title: '업데이트 성공!',
@@ -505,8 +501,8 @@
                             oldSelect.value = oldSelectValue
 
                             if (res.isConfirmed) {
-                                recentSelect.value = new Date(json.time).getTime()
-                                recentProductList = json.product
+                                recentSelect.value = json.minute,
+                                    recentProductList = json.product
                                 updateTable()
                             }
                             else {
@@ -1072,7 +1068,7 @@
                     th2.appendChild(a)
 
                     let th3 = document.createElement('th')
-                    th3.innerHTML = row.popularityRank
+                    th3.innerHTML = `${row.popularityRank} (${row.category})`
 
                     let th4 = document.createElement('th')
                     th4.innerHTML = row.prevPrice.toString().length > 0 ? `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ` : ''
@@ -1133,13 +1129,13 @@
                     let dateList = []
 
                     if (oldProductList.length > 0) {
-                        let date = new Date(Number(oldSelect.value))
+                        let date = new Date(oldSelect.value * 60 * 1000)
                         let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
                         dateList.push(text)
                     }
 
                     if (recentProductList.length > 0) {
-                        let date = new Date(Number(recentSelect.value))
+                        let date = new Date(recentSelect.value * 60 * 1000)
                         let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
                         dateList.push(text)
                     }
@@ -1218,10 +1214,14 @@
                 })
             }
 
-            function showWarning(html) {
+            function showWarning(html, fontSize = 20) {
                 swal.fire({
-                    title: '잠시만요!',
-                    html: html,
+                    icon: 'warning',
+                    html: `
+                        <div style="font-size: ${fontSize}px">
+                            ${html}
+                        </div>
+                    `,
                     confirmButtonText: '알겠어요',
                     heightAuto: false,
                 })
@@ -1253,19 +1253,17 @@
                 })
             }
 
-            function getOption(time) {
-                let value = time
-                let date = new Date(time)
+            function getOption(minute) {
+                let value = minute
+                let date = new Date(minute * 60 * 1000)
                 let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
                 return new Option(text, value)
             }
 
             function showQuotaExceededError(quotaDesc, quota, maxQuota) {
                 showWarning(`
-                    <span style="line-height: 130%">
-                        하루 사용량을 초과했어요!<br>
-                        ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
-                    </span>
+                    하루 사용량을 초과했어요!<br>
+                    ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
                 `)
             }
 
