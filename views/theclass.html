@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        @import url(//fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap);
+        @import url(//cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-full.css);
+
+        #store-title {
+            font-family: "D2Coding", monospace;
+            letter-spacing: -3px;
+            word-spacing: -3px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        table {
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 16px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2
+        }
+
+        .swal-option {
+            display: grid !important;
+        }
+
+        .container {
+            height: 100%;
+        }
+
+        body {
+            background-color: white;
+            color: black;
+            font-size: 25px;
+            height: 100vh;
+        }
+    </style>
+
+    <title>STORE MANAGER - 더클래스</title>
+    <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+
+    <meta name="google-signin-client_id"
+        content="36522862962-n5ba78aee74h5jggnppe3udfoupipu35.apps.googleusercontent.com">
+    <meta name="google-signin-cookiepolicy" content="single_host_origin">
+    <meta name="google-signin-scope" content="profile email">
+</head>
+
+<body>
+    <div class="container align-items-center justify-content-center">
+        <p></p>
+        <div class="d-flex" style="width: 680px; margin: auto">
+            <form action="/">
+                <button type="submit" style="background: none; border: none; outline: none">
+                    <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 8px 18px 0px"></i>
+                </button>
+            </form>
+            <h2 style="font-size: 30px; font-weight: 600; margin-bottom: auto">더클래스</h2>
+        </div>
+        <div class="d-flex p-2 border" style="width: 680px; margin: auto">
+            <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
+                <option value="0" selected>이전 데이터 선택</option>
+            </select>
+            <span style="margin: auto"> → </span>
+            <select id="recent-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
+                <option value="0" selected>최근 데이터 선택</option>
+            </select>
+            <span style="margin: auto">또는</span>
+            <button id="update-button" type="button" class="btn btn-primary" style="margin: auto">업데이트</button>
+        </div>
+        <div class="container" id="result" style="width: 1120px" hidden>
+            <p>&nbsp;</p>
+            <div id="sort-form">
+                <div class="form-check-inline">
+                    <button id="filter-button" type="button" class="btn btn-primary"
+                        style="margin: 6px 0px; padding: 4px 8px 4px 10px; font-size: 14px">
+                        필터링&nbsp;
+                    </button>
+                </div>
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 14px; margin: 0px 8px 0px 0px">
+                    <input class="form-check-input" type="checkbox" id="load-all" value="load-all">
+                    <label class="form-check-label">전부 로딩하기</label>
+                </div>
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
+                    <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
+                        checked>
+                    <label class="form-check-label">바뀐 제품을 위로</label>
+                </div>
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
+                    <input class="form-check-input" type="radio" name="sort-radio" id="by-recent" value="by-recent"
+                        checked>
+                    <label class="form-check-label">최신 순으로</label>
+                </div>
+                <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
+                    <input class="form-check-input" type="radio" name="sort-radio" id="by-popularity"
+                        value="by-popularity">
+                    <label class="form-check-label">인기 순으로</label>
+                </div>
+                <div class="d-flex" style="float: right; margin: auto">
+                    <span id="product-amount" style="margin: 10px 8px 0px 0px"></span>
+                    <button id="excel-export-button" type="button" class="btn btn-primary"
+                        style="margin: 6px 0px; padding: 4px 10px; font-size: 14px">
+                        엑셀 파일 (.xlsx)&nbsp;
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download"
+                            viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z">
+                            </path>
+                            <path
+                                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <table id="result-table"></table>
+            <span>&nbsp;<br>&nbsp;<br></span>
+        </div>
+        <div id="hidden-div" hidden>
+            <span id="minimum-code"></span>
+            <span id="maximum-code"></span>
+            <span id="title-search"></span>
+            <span id="minimum-popularity"></span>
+            <span id="maximum-popularity"></span>
+            <span id="minimum-price"></span>
+            <span id="maximum-price"></span>
+            <!-- Start: Copyright 2022 TraceMyIP.org Service Code (004635-03042022)- DO NOT MODIFY //-->
+            <div id="elemID031021" style="line-height:16px;text-align:center;position:relative;z-index:100000;">
+                <script type="text/javascript"
+                    src="//s3.tracemyip.org/tracker/lgUrl.php?random='+Math.random()+'&amp;stlVar2=1401&amp;rgtype=4684NR-IPIB&amp;pidnVar2=60431&amp;prtVar2=5&amp;scvVar2=12"></script>
+                <noscript><a
+                        href="https://www.tracemyip.org/tools/website-visitors-counter-traffic-tracker-statistics/"><img
+                            src="//s3.tracemyip.org/tracker/1401/4684NR-IPIB/60431/5/12/ans/"
+                            alt="Web Site Hits Ipv4 Tracer" style="border:0px;"></a></noscript>
+            </div> <!-- End: TraceMyIP.org Service Code //-->
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
+        <script type="module">
+            const storeUrl = 'https://theclasskorea.co.kr'
+            const storeTitle = '더클래스'
+            const endpoint = storeUrl.split('/').pop()
+
+
+
+            // Auth
+
+            showLoading('제품 기록들 목록을 불러오는 중이에요.')
+
+            import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
+            import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
+
+            initializeApp({
+                apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+                authDomain: "store-manager-5d527.firebaseapp.com",
+                projectId: "store-manager-5d527",
+                storageBucket: "store-manager-5d527.appspot.com",
+                messagingSenderId: "36522862962",
+                appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+                measurementId: "G-37DECVWLYX"
+            })
+
+            const loadAll = document.getElementById('load-all')
+            const highlightChanges = document.getElementById('highlight-changes')
+            const byPopularity = document.getElementById('by-popularity')
+            const byRecent = document.getElementById('by-recent')
+            const oldSelect = document.getElementById('old-select')
+            const recentSelect = document.getElementById('recent-select')
+
+            const auth = getAuth()
+            let user
+            let historyList = []
+
+            onAuthStateChanged(auth, async (firebaseUser) => {
+                if (firebaseUser) {
+                    user = firebaseUser
+
+                    try {
+                        let json = await postAsync('/user', { idToken: await user.getIdToken() })
+
+                        if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+
+                        loadAll.checked = json.user.loadAll
+                        highlightChanges.checked = json.user.highlightChanges
+                        byRecent.checked = json.user.sortMethod == 0
+                        byPopularity.checked = json.user.sortMethod == 1
+                    }
+                    catch (error) {
+                        let res = await swalAsync({
+                            title: '이런!',
+                            html: `
+                                <div style="line-height: 130%">
+                                    설정을 불러오는 도중 오류가 발생했어요.<br>
+                                    기본 설정으로 진행할까요?
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: '네',
+                            cancelButtonText: '새로고침',
+                            showCancelButton: true,
+                            heightAuto: false,
+                        })
+
+                        if (!res.isConfirmed) {
+                            location.reload()
+                        }
+                    }
+
+                    try {
+                        let json = await postAsync('/history', {
+                            idToken: await user.getIdToken(),
+                            storeUrl: storeUrl,
+                        })
+
+                        if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+
+                        json.history.sort((a, b) => b - a)
+                        historyList = json.history
+
+                        for (let history of historyList) {
+                            oldSelect.add(getOption(history))
+                            recentSelect.add(getOption(history))
+                        }
+
+                        swal.close()
+                    }
+                    catch (error) {
+                        showErrorWithRefresh('제품 기록을 불러오는 도중 오류가 발생했어요.', error.message)
+                        return
+                    }
+
+                    if (historyList.length == 0) {
+                        swal.fire({
+                            title: '처음이세요?',
+                            html: `
+                                <div style="line-height: 130%">
+                                    아직 제품 기록이 없는 스토어에요.<br>
+                                    업데이트 버튼을 눌러 첫 기록을 남겨보세요!
+                                </div>
+                            `,
+                            confirmButtonText: '알겠어요',
+                            showCancelButton: false,
+                        })
+                    }
+                } else {
+                    swal.fire({
+                        title: '잠시만요!',
+                        html: '이용하기 전에 로그인 해주세요!',
+                        confirmButtonText: '메인으로',
+                        allowOutsideClick: false,
+                        showCancelButton: false,
+                        heightAuto: false,
+                    }).then((res) => {
+                        let form = document.createElement('form')
+                        form.style.visibility = 'hidden'
+                        form.method = 'GET'
+                        form.action = '/'
+                        document.body.appendChild(form)
+                        form.submit()
+                    })
+                }
+            })
+
+
+
+            // 제품 기록 목록
+
+            let tempOldSelectValue = 0
+            let tempRecentSelectValue = 0
+            let oldProductList = []
+            let recentProductList = []
+
+            oldSelect.addEventListener('change', async () => {
+                if (oldSelect.value == 0) {
+                    oldProductList = []
+                    updateTable()
+                    return
+                }
+
+                if (oldSelect.value >= recentSelect.value) {
+                    recentProductList = []
+                    recentSelect.selectedIndex = 0
+                    updateTable()
+                }
+
+                showLoading(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 중이에요.<br>
+                        제품이 많을 수록 오래 걸려요!
+                    </div>
+                `)
+
+                try {
+                    let json = await postAsync('/product', {
+                        storeUrl: storeUrl,
+                        minute: oldSelect.value,
+                        idToken: await user.getIdToken(),
+                    })
+
+                    if (json.result == 'ok') {
+                        oldProductList = json.product
+                        tempOldSelectValue = oldSelect.value
+                        updateTable()
+                        swal.close()
+                    }
+                    else {
+                        oldSelect.value = tempOldSelectValue
+
+                        if (json.result == 'quota exceeded') {
+                            showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
+                        }
+                        else if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+                    }
+                }
+                catch (error) {
+                    showOldSelectError(error.message)
+                }
+            })
+
+            recentSelect.addEventListener('change', async () => {
+                if (recentSelect.value == 0) {
+                    recentProductList = []
+                    updateTable()
+                    return
+                }
+
+                if (oldSelect.value >= recentSelect.value) {
+                    oldProductList = []
+                    oldSelect.selectedIndex = 0
+                    updateTable()
+                }
+
+                showLoading(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 중이에요.<br>
+                        제품이 많을 수록 오래 걸려요!
+                    </div>
+                `)
+
+                try {
+                    let json = await postAsync('/product', {
+                        storeUrl: storeUrl,
+                        minute: recentSelect.value,
+                        idToken: await user.getIdToken(),
+                    })
+
+                    if (json.result == 'ok') {
+                        recentProductList = json.product
+                        tempRecentSelectValue = recentSelect.value
+                        updateTable()
+                        swal.close()
+                    }
+                    else {
+                        recentSelect.value = tempRecentSelectValue
+
+                        if (json.result == 'quota exceeded') {
+                            showQuotaExceededError('조회한 제품 개수', json.quotaUsed, json.quotaLimit)
+                        }
+                        else if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+                    }
+                }
+                catch (error) {
+                    showRecentSelectError(error.message)
+                }
+            })
+
+            function showOldSelectError(error) {
+                oldProductList = []
+                oldSelect.selectedIndex = 0
+
+                showError(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 도중 오류가 발생했어요.<br>
+                        다시 시도해주세요.
+                    </div>
+                `, error)
+            }
+
+            function showRecentSelectError(error) {
+                recentProductList = []
+                recentSelect.selectedIndex = 0
+
+                showError(`
+                    <div style="line-height: 130%">
+                        제품 기록을 불러오는 도중 오류가 발생했어요.<br>
+                        다시 시도해주세요.
+                    </div>
+                `, error)
+            }
+
+
+
+            // 업데이트
+
+            document.getElementById('update-button').addEventListener('click', async () => {
+                showLoading(`
+                    <div style="line-height: 130%">
+                        새로운 제품 기록을 쓰는 중이에요.<br>
+                        제품이 많을 수록 오래 걸려요!
+                    </div>
+                `)
+
+                try {
+                    let json = await postAsync('/theclass/update', {
+                        storeUrl: storeUrl,
+                        idToken: await user.getIdToken(),
+                    })
+
+                    let html = '확인 하시겠어요?'
+
+                    if (json.result == 'already exists') {
+                        for (let history of historyList) {
+                            if (json.minute == history) {
+                                showWarning(`
+                                    이미 업데이트 되어있어요.<br>
+                                    업데이트는 1분 단위로 하실 수 있어요.
+                                `)
+                                return
+                            }
+                        }
+
+                        html = `
+                            <span style="line-height: 130%">
+                                이미 누군가 업데이트 했어요!<br>
+                                확인 하시겠어요?
+                            </span>
+                        `
+                    }
+
+                    if (json.result == 'quota exceeded') {
+                        showQuotaExceededError('업데이트한 제품 개수', json.quotaUsed, json.quotaLimit)
+                    }
+                    else if (json.result == 'error') {
+                        showError(`
+                            <div style="line-height: 130%">
+                                업데이트 도중 오류가 발생했어요.<br>
+                                다시 시도해주세요.
+                            </div>
+                        `, json.error)
+                    }
+                    else {
+                        historyList.unshift(json.minute)
+
+                        swal.fire({
+                            title: '업데이트 성공!',
+                            html: html,
+                            icon: 'success',
+                            heightAuto: false,
+                            confirmButtonText: '네',
+                            cancelButtonText: '됐어요!',
+                            showCancelButton: true,
+                        }).then(async (res) => {
+                            let oldSelectValue = oldSelect.value
+                            let recentSelectValue = recentSelect.value
+
+                            while (oldSelect.options.length > 1) {
+                                oldSelect.remove(1)
+                            }
+
+                            while (recentSelect.options.length > 1) {
+                                recentSelect.remove(1)
+                            }
+
+                            for (let history of historyList.sort().reverse()) {
+                                oldSelect.add(getOption(history))
+                                recentSelect.add(getOption(history))
+                            }
+
+                            oldSelect.value = oldSelectValue
+
+                            if (res.isConfirmed) {
+                                recentSelect.value = json.minute,
+                                    recentProductList = json.product
+                                updateTable()
+                            }
+                            else {
+                                recentSelect.value = recentSelectValue
+                            }
+                        })
+                    }
+                }
+                catch (error) {
+                    showError(`
+                        <div style="line-height: 130%">
+                            업데이트 도중 오류가 발생했어요.<br>
+                            다시 시도해주세요.
+                        </div>
+                    `, error.message)
+                }
+            })
+
+
+
+            // 필터링
+
+            const minimumCodeSpan = document.getElementById('minimum-code')
+            const maximumCodeSpan = document.getElementById('maximum-code')
+            const titleSearchSpan = document.getElementById('title-search')
+            const minimumPopularitySpan = document.getElementById('minimum-popularity')
+            const maximumPopularitySpan = document.getElementById('maximum-popularity')
+            const minimumPriceSpan = document.getElementById('minimum-price')
+            const maximumPriceSpan = document.getElementById('maximum-price')
+
+            let minimumCode = -Infinity
+            let maximumCode = Infinity
+            let title = ''
+            let minimumPopularity = -Infinity
+            let maximumPopularity = Infinity
+            let minimumPrice = -Infinity
+            let maximumPrice = Infinity
+            let statusList = ['신규', '판매중', '품절', '판매중단']
+
+            document.getElementById('filter-button').addEventListener('click', () => {
+                let codeInput = document.createElement('input')
+                codeInput.classList.add('form-control')
+                codeInput.style = 'display: inline-block; box-shadow: none; width: 25%'
+                codeInput.setAttribute('type', 'number')
+                codeInput.setAttribute('min', '0')
+                codeInput.setAttribute('step', '1')
+                codeInput.setAttribute('placeholder', '상품 코드')
+
+                let biggerThan = codeInput.cloneNode(true)
+                biggerThan.setAttribute('onchange', `document.getElementById('minimum-code').innerText = this.value`)
+
+                if (minimumCode != -Infinity) {
+                    biggerThan.setAttribute('value', minimumCode)
+                }
+
+                let smallerThan = codeInput.cloneNode(true)
+                smallerThan.setAttribute('onchange', `document.getElementById('maximum-code').innerText = this.value`)
+
+                if (maximumCode != Infinity) {
+                    smallerThan.setAttribute('value', maximumCode)
+                }
+
+                let biggerThanLabel = document.createElement('label')
+                biggerThanLabel.style = 'padding: 5.3px 8px 0px 8px; display: inline-block'
+                biggerThanLabel.innerText = '이상'
+
+                let smallerThanLabel = document.createElement('label')
+                smallerThanLabel.style = 'padding: 5.3px 0px 0px 8px; display: inline-block'
+                smallerThanLabel.innerText = '이하'
+
+                let titleSearch = document.createElement('input')
+                titleSearch.classList.add('form-control')
+                titleSearch.style = 'box-shadow: none; width: 70%; margin: auto'
+                titleSearch.setAttribute('type', 'input')
+                titleSearch.setAttribute('placeholder', '제품명')
+                titleSearch.setAttribute('onchange', `document.getElementById('title-search').innerText = this.value`)
+
+                if (title.length > 0) {
+                    titleSearch.value = title
+                }
+
+                let popularityInput = document.createElement('input')
+                popularityInput.classList.add('form-control')
+                popularityInput.style = 'display: inline-block; box-shadow: none; width: 25%'
+                popularityInput.setAttribute('type', 'number')
+                popularityInput.setAttribute('min', '0')
+                popularityInput.setAttribute('step', '1')
+                popularityInput.setAttribute('placeholder', '인기 순위')
+
+                let popularThan = popularityInput.cloneNode(true)
+                popularThan.setAttribute('onchange', `document.getElementById('minimum-popularity').innerText = this.value`)
+
+                if (minimumPopularity != -Infinity) {
+                    popularThan.setAttribute('value', minimumPopularity)
+                }
+
+                let notPopularThan = popularityInput.cloneNode(true)
+                notPopularThan.setAttribute('onchange', `document.getElementById('maximum-popularity').innerText = this.value`)
+
+                if (maximumPopularity != Infinity) {
+                    notPopularThan.setAttribute('value', maximumPopularity)
+                }
+
+                let priceInput = document.createElement('input')
+                priceInput.classList.add('form-control')
+                priceInput.style = 'display: inline-block; box-shadow: none; width: 25%'
+                priceInput.setAttribute('type', 'number')
+                priceInput.setAttribute('placeholder', '가격(원)')
+
+                let moreExpensiveThan = priceInput.cloneNode(true)
+                moreExpensiveThan.setAttribute('onchange', `document.getElementById('minimum-price').innerText = this.value`)
+
+                if (minimumPrice != -Infinity) {
+                    moreExpensiveThan.setAttribute('value', minimumPrice)
+                }
+
+                let cheaperThan = priceInput.cloneNode(true)
+                cheaperThan.setAttribute('onchange', `document.getElementById('maximum-price').innerText = this.value`)
+
+                if (maximumPrice != Infinity) {
+                    cheaperThan.setAttribute('value', maximumPrice)
+                }
+
+                let checkBox = document.createElement('input')
+                checkBox.classList.add('form-check-input')
+                checkBox.setAttribute('type', 'checkbox')
+
+                let newProduct = checkBox.cloneNode(true)
+                let selling = checkBox.cloneNode(true)
+                let soldOut = checkBox.cloneNode(true)
+
+                let newProductLabel = document.createElement('label')
+                newProductLabel.innerText = '신규'
+
+                let sellingLabel = document.createElement('label')
+                sellingLabel.innerText = '판매중'
+
+                let soldOutLabel = document.createElement('label')
+                soldOutLabel.innerText = '품절 & 판매중단'
+
+                let codeDiv = document.createElement('div')
+                codeDiv.classList.add('form-group')
+                codeDiv.appendChild(biggerThan)
+                codeDiv.appendChild(biggerThanLabel)
+                codeDiv.appendChild(smallerThan)
+                codeDiv.appendChild(smallerThanLabel)
+
+                let popularityDiv = document.createElement('div')
+                popularityDiv.classList.add('form-group')
+                popularityDiv.appendChild(popularThan.cloneNode(true))
+                popularityDiv.appendChild(biggerThanLabel.cloneNode(true))
+                popularityDiv.appendChild(notPopularThan.cloneNode(true))
+                popularityDiv.appendChild(smallerThanLabel.cloneNode(true))
+
+                let priceDiv = document.createElement('div')
+                priceDiv.classList.add('form-group')
+                priceDiv.appendChild(moreExpensiveThan.cloneNode(true))
+                priceDiv.appendChild(biggerThanLabel.cloneNode(true))
+                priceDiv.appendChild(cheaperThan.cloneNode(true))
+                priceDiv.appendChild(smallerThanLabel.cloneNode(true))
+
+                let newProductDiv = document.createElement('div')
+                newProductDiv.classList.add('form-check', 'form-check-inline')
+                newProductDiv.appendChild(newProduct)
+                newProductDiv.appendChild(newProductLabel)
+
+                let sellingDiv = document.createElement('div')
+                sellingDiv.classList.add('form-check', 'form-check-inline')
+                sellingDiv.appendChild(selling)
+                sellingDiv.appendChild(sellingLabel)
+
+                let soldOutDiv = document.createElement('div')
+                soldOutDiv.classList.add('form-check', 'form-check-inline')
+                soldOutDiv.appendChild(soldOut)
+                soldOutDiv.appendChild(soldOutLabel)
+
+                let statusForm = document.createElement('form')
+                statusForm.appendChild(newProductDiv)
+                statusForm.appendChild(sellingDiv)
+                statusForm.appendChild(soldOutDiv)
+
+                let space = document.createElement('span')
+                space.innerHTML = '&nbsp'
+
+                let div = document.createElement('div')
+                div.appendChild(codeDiv)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(titleSearch)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(popularityDiv)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(priceDiv)
+                div.appendChild(space.cloneNode(true))
+                div.appendChild(statusForm)
+
+                for (let status of statusList) {
+                    if (status == '신규') {
+                        newProduct.checked = true
+                    }
+
+                    if (status == '판매중') {
+                        selling.checked = true
+                    }
+
+                    if (status == '품절' || status == '판매중단') {
+                        soldOut.checked = true
+                    }
+                }
+
+                swal.fire({
+                    title: '필터링',
+                    html: div,
+                    confirmButtonText: '확인',
+                    cancelButtonText: '이게 아닌데!',
+                    showCancelButton: true,
+                    heightAuto: false,
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        if (minimumCodeSpan.innerText.length > 0) {
+                            minimumCode = Number(minimumCodeSpan.innerText)
+                        }
+                        else {
+                            minimumCode = -Infinity
+                        }
+
+                        if (maximumCodeSpan.innerText.length > 0) {
+                            maximumCode = Number(maximumCodeSpan.innerText)
+                        }
+                        else {
+                            maximumCode = Infinity
+                        }
+
+                        title = titleSearchSpan.innerText
+
+                        if (minimumPopularitySpan.innerText.length > 0) {
+                            minimumPopularity = Number(minimumPopularitySpan.innerText)
+                        }
+                        else {
+                            minimumPopularity = -Infinity
+                        }
+
+                        if (maximumPopularitySpan.innerText.length > 0) {
+                            maximumPopularity = Number(maximumPopularitySpan.innerText)
+                        }
+                        else {
+                            maximumPopularity = Infinity
+                        }
+
+                        if (minimumPriceSpan.innerText.length > 0) {
+                            minimumPrice = Number(minimumPriceSpan.innerText)
+                        }
+                        else {
+                            minimumPrice = -Infinity
+                        }
+
+                        if (maximumPriceSpan.innerText.length > 0) {
+                            maximumPrice = Number(maximumPriceSpan.innerText)
+                        }
+                        else {
+                            maximumPrice = Infinity
+                        }
+
+                        let tempStatusList = []
+
+                        if (newProduct.checked) {
+                            tempStatusList.push('신규')
+                        }
+
+                        if (selling.checked) {
+                            tempStatusList.push('판매중')
+                        }
+
+                        if (soldOut.checked) {
+                            tempStatusList.push('품절', '판매중단')
+                        }
+
+                        if (tempStatusList.length > 0) {
+                            statusList = tempStatusList
+                        }
+                        else {
+                            statusList = ['신규', '판매중', '품절', '판매중단']
+                        }
+
+                        updateTable()
+                    }
+                })
+            })
+
+
+
+            // 테이블
+
+            const result = document.getElementById('result')
+            const resultTable = document.getElementById('result-table')
+            const productAmount = document.getElementById('product-amount')
+
+            let loadCount = 50
+            let table = []
+            let loadingTable = []
+            let sortedProductList = []
+
+            document.getElementById('sort-form').addEventListener('input', () => {
+                updateTable()
+            })
+
+            function updateTable() {
+                resultTable.innerHTML = ''
+                productAmount.textContent = ''
+
+                if (recentProductList.length == 0 && oldProductList.length == 0) {
+                    result.hidden = true
+                    return
+                }
+
+                result.hidden = false
+
+                table = []
+                let deletedProductList = []
+                let productList = recentProductList.length > 0 ? recentProductList : oldProductList
+
+                let newProductAmount = 0
+                let deletedProductAmount = 0
+
+                if (oldProductList.length > 0 & recentProductList.length > 0) {
+                    deletedProductList = [...oldProductList]
+                    let recentProductId = Math.max.apply(Math, oldProductList.map((product) => product.id))
+
+                    productAmount.textContent += `${oldProductList.length.toLocaleString('ko-KR')}개 → `
+                    let sum = 0
+
+                    for (let product of recentProductList) {
+                        let oldProduct = oldProductList.find((element) => element.id == product.id)
+                        deletedProductList = deletedProductList.filter((element) => element.id != product.id)
+
+                        let row = {
+                            id: product.id,
+                            title: product.title,
+                            popularityRank: product.popularityIndex + 1,
+                            prevPrice: '',
+                            price: product.price,
+                            prevStatus: '',
+                            status: product.isSoldOut ? '품절' : '판매중',
+                            isChanged: false,
+                        }
+
+                        if (!oldProduct) {
+                            if (recentProductId > product.id) {
+                                row.prevStatus = '판매중단'
+                                row.status = product.isSoldOut ? '품절' : '판매중'
+                            }
+                            else {
+                                row.status = `신규, ${row.status}`
+                            }
+
+                            row.isChanged = true
+                            newProductAmount++
+
+                            table.push(row)
+                            continue
+                        }
+
+                        if (oldProduct.price != product.price) {
+                            if (product.price <= 0) {
+                                row.price = oldProduct.price
+                            }
+                            else if (oldProduct.price > 0) {
+                                row.prevPrice = oldProduct.price
+                                row.isChanged = true
+                            }
+                        }
+
+                        if (oldProduct.isSoldOut != product.isSoldOut) {
+                            row.prevStatus = oldProduct.isSoldOut ? '품절' : '판매중'
+                            row.isChanged = true
+                        }
+
+                        table.push(row)
+                    }
+
+                    for (let deletedProduct of deletedProductList) {
+                        let row = {
+                            id: deletedProduct.id,
+                            title: deletedProduct.title,
+                            popularityRank: deletedProduct.popularityIndex + 1,
+                            prevPrice: deletedProduct.price,
+                            price: '',
+                            prevStatus: deletedProduct.isSoldOut ? '품절' : '판매중',
+                            status: '판매중단',
+                            isChanged: true,
+                        }
+                        table.push(row)
+                    }
+                }
+                else {
+                    for (let product of productList) {
+                        let row = {
+                            id: product.id,
+                            title: product.title,
+                            popularityRank: product.popularityIndex + 1,
+                            prevPrice: '',
+                            price: product.price,
+                            prevStatus: '',
+                            status: product.isSoldOut ? '품절' : '판매중',
+                        }
+                        table.push(row)
+                    }
+                }
+
+                productAmount.textContent += `${productList.length.toLocaleString('ko-KR')}개`
+
+                if (byRecent.checked) {
+                    table.sort((a, b) => b.id - a.id)
+                }
+                else if (byPopularity.checked) {
+                    table.sort((a, b) => a.popularityRank - b.popularityRank)
+                }
+
+                if (newProductAmount > 0 || deletedProductList.length > 0) {
+                    productAmount.innerHTML += `(<span style="color: green">+${newProductAmount}</span><span style="color: red"> -${deletedProductList.length}</span>)`
+
+                    if (highlightChanges.checked) {
+                        table.sort((a, b) => b.isChanged - a.isChanged)
+                    }
+
+                    for (let row of table) {
+                        delete row.isChanged
+                    }
+                }
+
+                for (let index = table.length - 1; index >= 0; index--) {
+                    let isFiltered = false
+
+                    isFiltered =
+                        table[index].id < minimumCode ||
+                        table[index].id > maximumCode ||
+                        !table[index].title.includes(title) ||
+                        table[index].popularityRank < minimumPopularity ||
+                        table[index].popularityRank > maximumPopularity ||
+                        table[index].price < minimumPrice ||
+                        table[index].price > maximumPrice
+
+                    let includeStatus = false
+
+                    for (let status of statusList) {
+                        if (table[index].status.split('→').pop().includes(status)) {
+                            includeStatus = true
+                        }
+                    }
+
+                    isFiltered = isFiltered || !includeStatus
+
+                    if (isFiltered) {
+                        table.splice(index, 1)
+                    }
+                }
+
+                let tr = document.createElement('tr')
+                resultTable.appendChild(tr)
+
+                let th1 = document.createElement('th')
+                th1.innerHTML = '상품 코드'
+
+                let th2 = document.createElement('th')
+                th2.innerHTML = '상품명'
+
+                let th3 = document.createElement('th')
+                th3.innerHTML = '인기 순위'
+
+                let th4 = document.createElement('th')
+                th4.innerHTML = '가격'
+
+                let th5 = document.createElement('th')
+                th5.innerHTML = '상태'
+
+                for (let th of [th1, th2, th3, th4, th5]) {
+                    th.setAttribute('style', 'font-weight: 600')
+                    tr.appendChild(th)
+                }
+
+                if (loadAll.checked) {
+                    loadCount = Infinity
+                }
+                else {
+                    loadCount = 50
+                }
+
+                loadingTable = table.slice(loadCount)
+
+                for (let row of table.slice(0, loadCount)) {
+                    let tr = document.createElement('tr')
+                    resultTable.appendChild(tr)
+
+                    let th1 = document.createElement('th')
+                    th1.innerHTML = row.id
+
+                    let a = document.createElement('a')
+
+                    a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
+                    a.setAttribute('target', '_blank')
+                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
+
+                    let th2 = document.createElement('th')
+                    th2.appendChild(a)
+
+                    let th3 = document.createElement('th')
+                    th3.innerHTML = row.popularityRank
+
+                    let th4 = document.createElement('th')
+
+                    if (row.prevPrice.toString().length > 0 && row.price.toString().length > 0) {
+                        th4.innerHTML = `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ${row.price.toLocaleString('ko-KR')}원`
+                    }
+                    else {
+                        th4.innerHTML += `${Number(row.prevPrice + row.price).toLocaleString('ko-KR')}원`
+                    }
+
+                    let th5 = document.createElement('th')
+
+                    th5.innerHTML = row.prevStatus.length > 0 ? `${row.prevStatus.toLocaleString('ko-KR')}<br>→ ` : ''
+                    th5.innerHTML += row.status
+
+                    for (let th of [th1, th2, th3, th4, th5]) {
+                        th.setAttribute('style', 'font-weight: 400')
+                        tr.appendChild(th)
+                    }
+                }
+            }
+
+            function loadTable() {
+                for (let row of loadingTable.slice(0, loadCount)) {
+                    let tr = document.createElement('tr')
+                    resultTable.appendChild(tr)
+
+                    let th1 = document.createElement('th')
+                    th1.innerHTML = row.id
+
+                    let a = document.createElement('a')
+
+                    a.setAttribute('href', `${storeUrl}/product/detail.html?product_no=${row.id}`)
+                    a.setAttribute('target', '_blank')
+                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
+
+                    let th2 = document.createElement('th')
+                    th2.appendChild(a)
+
+                    let th3 = document.createElement('th')
+                    th3.innerHTML = row.popularityRank
+
+                    let th4 = document.createElement('th')
+                    th4.innerHTML = row.prevPrice.toString().length > 0 ? `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ` : ''
+                    th4.innerHTML += `${row.price.toLocaleString('ko-KR')}원`
+
+                    let th5 = document.createElement('th')
+                    th5.innerHTML = row.prevStatus.length > 0 ? `${row.prevStatus.toLocaleString('ko-KR')}<br>→ ` : ''
+                    th5.innerHTML += row.status
+
+                    for (let th of [th1, th2, th3, th4, th5]) {
+                        th.setAttribute('style', 'font-weight: 400')
+                        tr.appendChild(th)
+                    }
+                }
+                loadingTable = loadingTable.slice(loadCount)
+            }
+
+            window.onscroll = (e) => {
+                if ((window.innerHeight + window.scrollY) >= document.body.scrollHeight) {
+                    loadTable()
+                }
+            }
+
+
+
+            // 엑셀
+
+            document.getElementById('excel-export-button').addEventListener('click', async () => {
+                fetch(`/save`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        idToken: await user.getIdToken(),
+                        storeUrl: storeUrl,
+                    }),
+                }).then(async (res) => {
+                    let json = await res.json()
+
+                    if (json.result != 'ok') {
+                        if (json.result == 'quota exceeded') {
+                            showQuotaExceededError('엑셀 다운로드 횟수', json.quotaUsed, json.quotaLimit)
+                        }
+                        else if (json.result == 'error') {
+                            showError(`
+                                <div style="line-height: 130%">
+                                    다운로드 도중 오류가 발생했어요.<br>
+                                    다시 시도해주세요.
+                                </div>
+                            `, json.error)
+                        }
+                        return
+                    }
+
+                    let ws = XLSX.utils.json_to_sheet(table)
+                    let dateList = []
+
+                    if (oldProductList.length > 0) {
+                        let date = new Date(oldSelect.value * 60 * 1000)
+                        let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
+                        dateList.push(text)
+                    }
+
+                    if (recentProductList.length > 0) {
+                        let date = new Date(recentSelect.value * 60 * 1000)
+                        let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')};${date.getUTCMinutes().toString().padStart(2, '0')}`
+                        dateList.push(text)
+                    }
+
+                    let filename = dateList.join(' → ')
+
+                    ws.A1.v = '상품 코드'
+                    ws.B1.v = '상품명'
+                    ws.C1.v = '카테고리'
+                    ws.D1.v = '인기 순위'
+                    ws.E1.v = '이전 가격'
+                    ws.F1.v = '현재 가격'
+                    ws.G1.v = '이전 상태'
+                    ws.H1.v = '현재 상태'
+
+                    for (let index = 1; index <= table.length; index++) {
+                        let idCell = ws[`A${index}`]
+                        let titleCell = ws[`B${index}`]
+
+                        titleCell.f = `=HYPERLINK("${storeUrl}/product/detail.html?product_no=${idCell.v}", "${titleCell.v}")`
+                    }
+
+                    let wb = XLSX.utils.book_new()
+                    XLSX.utils.book_append_sheet(wb, ws, storeTitle)
+                    XLSX.writeFile(wb, `${storeTitle} ${filename}.xlsx`)
+                })
+            })
+
+
+
+            // 자주 사용하는 함수
+
+            function showErrorWithRefresh(html, errorMessage) {
+                swal.fire({
+                    title: '이런!',
+                    html: html,
+                    icon: 'error',
+                    confirmButtonText: '어떻게 된거죠?',
+                    cancelButtonText: '새로고침',
+                    showCancelButton: true,
+                    allowOutsideClick: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        swal.fire({
+                            title: '원인',
+                            html: errorMessage,
+                            confirmButtonText: '새로고침',
+                            showCancelButton: false,
+                            allowOutsideClick: false,
+                            heightAuto: false,
+                        }).then(() => location.reload())
+                    }
+                })
+            }
+
+            function showError(html, errorMessage) {
+                swal.fire({
+                    title: '이런!',
+                    html: html,
+                    icon: 'error',
+                    confirmButtonText: '어떻게 된거죠?',
+                    cancelButtonText: '알겠어요',
+                    showCancelButton: true,
+                    heightAuto: false,
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        swal.fire({
+                            title: '원인',
+                            html: errorMessage,
+                            confirmButtonText: '알겠어요',
+                            showCancelButton: false,
+                            heightAuto: false,
+                        })
+                    }
+                })
+            }
+
+            function showWarning(html, fontSize = 20) {
+                swal.fire({
+                    icon: 'warning',
+                    html: `
+                        <div style="font-size: ${fontSize}px">
+                            ${html}
+                        </div>
+                    `,
+                    confirmButtonText: '알겠어요',
+                    heightAuto: false,
+                })
+            }
+
+            function showLoading(html) {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: html,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    heightAuto: false,
+                })
+                swal.showLoading()
+            }
+
+            function postAsync(url, params = {}) {
+                return new Promise((resolve, reject) => {
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(params),
+                    }).then(async (res) => {
+                        resolve(await res.json())
+                    }).catch((error) => reject(error))
+                })
+            }
+
+            function getOption(minute) {
+                let value = minute
+                let date = new Date(minute * 60 * 1000)
+                let text = `${date.getUTCFullYear()}. ${(date.getUTCMonth() + 1).toString().padStart(2, '0')}. ${date.getUTCDate().toString().padStart(2, '0')}. ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
+                return new Option(text, value)
+            }
+
+            function showQuotaExceededError(quotaDesc, quota, maxQuota) {
+                showWarning(`
+                    하루 사용량을 초과했어요!<br>
+                    ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
+                `)
+            }
+
+            function swalAsync(params) {
+                return new Promise((resolve, reject) => {
+                    swal.fire(params).then((res) => resolve(res))
+                })
+            }
+
+            function breakTitle(title) {
+                let html = ''
+                
+                for (let word of title.split(' ')) {
+ 
+                }
+            }
+        </script>
+</body>
+
+</html>
