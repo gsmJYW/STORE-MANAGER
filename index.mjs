@@ -750,11 +750,11 @@ app.post('/history', async (req, res) => {
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + 1
     `)
 
-    result = await conn.query(`SELECT FROM_UNIXTIME(minute * 60) as time FROM history WHERE storeUrl = '${storeUrl}'`)
+    result = await conn.query(`SELECT minute FROM history WHERE storeUrl = '${storeUrl}'`)
     let history = []
 
     for (let row of result[0]) {
-      history.push(row.time)
+      history.push(row.minute)
     }
 
     res.json({
@@ -774,7 +774,7 @@ app.post('/history', async (req, res) => {
 app.post('/product', async (req, res) => {
   let idToken = req.body.idToken
   let storeUrl = req.body.storeUrl
-  let time = req.body.time
+  let minute = req.body.minute
 
   let conn
 
@@ -808,7 +808,7 @@ app.post('/product', async (req, res) => {
       }
     }
 
-    result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(new Date(time))}`)
+    result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${minute}`)
     let productList = result[0]
 
     await conn.query(`
@@ -933,7 +933,7 @@ app.post('/smartstore/update', async (req, res) => {
 
       res.json({
         result: 'already exists',
-        time: new Date(history.minute * 60 * 1000),
+        minute: history.minute,
         product: productList,
       })
       return
@@ -960,7 +960,7 @@ app.post('/smartstore/update', async (req, res) => {
 
     res.json({
       result: 'ok',
-      time: new Date(getMinute(now) * 60 * 1000),
+      minute: getMinute(now),
       product: productList,
     })
   }
@@ -1011,7 +1011,7 @@ app.post('/n09/update', async (req, res) => {
 
       res.json({
         result: 'already exists',
-        time: new Date(history.minute * 60 * 1000),
+        minute: history.minute,
         product: productList,
       })
       return
@@ -1038,7 +1038,7 @@ app.post('/n09/update', async (req, res) => {
 
     res.json({
       result: 'ok',
-      time: new Date(getMinute(now) * 60 * 1000),
+      minute: getMinute(now),
       product: productList,
     })
   }
@@ -1089,7 +1089,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
 
       res.json({
         result: 'already exists',
-        time: new Date(history.minute * 60 * 1000),
+        minute: history.minute,
         product: productList,
       })
       return
@@ -1155,6 +1155,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
 
       if (tempPageList.length > 0) {
         tempPageList = await getCarlifemallProductList(tempPageList)
+        console.log(tempPageList)
 
         for (let tempPage of tempPageList) {
           for (let page of pageList) {
@@ -1192,7 +1193,7 @@ app.post('/hyundai/auton/update', async (req, res) => {
 
     res.json({
       result: 'ok',
-      time: new Date(getMinute(now) * 60 * 1000),
+      minute: getMinute(now),
       product: productList,
     })
   }
@@ -1243,7 +1244,7 @@ app.post('/autowash/update', async (req, res) => {
 
       res.json({
         result: 'already exists',
-        time: new Date(history.minute * 60 * 1000),
+        minute: history.minute,
         product: productList,
       })
       return
@@ -1271,7 +1272,7 @@ app.post('/autowash/update', async (req, res) => {
 
     res.json({
       result: 'ok',
-      time: new Date(getMinute(now) * 60 * 1000),
+      minute: getMinute(now),
       product: productList,
     })
   }
@@ -1517,7 +1518,7 @@ function getSmartstoreProductList(storeUrl, productAmount) {
 
 function getCarlifemallCategoryIdList() {
   return new Promise((resolve, reject) => {
-    https.get('https://hyundai.auton.kr/product/category/category_main?pcid=3478&rootid=3439', (res) => {
+    https.get('https://hyundai.auton.kr/product/category/category_main?pcid=4441&rootid=4388', (res) => {
       let data = ''
 
       res.on('error', (error) => reject(error))
@@ -1561,7 +1562,7 @@ function getCarlifemallCategoryList(categoryIdList) {
     let categoryList = []
 
     for (let categoryId of categoryIdList) {
-      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${categoryId}&rootid=3439`, (res) => {
+      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${categoryId}&rootid=4388`, (res) => {
         let data = ''
 
         res.on('error', (error) => reject(error))
@@ -1618,7 +1619,7 @@ function getCarlifemallProductList(pageList) {
     for (let page of pageList) {
       let productList = []
 
-      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${page.categoryId}&rootid=3439&page=${page.num}&recodeCount=100&search.orderBy=sellCount&search.order=desc`, (res) => {
+      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${page.categoryId}&rootid=4388&page=${page.num}&recodeCount=100&search.orderBy=sellCount&search.order=desc`, (res) => {
         let data = ''
 
         res.on('error', (error) => reject(error))
@@ -1824,7 +1825,11 @@ function getAutowashCategoryList(categoryIdList) {
           let categoryTitleElement = document.querySelector('.this_category')
           let productAmountElement = document.querySelector('.pick_list_num')
 
-          let productAmount = Number(productAmountElement.innerText.replace(/[^\d.]/g, ''))
+          let productAmount = 0
+
+          if (productAmountElement) {
+            productAmount = Number(productAmountElement.innerText.replace(/[^\d.]/g, ''))
+          }
 
           if (productAmount == 0) {
             categories--
