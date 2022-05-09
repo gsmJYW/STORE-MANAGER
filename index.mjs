@@ -1335,7 +1335,7 @@ app.post('/theclass/update', async (req, res) => {
 
     for (let product of productList) {
       let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
     }
 
     query = query.substring(0, query.length - 2)
