@@ -16,7 +16,8 @@
     "https": "^1.0.0",
     "mysql2": "^2.3.3",
     "node-html-parser": "^5.1.0",
-    "npm": "^8.3.0"
+    "npm": "^8.3.0",
+    "selenium-webdriver": "^4.1.2"
   },
   "type": "module"
 }
