@@ -7,7 +7,9 @@ import parser from 'node-html-parser'
 import express from 'express'
 import mysql from 'mysql2/promise'
 import { fileURLToPath } from 'url'
-import { dirname } from 'path'
+import { dirname, resolve } from 'path'
+import { Builder, By, until } from 'selenium-webdriver'
+import { Options } from 'selenium-webdriver/chrome.js'
 
 const app = express()
 const __filename = fileURLToPath(import.meta.url)
@@ -24,8 +26,8 @@ const credentials = {
 
 const args = process.argv.slice(2);
 
-if (args.length < 5) {
-  console.error('Parameters not provided: [host] [user] [password] [database] [connectionLimit]')
+if (args.length < 7) {
+  console.error('Parameters not provided: [host] [user] [password] [database] [connection limit] [autowash B2B id] [autowash b2b pwd]')
   exit(1)
 }
 
@@ -36,6 +38,9 @@ const pool = mysql.createPool({
   database: args[3],
   connectionLimit: args[4],
 })
+
+const autowashB2BId = args[5]
+const autowashB2BPwd = args[6]
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -1444,6 +1449,83 @@ app.post('/autowax/update', async (req, res) => {
   }
 })
 
+app.get('/autowash/b2b', async (req, res) => {
+  res.sendFile(__dirname + '/views/autowashB2B.html')
+})
+
+app.post('/autowash/b2b/update', async (req, res) => {
+  let storeUrl = 'http://autowash2.com'
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let now = await getKST()
+
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return;
+    }
+
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+    let productList
+
+    if (result[0].length > 0) {
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+      productList = result[0]
+
+      res.json({
+        result: 'already exists',
+        minute: history.minute,
+        product: productList,
+      })
+      return
+    }
+
+    productList = await getAutoWashB2BProductList()
+
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
+
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
+    }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+
+    await conn.query(`
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
+    `)
+
+    res.json({
+      result: 'ok',
+      minute: getMinute(now),
+      product: productList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
 function getSecond(date) {
   return parseInt(date.getTime() / 1000)
 }
@@ -1462,6 +1544,87 @@ async function getKST() {
   return new Date(now.getTime() + 1000 * 60 * 60 * 9)
 }
 
+function initiateDriver() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const driver = await new Builder()
+        .forBrowser('chrome')
+        .setChromeOptions(new Options()
+          // .addArguments('--no-sandbox')
+          .addArguments('--headless', '--no-sandbox')
+        ).build()
+
+      resolve(driver)
+    }
+    catch (error) {
+      reject(error)
+    }
+  })
+}
+
+function getAutoWashB2BProductList() {
+  return new Promise(async (resolve, reject) => {
+    const driver = await initiateDriver()
+
+    try {
+      await driver.get('http://autowash2.com')
+
+      let idInput = await driver.wait(until.elementLocated(By.id('loginId')))
+      idInput.sendKeys(autowashB2BId)
+
+      let pwdInput = await driver.findElement(By.id('loginPwd'))
+      pwdInput.sendKeys(autowashB2BPwd)
+
+      let loginDiv = await driver.findElement(By.className('login_input_sec'))
+      await loginDiv.findElement(By.css('button')).click()
+
+      await driver.wait(until.elementLocated(By.className('top_srarch_text')))
+      await driver.get('http://autowash2.com/goods/goods_list.php?cateCd=096')
+
+      let productAmountElement = await driver.wait(until.elementLocated(By.className('pick_list_num')))
+      let productAmountText = await productAmountElement.getAttribute('innerText')
+      let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
+
+      await driver.get(`http://autowash2.com/goods/goods_list.php?cateCd=096&sort=sellcnt&pageNum=${productAmount}`)
+
+      let body = await driver.wait(until.elementLocated(By.css('body')))
+      let data = await body.getAttribute('innerHTML')
+      let document = parser.parse(data)
+
+      let productList = []
+
+      document.querySelectorAll('.item_cont').forEach((itemCont, index) => {
+        let idElement = itemCont.getElementsByTagName('a')[0]
+        let idText = idElement.getAttribute('href')
+        let id = Number(idText.split('=')[1])
+
+        let title = itemCont.querySelector('.item_name').innerText
+
+        let priceElement = itemCont.querySelector('.item_price')
+        let price = Number(priceElement.innerText.replace(/[^0-9]/g, ''))
+
+        let product = {
+          id: id,
+          title: title,
+          popularityIndex: index,
+          price: price,
+          isSoldOut: itemCont.innerHTML.includes('soldout'),
+        }
+
+        productList.push(product)
+      })
+
+      resolve(productList)
+    }
+    catch (error) {
+      reject(error)
+    }
+    finally {
+      driver.quit()
+    }
+  })
+}
+
 function getCJTrackingList(invcNoList) {
   return new Promise((resolve, reject) => {
     let trackingList = []
@@ -1477,7 +1640,7 @@ function getCJTrackingList(invcNoList) {
       https.get(`https://www.doortodoor.co.kr/parcel/doortodoor.do?fsp_action=PARC_ACT_002&fsp_cmd=retrieveInvNoACT&invc_no=${invcNo}`, (res) => {
         let data = ''
 
-        res.on('error', (error) => console.log(error))
+        res.on('error', (error) => reject(error))
         res.on('data', (chunk) => {
           data += chunk
         })
