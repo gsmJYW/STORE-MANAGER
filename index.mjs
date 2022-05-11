@@ -7,9 +7,9 @@ import parser from 'node-html-parser'
 import express from 'express'
 import mysql from 'mysql2/promise'
 import { fileURLToPath } from 'url'
-import { dirname, resolve } from 'path'
+import { dirname } from 'path'
 import { Builder, By, until } from 'selenium-webdriver'
-import { Options } from 'selenium-webdriver/chrome.js'
+import chrome, { Options, ServiceBuilder } from 'selenium-webdriver/chrome.js'
 
 const app = express()
 const __filename = fileURLToPath(import.meta.url)
@@ -27,7 +27,7 @@ const credentials = {
 const args = process.argv.slice(2);
 
 if (args.length < 7) {
-  console.error('Parameters not provided: [host] [user] [password] [database] [connection limit] [autowash B2B id] [autowash b2b pwd]')
+  console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [chromedriver_path] [autowash_b2b_id] [autowash_b2b_pwd]')
   exit(1)
 }
 
@@ -39,8 +39,11 @@ const pool = mysql.createPool({
   connectionLimit: args[4],
 })
 
-const autowashB2BId = args[5]
-const autowashB2BPwd = args[6]
+const service = new ServiceBuilder(args[5]).build()
+chrome.setDefaultService(service);
+
+const autowashB2BId = args[6]
+const autowashB2BPwd = args[7]
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -1550,7 +1553,6 @@ function initiateDriver() {
       const driver = await new Builder()
         .forBrowser('chrome')
         .setChromeOptions(new Options()
-          // .addArguments('--no-sandbox')
           .addArguments('--headless', '--no-sandbox')
         ).build()
 
