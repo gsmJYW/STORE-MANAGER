@@ -1132,7 +1132,7 @@
 
                     table.forEach((row, index) => {
                         let cell = ws[`B${index + 2}`]
-                        cell.f = `=HYPERLINK("${storeUrl}/product/${row.title.replace(' ', '-').replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣\-]+/g, '')}/${row.id}", "${titleCell.v}")`
+                        cell.f = `=HYPERLINK("${storeUrl}/product/${row.title.replace(' ', '-').replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣\-]+/g, '')}/${row.id}", "${row.title}")`
                     })
 
                     let wb = XLSX.utils.book_new()
