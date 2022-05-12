@@ -547,6 +547,48 @@ app.post('/user/update', async (req, res) => {
   }
 })
 
+app.post('/user/byEmail', async (req, res) => {
+  let idToken = req.body.idToken
+  let email = req.body.email
+  let conn
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return
+    }
+
+    result = await conn.query(`SELECT * FROM user WHERE email = '${email}'`)
+
+    if (result[0].length <= 0) {
+      res.json({ result: 'user not found' })
+      return
+    }
+
+    res.json({
+      result: 'ok',
+      user: result[0][0]
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
 app.post('/user/permission', async (req, res) => {
   let idToken = req.body.idToken
   let email = req.body.email
@@ -2625,7 +2667,7 @@ function getWashmartProductList() {
 
         document.querySelectorAll('.item.hovimg.xans-record-').forEach((item, index) => {
           let titleElement = item.querySelector('.name')
-          
+
           let idElement = titleElement.querySelector('a')
           let idSplit = idElement.getAttribute('href').split('/category')[0].split('/')
           let id = Number(idSplit[idSplit.length - 1])
@@ -2651,7 +2693,7 @@ function getWashmartProductList() {
           }
 
           let soldOutElement = item.querySelector('.sold')
-          
+
           if (soldOutElement.querySelector('img')) {
             product.isSoldOut = true
           }
