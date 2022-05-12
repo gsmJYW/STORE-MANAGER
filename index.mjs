@@ -2501,13 +2501,13 @@ function getWashmartProductList() {
         let document = parser.parse(data)
 
         document.querySelectorAll('.item.hovimg.xans-record-').forEach((item, index) => {
-          let nameElement = item.querySelector('.name')
+          let titleElement = item.querySelector('.name')
           
-          let idElement = nameElement.querySelector('a')
+          let idElement = titleElement.querySelector('a')
           let idSplit = idElement.getAttribute('href').split('/category')[0].split('/')
           let id = Number(idSplit[idSplit.length - 1])
 
-          let name = nameElement.innerText.split(':')[1].trim()
+          let title = titleElement.innerText.split(':')[1].trim()
 
           let priceElement = item.querySelector('.xans-record-.halfli2')
           let price = 0
@@ -2521,7 +2521,7 @@ function getWashmartProductList() {
 
           let product = {
             id: id,
-            name: name,
+            title: title,
             popularityIndex: (page - 1) * 60 + index,
             price: price,
             isSoldOut: false,
