@@ -86,6 +86,7 @@
                 업로드&nbsp;
                 <i class="fa fa-upload"></i>
             </button>
+            <input id="text-file-input" type="file" hidden />
         </div>
         <div class="container" id="result" style="width: 1120px" hidden>
             <p>&nbsp;</p>
@@ -108,7 +109,91 @@
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
         <script type="module">
+            showLoading('유저 정보를 불러오는 중이에요.')
+
+
+
+            // Auth
+
+            import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
+            import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
+
+            initializeApp({
+                apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
+                authDomain: "store-manager-5d527.firebaseapp.com",
+                projectId: "store-manager-5d527",
+                storageBucket: "store-manager-5d527.appspot.com",
+                messagingSenderId: "36522862962",
+                appId: "1:36522862962:web:8a9e9b88373a19add095eb",
+                measurementId: "G-37DECVWLYX"
+            })
+
+            const auth = getAuth()
+            let user
+
+            onAuthStateChanged(auth, async (firebaseUser) => {
+                if (firebaseUser) {
+                    user = firebaseUser
+
+                    try {
+                        let json = await postAsync('/user', { idToken: await user.getIdToken() })
+
+                        if (json.result == 'error') {
+                            throw new Error(json.error)
+                        }
+
+                        if (json.user.permission == 0) {
+                            showNoPermissionError()
+                            return
+                        }
+
+                        swal.close()
+                    }
+                    catch (error) {
+                        showErrorWithRefresh('유저 정보를 불러오는 도중 오류가 발생했어요.', error.message)
+                    }
+                } else {
+                    swal.fire({
+                        title: '잠시만요!',
+                        html: '이용하기 전에 로그인 해주세요!',
+                        confirmButtonText: '메인으로',
+                        allowOutsideClick: false,
+                        showCancelButton: false,
+                        heightAuto: false,
+                    }).then((res) => {
+                        let form = document.createElement('form')
+                        form.style.visibility = 'hidden'
+                        form.method = 'GET'
+                        form.action = '/'
+                        document.body.appendChild(form)
+                        form.submit()
+                    })
+                }
+            })
+
+
+
+            // 배송 조회
+
             let trackingList = []
+            const textFileInput = document.getElementById('text-file-input')
+
+            document.getElementById('upload-button').addEventListener('click', () => textFileInput.click())
+            textFileInput.addEventListener('change', (event) => {
+                let file = event.target.files[0]
+
+                if (!file) {
+                    return
+                }
+
+                let reader = new FileReader()
+
+                reader.onload = async () => {
+                    track(reader.result)
+                }
+
+                reader.readAsText(file, "utf-8")
+            })
 
             document.getElementById('example-button').addEventListener('click', async () => {
                 let exampleIndex = 0
@@ -162,11 +247,14 @@
             })
 
             document.getElementById('paste-button').addEventListener('click', async () => {
+                let clipboard = await navigator.clipboard.readText();
+                track(clipboard)
+            })
+
+            async function track(text) {
                 showLoading('배송 조회를 하는 중이에요.')
 
-                let clipboard = await navigator.clipboard.readText();
-                let numericSplit = clipboard.replace(/\D/g, ' ');
-
+                let numericSplit = text.replace(/\D/g, ' ');
                 let invcNoList = []
 
                 for (let numeric of numericSplit.split(' ')) {
@@ -185,9 +273,13 @@
                 }
 
                 try {
-                    let json = await postAsync('/cjTracking', { invcNo: invcNoList })
+                    let json = await postAsync('/cjTracking', { idToken: await user.getIdToken(), invcNo: invcNoList })
 
-                    if (json.result == 'error') {
+                    if (json.result == 'no permission') {
+                        showNoPermissionError()
+                        return
+                    }
+                    else if (json.result == 'error') {
                         throw new Error(json.error)
                     }
 
@@ -199,7 +291,7 @@
                 catch (error) {
                     showError('배송 조회를 하는 도중 오류가 발생했어요.')
                 }
-            })
+            }
 
 
 
@@ -286,7 +378,6 @@
                     a.setAttribute('href', `https://www.doortodoor.co.kr/parcel/doortodoor.do?fsp_action=PARC_ACT_002&fsp_cmd=retrieveInvNoACT&invc_no=${row.id}`)
                     a.setAttribute('target', '_blank')
                     a.innerHTML = row.id
-                    // a.innerHTML = row.title.match(/.{1,40}/g).join('<br>')
 
                     let th1 = document.createElement('th')
                     th1.appendChild(a)
@@ -347,6 +438,30 @@
 
             // 자주 사용하는 함수
 
+            function showErrorWithRefresh(html, errorMessage) {
+                swal.fire({
+                    title: '이런!',
+                    html: html,
+                    icon: 'error',
+                    confirmButtonText: '어떻게 된거죠?',
+                    cancelButtonText: '새로고침',
+                    showCancelButton: true,
+                    allowOutsideClick: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        swal.fire({
+                            title: '원인',
+                            html: errorMessage,
+                            confirmButtonText: '새로고침',
+                            showCancelButton: false,
+                            allowOutsideClick: false,
+                            heightAuto: false,
+                        }).then(() => location.reload())
+                    }
+                })
+            }
+
             function showError(html, errorMessage) {
                 swal.fire({
                     title: '이런!',
@@ -387,6 +502,24 @@
                     heightAuto: false,
                 })
                 swal.showLoading()
+            }
+
+            function showNoPermissionError() {
+                swal.fire({
+                    title: '잠시만요!',
+                    html: '관리자만 접근할 수 있어요!',
+                    confirmButtonText: '메인으로',
+                    allowOutsideClick: false,
+                    showCancelButton: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                })
             }
 
             function postAsync(url, params = {}) {
