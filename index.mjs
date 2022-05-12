@@ -196,8 +196,21 @@ app.get('/cjTracking', async (req, res) => {
 
 app.post('/cjTracking', async (req, res) => {
   let invcNoList = req.body.invcNo
+  let idToken = req.body.idToken
+  let conn
 
   try {
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return
+    }
+
     let trackingList = await getCJTrackingList(invcNoList)
 
     while (true) {
