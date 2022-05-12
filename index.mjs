@@ -54,6 +54,116 @@ admin.initializeApp({
 })
 
 const auth = getAuth()
+const conn = await pool.getConnection()
+
+await conn.query(`
+  CREATE TABLE IF NOT EXISTS user (
+    uid char(28) NOT NULL,
+    email varchar(255) NOT NULL,
+    name varchar(64) NOT NULL,
+    permission tinyint NOT NULL DEFAULT '0',
+    loadAll tinyint NOT NULL DEFAULT '0',
+    highlightChanges tinyint NOT NULL DEFAULT '1',
+    sortMethod tinyint NOT NULL DEFAULT '0',
+    firstLoginSecond int NOT NULL,
+    lastLoginSecond int NOT NULL,
+    PRIMARY KEY (uid)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+`)
+
+await conn.query(`
+  CREATE TABLE IF NOT EXISTS store (
+    url varchar(256) NOT NULL,
+    title varchar(256) NOT NULL,
+    PRIMARY KEY (url)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+`)
+
+await conn.query(`
+  CREATE TABLE IF NOT EXISTS bookmark (
+    uid char(28) NOT NULL,
+    storeUrl varchar(256) NOT NULL,
+    PRIMARY KEY (uid,storeUrl),
+    KEY storeUrl_idx (storeUrl),
+    CONSTRAINT bookmarkStoreUrl FOREIGN KEY (storeUrl) REFERENCES store (url) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='	'
+`)
+
+await conn.query(`
+  CREATE TABLE IF NOT EXISTS query (
+    uid varchar(45) NOT NULL,
+    storeUrl varchar(256) NOT NULL,
+    day mediumint NOT NULL,
+    type tinyint NOT NULL,
+    second int NOT NULL,
+    amount int NOT NULL,
+    PRIMARY KEY (uid,storeUrl,day,type),
+    KEY queryStoreUrl_idx (storeUrl),
+    CONSTRAINT queryStoreUrl FOREIGN KEY (storeUrl) REFERENCES store (url) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+`)
+
+await conn.query(`
+  CREATE TABLE IF NOT EXISTS history (
+    storeUrl varchar(256) NOT NULL,
+    minute int NOT NULL,
+    PRIMARY KEY (storeUrl,minute),
+    CONSTRAINT historyStoreUrl FOREIGN KEY (storeUrl) REFERENCES store (url) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+`)
+
+await conn.query(`
+  CREATE TABLE IF NOT EXISTS product (
+    storeUrl varchar(256) NOT NULL,
+    minute int NOT NULL,
+    id bigint NOT NULL,
+    title varchar(256) NOT NULL,
+    price int NOT NULL,
+    popularityIndex int NOT NULL,
+    isSoldOut tinyint NOT NULL,
+    category varchar(32) DEFAULT NULL,
+    PRIMARY KEY (storeUrl,minute,id),
+    CONSTRAINT productStoreUrl FOREIGN KEY (storeUrl) REFERENCES store (url) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+`)
+
+await conn.query(`
+  CREATE TABLE IF NOT EXISTS carWash (
+    name varchar(64) NOT NULL,
+    category varchar(64) DEFAULT NULL,
+    type varchar(64) DEFAULT NULL,
+    lat double NOT NULL,
+    lon double NOT NULL,
+    siDo varchar(32) NOT NULL,
+    siGunGu varchar(32) NOT NULL,
+    eupMyeonDong varchar(32) NOT NULL,
+    ri varchar(32) DEFAULT NULL,
+    roadName varchar(64) NOT NULL,
+    buildingNo varchar(16) NOT NULL,
+    buildingName varchar(64) DEFAULT NULL,
+    phone char(14) DEFAULT NULL,
+    openAt time DEFAULT NULL,
+    closeAt time DEFAULT NULL,
+    weekendOpenAt time DEFAULT NULL,
+    weekendCloseAt time DEFAULT NULL,
+    dayoff varchar(32) DEFAULT NULL,
+    businessHours text,
+    PRIMARY KEY (roadName,buildingNo)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+`)
+
+await conn.query(`
+  INSERT IGNORE INTO store VALUES
+    ('https://n09.co.kr', '엔공구'),
+    ('https://autowash.co.kr', '오토워시'),
+    ('http://autowash2.com', '오토워시 B2B'),
+    ('https://hyundai.auton.kr', '카라이프몰'),
+    ('https://theclasskorea.co.kr', '더클래스'),
+    ('https://autowax.co.kr', '오토왁스'),
+    ('https://washmart.co.kr', '워시마트')
+`)
+
+conn.release()
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({
