@@ -26,8 +26,8 @@ const credentials = {
 
 const args = process.argv.slice(2);
 
-if (args.length < 7) {
-  console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [chromedriver_path] [autowash_b2b_id] [autowash_b2b_pwd]')
+if (args.length < 9) {
+  console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [chromedriver_path] [autowash_b2b_id] [autowash_b2b_pwd] [washmart_id] [washmart_pwd]')
   exit(1)
 }
 
@@ -44,6 +44,9 @@ chrome.setDefaultService(service);
 
 const autowashB2BId = args[6]
 const autowashB2BPwd = args[7]
+
+const washmartId = args[8]
+const washmartPwd = args[9]
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -1296,6 +1299,83 @@ app.post('/autowash/update', async (req, res) => {
   }
 })
 
+app.get('/autowash/b2b', async (req, res) => {
+  res.sendFile(__dirname + '/views/autowashB2B.html')
+})
+
+app.post('/autowash/b2b/update', async (req, res) => {
+  let storeUrl = 'http://autowash2.com'
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let now = await getKST()
+
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return;
+    }
+
+    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+    let productList
+
+    if (result[0].length > 0) {
+      let history = result[0][0]
+
+      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
+      productList = result[0]
+
+      res.json({
+        result: 'already exists',
+        minute: history.minute,
+        product: productList,
+      })
+      return
+    }
+
+    productList = await getAutowashB2BProductList()
+
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
+
+    for (let product of productList) {
+      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
+    }
+
+    query = query.substring(0, query.length - 2)
+    await conn.query(query)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+
+    await conn.query(`
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
+    `)
+
+    res.json({
+      result: 'ok',
+      minute: getMinute(now),
+      product: productList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
 app.get('/theclass', async (req, res) => {
   res.sendFile(__dirname + '/views/theclass.html')
 })
@@ -1452,12 +1532,12 @@ app.post('/autowax/update', async (req, res) => {
   }
 })
 
-app.get('/autowash/b2b', async (req, res) => {
-  res.sendFile(__dirname + '/views/autowashB2B.html')
+app.get('/washmart', async (req, res) => {
+  res.sendFile(__dirname + '/views/washmart.html')
 })
 
-app.post('/autowash/b2b/update', async (req, res) => {
-  let storeUrl = 'http://autowash2.com'
+app.post('/washmart/update', async (req, res) => {
+  let storeUrl = 'https://washmart.co.kr'
   let idToken = req.body.idToken
   let conn
 
@@ -1492,7 +1572,7 @@ app.post('/autowash/b2b/update', async (req, res) => {
       return
     }
 
-    productList = await getAutoWashB2BProductList()
+    productList = await getWashmartProductList()
 
     let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
 
@@ -1560,69 +1640,6 @@ function initiateDriver() {
     }
     catch (error) {
       reject(error)
-    }
-  })
-}
-
-function getAutoWashB2BProductList() {
-  return new Promise(async (resolve, reject) => {
-    const driver = await initiateDriver()
-
-    try {
-      await driver.get('http://autowash2.com')
-
-      let idInput = await driver.wait(until.elementLocated(By.id('loginId')))
-      idInput.sendKeys(autowashB2BId)
-
-      let pwdInput = await driver.findElement(By.id('loginPwd'))
-      pwdInput.sendKeys(autowashB2BPwd)
-
-      let loginDiv = await driver.findElement(By.className('login_input_sec'))
-      await loginDiv.findElement(By.css('button')).click()
-
-      await driver.wait(until.elementLocated(By.className('top_srarch_text')))
-      await driver.get('http://autowash2.com/goods/goods_list.php?cateCd=096')
-
-      let productAmountElement = await driver.wait(until.elementLocated(By.className('pick_list_num')))
-      let productAmountText = await productAmountElement.getAttribute('innerText')
-      let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
-
-      await driver.get(`http://autowash2.com/goods/goods_list.php?cateCd=096&sort=sellcnt&pageNum=${productAmount}`)
-
-      let body = await driver.wait(until.elementLocated(By.css('body')))
-      let data = await body.getAttribute('innerHTML')
-      let document = parser.parse(data)
-
-      let productList = []
-
-      document.querySelectorAll('.item_cont').forEach((itemCont, index) => {
-        let idElement = itemCont.getElementsByTagName('a')[0]
-        let idText = idElement.getAttribute('href')
-        let id = Number(idText.split('=')[1])
-
-        let title = itemCont.querySelector('.item_name').innerText
-
-        let priceElement = itemCont.querySelector('.item_price')
-        let price = Number(priceElement.innerText.replace(/[^0-9]/g, ''))
-
-        let product = {
-          id: id,
-          title: title,
-          popularityIndex: index,
-          price: price,
-          isSoldOut: itemCont.innerHTML.includes('soldout'),
-        }
-
-        productList.push(product)
-      })
-
-      resolve(productList)
-    }
-    catch (error) {
-      reject(error)
-    }
-    finally {
-      driver.quit()
     }
   })
 }
@@ -2236,6 +2253,71 @@ function getAutowashProductList(categoryList) {
   })
 }
 
+function getAutowashB2BProductList() {
+  return new Promise(async (resolve, reject) => {
+    const driver = await initiateDriver()
+
+    try {
+      await driver.get('http://autowash2.com')
+
+      let idInput = await driver.wait(until.elementLocated(By.id('loginId')))
+      idInput.sendKeys(autowashB2BId)
+
+      let pwdInput = await driver.findElement(By.id('loginPwd'))
+      pwdInput.sendKeys(autowashB2BPwd)
+
+      let loginDiv = await driver.findElement(By.className('login_input_sec'))
+      await loginDiv.findElement(By.css('button')).click()
+
+      await driver.wait(until.elementLocated(By.className('top_srarch_text')))
+      await driver.get('http://autowash2.com/goods/goods_list.php?cateCd=096')
+
+      let productAmountElement = await driver.wait(until.elementLocated(By.className('pick_list_num')))
+      let productAmountText = await productAmountElement.getAttribute('innerText')
+      let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
+
+      await driver.get(`http://autowash2.com/goods/goods_list.php?cateCd=096&sort=sellcnt&pageNum=${productAmount}`)
+
+      let body = await driver.wait(until.elementLocated(By.css('body')))
+      let data = await body.getAttribute('innerHTML')
+      let document = parser.parse(data)
+
+      let productList = []
+
+      document.querySelectorAll('.item_cont').forEach((itemCont, index) => {
+        let idElement = itemCont.getElementsByTagName('a')[0]
+        let idText = idElement.getAttribute('href')
+        let id = Number(idText.split('=')[1])
+
+        console.log(idText)
+
+        let title = itemCont.querySelector('.item_name').innerText
+
+        let priceElement = itemCont.querySelector('.item_price')
+        let price = Number(priceElement.innerText.replace(/[^0-9]/g, ''))
+
+        let product = {
+          id: id,
+          title: title,
+          popularityIndex: index,
+          price: price,
+          isSoldOut: itemCont.innerHTML.includes('soldout'),
+        }
+
+        productList.push(product)
+      })
+
+      resolve(productList)
+    }
+    catch (error) {
+      reject(error)
+    }
+    finally {
+      driver.quit()
+    }
+  })
+}
+
 function getTheClassProductAmount() {
   return new Promise((resolve, reject) => {
     https.get('https://theclasskorea.co.kr/product/list.html?cate_no=43', (res) => {
@@ -2380,6 +2462,88 @@ function getAutowaxProductList(productAmount) {
           })
         })
       }).on('error', (error) => reject(error))
+    }
+  })
+}
+
+function getWashmartProductList() {
+  return new Promise(async (resolve, reject) => {
+    const driver = await initiateDriver()
+
+    try {
+      await driver.get('https://washmart.co.kr')
+
+      let idInput = await driver.wait(until.elementLocated(By.id('member_id')))
+      idInput.sendKeys(washmartId)
+
+      let pwdInput = await driver.findElement(By.id('member_passwd'))
+      pwdInput.sendKeys(washmartPwd)
+
+      let loginButton = await driver.findElement(By.className('Loginbtn'))
+      await loginButton.click()
+
+      await driver.wait(until.elementLocated(By.id('xans_myshop_mileage')))
+      await driver.get('https://washmart.co.kr/product/list3.html?cate_no=24&sort_method=6')
+
+      let productAmountElement = await driver.wait(until.elementLocated(By.className('prdCount')))
+      let productAmountText = await productAmountElement.getAttribute('innerText')
+      let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
+
+      let productList = []
+
+      for (let page = 1; page <= Math.ceil(productAmount / 60); page++) {
+        if (page > 1) {
+          await driver.get(`https://washmart.co.kr/product/list3.html?cate_no=24&sort_method=6&page=${page}`)
+        }
+
+        let body = await driver.wait(until.elementLocated(By.css('body')))
+        let data = await body.getAttribute('innerHTML')
+        let document = parser.parse(data)
+
+        document.querySelectorAll('.item.hovimg.xans-record-').forEach((item, index) => {
+          let nameElement = item.querySelector('.name')
+          
+          let idElement = nameElement.querySelector('a')
+          let idSplit = idElement.getAttribute('href').split('/category')[0].split('/')
+          let id = Number(idSplit[idSplit.length - 1])
+
+          let name = nameElement.innerText.split(':')[1].trim()
+
+          let priceElement = item.querySelector('.xans-record-.halfli2')
+          let price = 0
+
+          try {
+            price = Number(priceElement.innerText.replace(/[^0-9]/g, ''))
+          }
+          catch {
+
+          }
+
+          let product = {
+            id: id,
+            name: name,
+            popularityIndex: (page - 1) * 60 + index,
+            price: price,
+            isSoldOut: false,
+          }
+
+          let soldOutElement = item.querySelector('.sold')
+          
+          if (soldOutElement.querySelector('img')) {
+            product.isSoldOut = true
+          }
+
+          productList.push(product)
+        })
+      }
+
+      resolve(productList)
+    }
+    catch (error) {
+      reject(error)
+    }
+    finally {
+      driver.quit()
     }
   })
 }
