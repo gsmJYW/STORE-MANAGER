@@ -1131,12 +1131,10 @@
                     ws.G1.v = '이전 상태'
                     ws.H1.v = '현재 상태'
 
-                    for (let index = 1; index <= table.length; index++) {
-                        let idCell = ws[`A${index}`]
-                        let titleCell = ws[`B${index}`]
-
-                        titleCell.f = `=HYPERLINK("${storeUrl}/goods/goods_view.php?goodsNo=${idCell.v}", "${titleCell.v}")`
-                    }
+                    table.forEach((row, index) => {
+                        let cell = ws[`B${index + 2}`]
+                        cell.f = `=HYPERLINK("${storeUrl}/goods/goods_view.php?goodsNo=${row.id}", "${row.title}")`
+                    })
 
                     let wb = XLSX.utils.book_new()
                     XLSX.utils.book_append_sheet(wb, ws, storeTitle)
