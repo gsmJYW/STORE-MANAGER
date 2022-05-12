@@ -200,14 +200,40 @@
 
         document.getElementById('add-button').addEventListener('click', async () => {
             try {
-                let email = emailInput.value
+                let email = emailInput.value.trim()
 
                 if (!validateEmail(email)) {
                     showWarning('이메일 형식이 잘못됐어요!')
                     return
                 }
 
-                let json = await postAsync('/user/permission', { idToken: await user.getIdToken(), email: email, permission: 1 })
+                let json = await postAsync('/user/byEmail', { idToken: await user.getIdToken(), email: email })
+
+                if (json.result == 'error') {
+                    throw new Error(json.error)
+                }
+                else if (json.result == 'no permission') {
+                    showNoPermissionError()
+                    return
+                }
+                else if (json.result == 'user not found') {
+                    showWarning('유저를 찾지 못했어요!')
+                    return
+                }
+
+                let res = await swalAsync({
+                    icon: 'warning',
+                    html: `<b>${json.user.name}</b>님을 관리자로 추가 하시겠어요?`,
+                    confirmButtonText: '네',
+                    cancelButtonText: '이게 아닌데!',
+                    showCancelButton: true,
+                })
+
+                if (!res.isConfirmed) {
+                    return
+                }
+
+                json = await postAsync('/user/permission', { idToken: await user.getIdToken(), email: email, permission: 1 })
 
                 if (json.result == 'error') {
                     throw new Error(json.error)
@@ -245,14 +271,40 @@
 
         document.getElementById('remove-button').addEventListener('click', async () => {
             try {
-                let email = emailInput.value
+                let email = emailInput.value.trim()
 
                 if (!validateEmail(email)) {
                     showWarning('이메일 형식이 잘못됐어요!')
                     return
                 }
 
-                let json = await postAsync('/user/permission', { idToken: await user.getIdToken(), email: email, permission: 0 })
+                let json = await postAsync('/user/byEmail', { idToken: await user.getIdToken(), email: email })
+
+                if (json.result == 'error') {
+                    throw new Error(json.error)
+                }
+                else if (json.result == 'no permission') {
+                    showNoPermissionError()
+                    return
+                }
+                else if (json.result == 'user not found') {
+                    showWarning('유저를 찾지 못했어요!')
+                    return
+                }
+
+                let res = await swalAsync({
+                    icon: 'warning',
+                    html: `<b>${json.user.name}</b>님을 관리자에서 해제 하시겠어요?`,
+                    confirmButtonText: '네',
+                    cancelButtonText: '이게 아닌데!',
+                    showCancelButton: true,
+                })
+
+                if (!res.isConfirmed) {
+                    return
+                }
+
+                json = await postAsync('/user/permission', { idToken: await user.getIdToken(), email: email, permission: 0 })
 
                 if (json.result == 'error') {
                     throw new Error(json.error)
