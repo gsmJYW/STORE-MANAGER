@@ -27,7 +27,7 @@ const credentials = {
 const args = process.argv.slice(2);
 
 if (args.length < 9) {
-  console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [chromedriver_path] [autowash_b2b_id] [autowash_b2b_pwd] [washmart_id] [washmart_pwd]')
+  console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [chromedriver_path] [n09_b2b_id] [n09_b2b_pwd] [washmart_id] [washmart_pwd]')
   exit(1)
 }
 
@@ -42,8 +42,8 @@ const pool = mysql.createPool({
 const service = new ServiceBuilder(args[5]).build()
 chrome.setDefaultService(service);
 
-const autowashB2BId = args[6]
-const autowashB2BPwd = args[7]
+const n09B2BId = args[6]
+const n09B2BPwd = args[7]
 
 const washmartId = args[8]
 const washmartPwd = args[9]
@@ -155,6 +155,7 @@ await conn.query(`
 await conn.query(`
   INSERT IGNORE INTO store VALUES
     ('https://n09.co.kr', '엔공구'),
+    ('https://n09b2b.co.kr', '엔공구 B2B'),
     ('https://autowash.co.kr', '오토워시'),
     ('http://autowash2.com', '오토워시 B2B'),
     ('https://hyundai.auton.kr', '카라이프몰'),
@@ -186,235 +187,105 @@ app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 })
 
-app.get('/admin', async (req, res) => {
-  res.sendFile(__dirname + '/views/admin.html')
-})
+app.get('/smartstore/:endpoint', async (req, res) => {
+  let endpoint = req.params.endpoint
+  let storeUrl = `https://smartstore.naver.com/${endpoint}`
 
-app.get('/cjTracking', async (req, res) => {
-  res.sendFile(__dirname + '/views/cjTracking.html')
-})
+  if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
+    res.sendFile(__dirname + '/views/storeNotFound.html')
+    return
+  }
 
-app.post('/cjTracking', async (req, res) => {
-  let invcNoList = req.body.invcNo
-  let idToken = req.body.idToken
+  let storeTitle
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    let result = await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`)
 
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return
+    if (result[0].length > 0) {
+      storeTitle = result[0][0].title
     }
+    else {
+      storeTitle = await searchSmartstore(storeUrl)
 
-    let trackingList = await getCJTrackingList(invcNoList)
-
-    while (true) {
-      let errorList = trackingList.filter((tracking) => tracking.error == true)
-
-      if (errorList.length <= 0) {
-        break
+      if (!storeTitle) {
+        throw new Error()
       }
 
-      let tempInvcNoList = []
-
-      for (let error of errorList) {
-        tempInvcNoList.push(error.id)
-      }
-
-      let tempTrackingList = await getCJTrackingList(tempInvcNoList)
-
-      trackingList = trackingList.filter((tracking) => tracking.error == false)
-      trackingList.concat(tempTrackingList)
+      await conn.query(`
+        INSERT INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')
+        ON DUPLICATE KEY UPDATE title = '${storeTitle}'
+      `)
     }
 
-    res.json({
-      result: 'ok',
-      cjTracking: trackingList,
+    fs.readFile(__dirname + '/views/smartstore.html', (error, data) => {
+      if (error) {
+        res.json({
+          result: 'error',
+          error: error.message,
+        })
+        return
+      }
+
+      let htmlString = data.toString()
+      htmlString = htmlString.replaceAll('$storeUrl', storeUrl)
+      htmlString = htmlString.replaceAll('$storeTitle', storeTitle)
+      res.send(htmlString)
     })
   }
   catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
+    res.sendFile(__dirname + '/views/storeNotFound.html')
   }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.get('/n09', async (req, res) => {
+  res.sendFile(__dirname + '/views/n09.html')
+})
+
+app.get('/n09/b2b', async (req, res) => {
+  res.sendFile(__dirname + '/views/n09B2B.html')
+})
+
+app.get('/hyundai/auton', async (req, res) => {
+  res.sendFile(__dirname + '/views/carlifemall.html')
+})
+
+app.get('/autowash', async (req, res) => {
+  res.sendFile(__dirname + '/views/autowash.html')
+})
+
+// app.get('/autowash/b2b', async (req, res) => {
+//   res.sendFile(__dirname + '/views/autowashB2B.html')
+// })
+
+app.get('/theclass', async (req, res) => {
+  res.sendFile(__dirname + '/views/theclass.html')
+})
+
+app.get('/autowax', async (req, res) => {
+  res.sendFile(__dirname + '/views/autowax.html')
+})
+
+app.get('/washmart', async (req, res) => {
+  res.sendFile(__dirname + '/views/washmart.html')
 })
 
 app.get('/carWash', async (req, res) => {
   res.sendFile(__dirname + '/views/carWash.html')
 })
 
-app.post('/siDo', async (req, res) => {
-  let conn
-
-  try {
-    conn = await pool.getConnection()
-    let result = await conn.query('SELECT siDo FROM carWash GROUP BY siDo')
-
-    let siDoList = []
-
-    for (let row of result[0]) {
-      siDoList.push(row.siDo)
-    }
-
-    res.json({
-      result: 'ok',
-      siDo: siDoList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
+app.get('/cjTracking', async (req, res) => {
+  res.sendFile(__dirname + '/views/cjTracking.html')
 })
 
-app.post('/siGunGu', async (req, res) => {
-  let siDo = req.body.siDo
-  let conn
-
-  try {
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT siGunGu FROM carWash WHERE siDo = '${siDo}' GROUP BY siGunGu`)
-
-    let siGunGuList = []
-
-    for (let row of result[0]) {
-      siGunGuList.push(row.siGunGu)
-    }
-
-    res.json({
-      result: 'ok',
-      siGunGu: siGunGuList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.post('/eupMyeonDong', async (req, res) => {
-  let siDo = req.body.siDo
-  let siGunGu = req.body.siGunGu
-  let conn
-
-  try {
-    conn = await pool.getConnection()
-
-    let query = 'SELECT eupMyeonDong FROM carWash'
-    let whereClause = []
-
-    if (siDo) {
-      whereClause.push(`siDo = '${siDo}'`)
-    }
-
-    if (siGunGu) {
-      whereClause.push(`siGunGu = '${siGunGu}'`)
-    }
-
-    if (whereClause.length > 0) {
-      query += ` WHERE ${whereClause.join(' AND ')}`
-    }
-
-    query += ' GROUP BY eupMyeonDong'
-    let result = await conn.query(query)
-
-    let eupMyeonDongList = []
-
-    for (let row of result[0]) {
-      eupMyeonDongList.push(row.eupMyeonDong)
-    }
-
-    res.json({
-      result: 'ok',
-      eupMyeonDong: eupMyeonDongList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.post('/carWash', async (req, res) => {
-  let siDo = req.body.siDo
-  let siGunGu = req.body.siGunGu
-  let eupMyeonDong = req.body.eupMyeonDong
-  let conn
-
-  try {
-    conn = await pool.getConnection()
-
-    let query = 'SELECT * FROM carWash'
-    let whereClause = []
-
-    if (siDo) {
-      whereClause.push(`siDo = '${siDo}'`)
-    }
-
-    if (siGunGu) {
-      whereClause.push(`siGunGu = '${siGunGu}'`)
-    }
-
-    if (eupMyeonDong) {
-      whereClause.push(`eupMyeonDong = '${eupMyeonDong}'`)
-    }
-
-    if (whereClause.length > 0) {
-      query += ` WHERE ${whereClause.join(' AND ')}`
-    }
-
-    let result = await conn.query(query)
-    let carWashList = result[0]
-
-    query = query.replace('*', 'AVG(lat) as lat, AVG(lon) as lon')
-    result = await conn.query(query)
-    let center = result[0][0]
-
-    res.json({
-      result: 'ok',
-      carWash: carWashList,
-      center: center,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
+app.get('/admin', async (req, res) => {
+  res.sendFile(__dirname + '/views/admin.html')
 })
 
 app.post('/signin', async (req, res) => {
@@ -468,41 +339,6 @@ app.post('/user', async (req, res) => {
     res.json({
       result: 'ok',
       user: result[0][0],
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.post('/quota', async (req, res) => {
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    let now = await getKST()
-    conn = await pool.getConnection()
-
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-    let isAdmin = result[0][0].permission == 1
-
-    result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND day = ${getDay(now)}`)
-
-    res.json({
-      result: 'ok',
-      isAdmin: isAdmin,
-      quota: result[0],
     })
   }
   catch (error) {
@@ -769,7 +605,42 @@ app.post('/bookmark/delete', async (req, res) => {
   }
 })
 
-app.post('/save', async (req, res) => {
+app.post('/quota', async (req, res) => {
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    let now = await getKST()
+    conn = await pool.getConnection()
+
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    let isAdmin = result[0][0].permission == 1
+
+    result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND day = ${getDay(now)}`)
+
+    res.json({
+      result: 'ok',
+      isAdmin: isAdmin,
+      quota: result[0],
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/excel', async (req, res) => {
   let idToken = req.body.idToken
   let storeUrl = req.body.storeUrl
   let conn
@@ -817,6 +688,225 @@ app.post('/save', async (req, res) => {
     if (typeof conn == 'object') {
       conn.release()
     }
+  }
+})
+
+app.post('/siDo', async (req, res) => {
+  let conn
+
+  try {
+    conn = await pool.getConnection()
+    let result = await conn.query('SELECT siDo FROM carWash GROUP BY siDo')
+
+    let siDoList = []
+
+    for (let row of result[0]) {
+      siDoList.push(row.siDo)
+    }
+
+    res.json({
+      result: 'ok',
+      siDo: siDoList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/siGunGu', async (req, res) => {
+  let siDo = req.body.siDo
+  let conn
+
+  try {
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT siGunGu FROM carWash WHERE siDo = '${siDo}' GROUP BY siGunGu`)
+
+    let siGunGuList = []
+
+    for (let row of result[0]) {
+      siGunGuList.push(row.siGunGu)
+    }
+
+    res.json({
+      result: 'ok',
+      siGunGu: siGunGuList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/eupMyeonDong', async (req, res) => {
+  let siDo = req.body.siDo
+  let siGunGu = req.body.siGunGu
+  let conn
+
+  try {
+    conn = await pool.getConnection()
+
+    let query = 'SELECT eupMyeonDong FROM carWash'
+    let whereClause = []
+
+    if (siDo) {
+      whereClause.push(`siDo = '${siDo}'`)
+    }
+
+    if (siGunGu) {
+      whereClause.push(`siGunGu = '${siGunGu}'`)
+    }
+
+    if (whereClause.length > 0) {
+      query += ` WHERE ${whereClause.join(' AND ')}`
+    }
+
+    query += ' GROUP BY eupMyeonDong'
+    let result = await conn.query(query)
+
+    let eupMyeonDongList = []
+
+    for (let row of result[0]) {
+      eupMyeonDongList.push(row.eupMyeonDong)
+    }
+
+    res.json({
+      result: 'ok',
+      eupMyeonDong: eupMyeonDongList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/carWash', async (req, res) => {
+  let siDo = req.body.siDo
+  let siGunGu = req.body.siGunGu
+  let eupMyeonDong = req.body.eupMyeonDong
+  let conn
+
+  try {
+    conn = await pool.getConnection()
+
+    let query = 'SELECT * FROM carWash'
+    let whereClause = []
+
+    if (siDo) {
+      whereClause.push(`siDo = '${siDo}'`)
+    }
+
+    if (siGunGu) {
+      whereClause.push(`siGunGu = '${siGunGu}'`)
+    }
+
+    if (eupMyeonDong) {
+      whereClause.push(`eupMyeonDong = '${eupMyeonDong}'`)
+    }
+
+    if (whereClause.length > 0) {
+      query += ` WHERE ${whereClause.join(' AND ')}`
+    }
+
+    let result = await conn.query(query)
+    let carWashList = result[0]
+
+    query = query.replace('*', 'AVG(lat) as lat, AVG(lon) as lon')
+    result = await conn.query(query)
+    let center = result[0][0]
+
+    res.json({
+      result: 'ok',
+      carWash: carWashList,
+      center: center,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+  finally {
+    if (typeof conn == 'object') {
+      conn.release()
+    }
+  }
+})
+
+app.post('/cjTracking', async (req, res) => {
+  let invcNoList = req.body.invcNo
+  let idToken = req.body.idToken
+  let conn
+
+  try {
+    let decodedToken = await auth.verifyIdToken(idToken)
+    let uid = decodedToken.uid
+
+    conn = await pool.getConnection()
+    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+
+    if (result[0][0].permission == 0) {
+      res.json({ result: 'no permission' })
+      return
+    }
+
+    let trackingList = await getCJTrackingList(invcNoList)
+
+    while (true) {
+      let errorList = trackingList.filter((tracking) => tracking.error == true)
+
+      if (errorList.length <= 0) {
+        break
+      }
+
+      let tempInvcNoList = []
+
+      for (let error of errorList) {
+        tempInvcNoList.push(error.id)
+      }
+
+      let tempTrackingList = await getCJTrackingList(tempInvcNoList)
+
+      trackingList = trackingList.filter((tracking) => tracking.error == false)
+      trackingList.concat(tempTrackingList)
+    }
+
+    res.json({
+      result: 'ok',
+      cjTracking: trackingList,
+    })
+  }
+  catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
   }
 })
 
@@ -1010,84 +1100,26 @@ app.post('/product', async (req, res) => {
   }
 })
 
-app.get('/smartstore/:endpoint', async (req, res) => {
-  let endpoint = req.params.endpoint
-  let storeUrl = `https://smartstore.naver.com/${endpoint}`
-
-  if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
-    res.sendFile(__dirname + '/views/storeNotFound.html')
-    return
-  }
-
-  let storeTitle
-  let conn
-
-  try {
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`)
-
-    if (result[0].length > 0) {
-      storeTitle = result[0][0].title
-    }
-    else {
-      storeTitle = await searchSmartstore(storeUrl)
-
-      if (!storeTitle) {
-        throw new Error()
-      }
-
-      await conn.query(`
-        INSERT INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')
-        ON DUPLICATE KEY UPDATE title = '${storeTitle}'
-      `)
-    }
-
-    fs.readFile(__dirname + '/views/smartstore.html', (error, data) => {
-      if (error) {
-        res.json({
-          result: 'error',
-          error: error.message,
-        })
-        return
-      }
-
-      let htmlString = data.toString()
-      htmlString = htmlString.replaceAll('$storeUrl', storeUrl)
-      htmlString = htmlString.replaceAll('$storeTitle', storeTitle)
-      res.send(htmlString)
-    })
-  }
-  catch (error) {
-    res.sendFile(__dirname + '/views/storeNotFound.html')
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.post('/smartstore/update', async (req, res) => {
-  let idToken = req.body.idToken
+app.post('/product/update', async (req, res) => {
   let storeUrl = req.body.storeUrl
+  let idToken = req.body.idToken
   let conn
 
   try {
+    let now = await getKST()
+
     let decodedToken = await auth.verifyIdToken(idToken)
     let uid = decodedToken.uid
 
-    let now = await getKST()
-
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    let user = (await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`))[0][0]
 
-    if (result[0][0].permission == 0) {
-      result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND day = ${getDay(now)} AND type = 2`)
-
+    if (user.permission == 0) {
+      let query = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND day = ${getDay(now)} AND type = 2`))[0][0]
       let quotaLimit = 25000
 
-      if (result[0].length > 0) {
-        if (result[0][0].amount >= quotaLimit) {
+      if (query) {
+        if (query.amount >= quotaLimit) {
           res.json({
             result: 'quota exceeded',
             quotaUsed: result[0][0].amount,
@@ -1098,655 +1130,191 @@ app.post('/smartstore/update', async (req, res) => {
       }
     }
 
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
+    let store = (await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`))[0][0]
+    
+    if (!store) {
+      res.json({ result: 'no such store' })
       return
     }
 
-    let productAmount = await getSmartstoreProductAmount(storeUrl)
-    productList = await getSmartstoreProductList(storeUrl, productAmount)
+    let history = (await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`))[0][0]
+    let productList = []
 
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
+    if (history) {
+      productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`))[0]
     }
 
-    query = query.substring(0, query.length - 2)
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+    let categoryIdList
+    let categoryList
+    let productAmount
 
-    await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
-      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
-    `)
-
-    res.json({
-      result: 'ok',
-      minute: getMinute(now),
-      product: productList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.get('/n09', async (req, res) => {
-  res.sendFile(__dirname + '/views/n09.html')
-})
-
-app.post('/n09/update', async (req, res) => {
-  let storeUrl = 'https://n09.co.kr'
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let now = await getKST()
-
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return;
-    }
-
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
-      return
-    }
-
-    let productAmount = await getN09ProductAmount()
-    productList = await getN09ProductList(productAmount)
-
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
-    }
-
-    query = query.substring(0, query.length - 2)
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
-
-    await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
-      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
-    `)
-
-    res.json({
-      result: 'ok',
-      minute: getMinute(now),
-      product: productList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.get('/hyundai/auton', async (req, res) => {
-  res.sendFile(__dirname + '/views/carlifemall.html')
-})
-
-app.post('/hyundai/auton/update', async (req, res) => {
-  let storeUrl = 'https://hyundai.auton.kr'
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let now = await getKST()
-
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return;
-    }
-
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
-      return
-    }
-
-    let categoryIdList = []
-
-    while (categoryIdList <= 0) {
-      categoryIdList = await getCarlifemallCategoryIdList()
-    }
-
-    let categoryList = await getCarlifemallCategoryList(categoryIdList)
-
-    while (true) {
-      let tempCategoryIdList = []
-
-      for (let index = categoryList.length - 1; index >= 0; index--) {
-        let category = categoryList[index]
-
-        if (isNaN(category.productAmount)) {
-          tempCategoryIdList.push(category.id)
-        }
-      }
-
-      if (tempCategoryIdList.length > 0) {
-        let tempCategoryList = await getCarlifemallCategoryList(tempCategoryIdList)
-
-        for (let tempCategory of tempCategoryList) {
-          for (let category of categoryList) {
-            if (category.id == tempCategory.id) {
-              category.productAmount = tempCategory.productAmount
-            }
-          }
-        }
-      }
-      else {
-        break
-      }
-    }
-
-    let pageList = []
-
-    for (let category of categoryList) {
-      for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
-        pageList.push({
-          categoryId: category.id,
-          categoryTitle: category.title,
-          num: page,
+    if (storeUrl.includes('smartstore.naver.com')) {
+      if (productList.length > 0) {
+        res.json({
+          result: 'already exists',
+          minute: history.minute,
+          product: productList,
         })
+        return
       }
+
+      productAmount = await getSmartstoreProductAmount(storeUrl)
+      productList = await getSmartstoreProductList(storeUrl, productAmount)
     }
-
-    pageList = await getCarlifemallProductList(pageList)
-
-    while (true) {
-      let tempPageList = []
-
-      for (let page of pageList) {
-        if (page.productList.length <= 0) {
-          tempPageList.push(page)
-        }
+    else {
+      if (user.permission == 0) {
+        res.json({ result: 'no permission' })
+        return
       }
 
-      if (tempPageList.length > 0) {
-        tempPageList = await getCarlifemallProductList(tempPageList)
+      if (productList.length > 0) {
+        res.json({
+          result: 'already exists',
+          minute: history.minute,
+          product: productList,
+        })
+        return
+      }
 
-        for (let tempPage of tempPageList) {
-          for (let page of pageList) {
-            if (tempPage.categoryId == page.categoryId && tempPage.num == page.num) {
-              page.productList = tempPage.productList
+      switch (storeUrl) {
+        // 엔공구
+        case 'https://n09.co.kr':
+          productAmount = await getN09ProductAmount()
+          productList = await getN09ProductList(productAmount)
+          break
+        
+        // 엔공구 B2B
+        case 'https://n09b2b.co.kr':
+          productList = await getN09B2BProductList()
+          break
+
+        // 오토워시
+        case 'https://autowash.co.kr':
+          categoryIdList = await getAutowashCategoryIdList()
+          categoryList = await getAutowashCategoryList(categoryIdList)
+          productList = await getAutowashProductList(categoryList)
+          break
+
+        // 오토워시 B2B
+        // case 'http://autowash2.com':
+        //   productList = await getAutowashB2BProductList()
+        //   break
+
+        // 카라이프몰
+        case 'https://hyundai.auton.kr':
+          categoryIdList = []
+
+          while (categoryIdList <= 0) {
+            categoryIdList = await getCarlifemallCategoryIdList()
+          }
+
+          categoryList = await getCarlifemallCategoryList(categoryIdList)
+
+          while (true) {
+            let tempCategoryIdList = []
+
+            for (let index = categoryList.length - 1; index >= 0; index--) {
+              let category = categoryList[index]
+
+              if (isNaN(category.productAmount)) {
+                tempCategoryIdList.push(category.id)
+              }
+            }
+
+            if (tempCategoryIdList.length > 0) {
+              let tempCategoryList = await getCarlifemallCategoryList(tempCategoryIdList)
+
+              for (let tempCategory of tempCategoryList) {
+                for (let category of categoryList) {
+                  if (category.id == tempCategory.id) {
+                    category.productAmount = tempCategory.productAmount
+                  }
+                }
+              }
+            }
+            else {
+              break
             }
           }
-        }
-      }
-      else {
-        break
-      }
-    }
 
-    productList = []
+          let pageList = []
 
-    for (let page of pageList) {
-      for (let product of page.productList) {
-        if (productList.filter((tempProduct) => tempProduct.id == product.id).length <= 0) {
-          productList.push(product)
-        }
+          for (let category of categoryList) {
+            for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
+              pageList.push({
+                categoryId: category.id,
+                categoryTitle: category.title,
+                num: page,
+              })
+            }
+          }
+
+          pageList = await getCarlifemallProductList(pageList)
+
+          while (true) {
+            let tempPageList = []
+
+            for (let page of pageList) {
+              if (page.productList.length <= 0) {
+                tempPageList.push(page)
+              }
+            }
+
+            if (tempPageList.length > 0) {
+              tempPageList = await getCarlifemallProductList(tempPageList)
+
+              for (let tempPage of tempPageList) {
+                for (let page of pageList) {
+                  if (tempPage.categoryId == page.categoryId && tempPage.num == page.num) {
+                    page.productList = tempPage.productList
+                  }
+                }
+              }
+            }
+            else {
+              break
+            }
+          }
+
+          for (let page of pageList) {
+            for (let product of page.productList) {
+              if (productList.filter((tempProduct) => tempProduct.id == product.id).length <= 0) {
+                productList.push(product)
+              }
+            }
+          }
+          break
+
+        // 더클래스
+        case 'https://theclasskorea.co.kr':
+          productAmount = await getTheClassProductAmount()
+          productList = await getTheClassProductList(productAmount)
+          break
+
+        // 오토왁스
+        case 'https://autowax.co.kr':
+          productAmount = await getAutowaxProductAmount()
+          productList = await getAutowaxProductList(productAmount)
+          break
+
+        // 워시마트
+        case 'https://washmart.co.kr':
+          productList = await getWashmartProductList()
+          break
       }
     }
 
     let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
+    let values = []
 
     for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
+      let title = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      let category = product.category ? `'${product.category}'` : 'null'
+      values.push(`('${storeUrl}', ${getMinute(now)}, ${product.id}, '${title}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, ${category})`)
     }
 
-    query = query.substring(0, query.length - 2)
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+    query += values.join(', ')
 
-    res.json({
-      result: 'ok',
-      minute: getMinute(now),
-      product: productList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.get('/autowash', async (req, res) => {
-  res.sendFile(__dirname + '/views/autowash.html')
-})
-
-app.post('/autowash/update', async (req, res) => {
-  let storeUrl = 'https://autowash.co.kr'
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let now = await getKST()
-
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return;
-    }
-
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
-      return
-    }
-
-    let categoryIdList = await getAutowashCategoryIdList()
-    let categoryList = await getAutowashCategoryList(categoryIdList)
-    productList = await getAutowashProductList(categoryList)
-
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, '${product.category}'), `
-    }
-
-    query = query.substring(0, query.length - 2)
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
-
-    await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
-      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
-    `)
-
-    res.json({
-      result: 'ok',
-      minute: getMinute(now),
-      product: productList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.get('/autowash/b2b', async (req, res) => {
-  res.sendFile(__dirname + '/views/autowashB2B.html')
-})
-
-app.post('/autowash/b2b/update', async (req, res) => {
-  let storeUrl = 'http://autowash2.com'
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let now = await getKST()
-
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return;
-    }
-
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
-      return
-    }
-
-    productList = await getAutowashB2BProductList()
-
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
-    }
-
-    query = query.substring(0, query.length - 2)
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
-
-    await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
-      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
-    `)
-
-    res.json({
-      result: 'ok',
-      minute: getMinute(now),
-      product: productList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.get('/theclass', async (req, res) => {
-  res.sendFile(__dirname + '/views/theclass.html')
-})
-
-app.post('/theclass/update', async (req, res) => {
-  let storeUrl = 'https://theclasskorea.co.kr'
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let now = await getKST()
-
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return;
-    }
-
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
-      return
-    }
-
-    let productAmount = await getTheClassProductAmount()
-    productList = await getTheClassProductList(productAmount)
-
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
-    }
-
-    query = query.substring(0, query.length - 2)
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
-
-    await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
-      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
-    `)
-
-    res.json({
-      result: 'ok',
-      minute: getMinute(now),
-      product: productList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.get('/autowax', async (req, res) => {
-  res.sendFile(__dirname + '/views/autowax.html')
-})
-
-app.post('/autowax/update', async (req, res) => {
-  let storeUrl = 'https://autowax.co.kr'
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let now = await getKST()
-
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return;
-    }
-
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
-      return
-    }
-
-    let productAmount = await getAutowaxProductAmount()
-    productList = await getAutowaxProductList(productAmount)
-
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
-    }
-
-    query = query.substring(0, query.length - 2)
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
-
-    await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
-      ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
-    `)
-
-    res.json({
-      result: 'ok',
-      minute: getMinute(now),
-      product: productList,
-    })
-  }
-  catch (error) {
-    res.json({
-      result: 'error',
-      error: error.message,
-    })
-  }
-  finally {
-    if (typeof conn == 'object') {
-      conn.release()
-    }
-  }
-})
-
-app.get('/washmart', async (req, res) => {
-  res.sendFile(__dirname + '/views/washmart.html')
-})
-
-app.post('/washmart/update', async (req, res) => {
-  let storeUrl = 'https://washmart.co.kr'
-  let idToken = req.body.idToken
-  let conn
-
-  try {
-    let now = await getKST()
-
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-
-    if (result[0][0].permission == 0) {
-      res.json({ result: 'no permission' })
-      return;
-    }
-
-    result = await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-    let productList
-
-    if (result[0].length > 0) {
-      let history = result[0][0]
-
-      result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`)
-      productList = result[0]
-
-      res.json({
-        result: 'already exists',
-        minute: history.minute,
-        product: productList,
-      })
-      return
-    }
-
-    productList = await getWashmartProductList()
-
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut) VALUES '
-
-    for (let product of productList) {
-      let productTitle = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      query += `('${storeUrl}', ${getMinute(now)}, ${product.id}, '${productTitle}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}), `
-    }
-
-    query = query.substring(0, query.length - 2)
     await conn.query(query)
     await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
 
@@ -2266,6 +1834,93 @@ function getN09ProductList(productAmount) {
   })
 }
 
+function getN09B2BProductList() {
+  return new Promise(async (resolve, reject) => {
+    let driverList = []
+
+    try {
+      let productList = []
+      let progress = 0
+
+      for (let i = 0; i < 5; i++) {
+        initiateDriver().then(async (driver) => {
+          driverList.push(driver)
+          await driver.get('https://n09b2b.co.kr')
+
+          let idInput = await driver.wait(until.elementLocated(By.id('member_id')))
+          idInput.sendKeys(n09B2BId)
+
+          let pwdInput = await driver.findElement(By.id('member_passwd'))
+          pwdInput.sendKeys(n09B2BPwd)
+
+          let loginButton = await driver.findElement(By.className('btn'))
+          await loginButton.click()
+
+          await driver.wait(until.elementLocated(By.className('log')))
+          await driver.get('https://n09b2b.co.kr/product/search.html?product_price1=0&product_price2=10000000&order_by=favor')
+
+          let productAmountElement = await driver.wait(until.elementLocated(By.className('record')))
+          let productAmountText = await productAmountElement.getAttribute('innerText')
+          let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
+
+          for (let page = i + 1; page <= Math.ceil(productAmount / 120); page += 5) {
+            let url = `https://n09b2b.co.kr/product/search.html?product_price1=0&product_price2=10000000&order_by=favor&page=${page}`
+            await driver.get(url)
+
+            let body = await driver.wait(until.elementLocated(By.css('body')))
+            let data = await body.getAttribute('innerHTML')
+            let document = parser.parse(data)
+
+            document.querySelector('.prdList.grid4').querySelectorAll('li.xans-record-').forEach((item, index) => {
+              let titleElement = item.querySelector('.name')
+
+              let idElement = titleElement.querySelector('a')
+              let idSplit = idElement.getAttribute('href').split('/category')[0].split('/')
+              let id = Number(idSplit[idSplit.length - 1])
+
+              let title = titleElement.innerText.split(':')[1].trim()
+
+              let priceSpan = item.querySelector('div.description > ul > li > span:nth-last-child(2)')
+              let price = Number(priceSpan.innerText.replace(/[^0-9]/g, ''))
+
+              let product = {
+                id: id,
+                title: title,
+                popularityIndex: (page - 1) * 120 + index,
+                price: price,
+                isSoldOut: false,
+              }
+
+              let iconImg = item.querySelector('.icon_img')
+
+              if (iconImg) {
+                product.isSoldOut = iconImg.getAttribute('alt') == '품절'
+              }
+
+              productList.push(product)
+            })
+          }
+
+          progress++
+          driverList = driverList.filter(tempDriver => tempDriver != driver)
+
+          if (progress >= 5) {
+            resolve(productList)
+          }
+        })
+      }
+    }
+    catch (error) {
+      reject(error)
+    }
+    finally {
+      for (let driver of driverList) {
+        driver.quit()
+      }
+    }
+  })
+}
+
 function getAutowashCategoryIdList() {
   return new Promise((resolve, reject) => {
     https.get('https://autowash.co.kr/goods/goods_list.php?cateCd=032', (res) => {
@@ -2453,8 +2108,6 @@ function getAutowashB2BProductList() {
         let idElement = itemCont.getElementsByTagName('a')[0]
         let idText = idElement.getAttribute('href')
         let id = Number(idText.split('=')[1])
-
-        console.log(idText)
 
         let title = itemCont.querySelector('.item_name').innerText
 
