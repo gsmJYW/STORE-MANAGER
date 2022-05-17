@@ -630,7 +630,7 @@
                 `)
 
                 try {
-                    let json = await postAsync('/smartstore/update', {
+                    let json = await postAsync('/product/update', {
                         storeUrl: storeUrl,
                         idToken: await user.getIdToken(),
                     })
@@ -1275,7 +1275,7 @@
             // 엑셀
 
             document.getElementById('excel-export-button').addEventListener('click', async () => {
-                fetch(`/save`, {
+                fetch(`/excel`, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
