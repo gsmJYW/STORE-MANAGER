@@ -999,7 +999,7 @@
 
                     let a = document.createElement('a')
 
-                    a.setAttribute('href', `${storeUrl}/goods/goods_view.php?goodsNo=${row.id}`)
+                    a.setAttribute('href', `${storeUrl}/product/${row.title.replace(' ', '-').replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣\-]+/g, '')}/${row.id}`)
                     a.setAttribute('target', '_blank')
                     a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
 
@@ -1040,7 +1040,7 @@
 
                     let a = document.createElement('a')
 
-                    a.setAttribute('href', `${storeUrl}/goods/goods_view.php?goodsNo=${row.id}`)
+                    a.setAttribute('href', `${storeUrl}/product/${row.title.replace(' ', '-').replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣\-]+/g, '')}/${row.id}`)
                     a.setAttribute('target', '_blank')
                     a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
 
@@ -1124,16 +1124,15 @@
 
                     ws.A1.v = '상품 코드'
                     ws.B1.v = '상품명'
-                    ws.C1.v = '카테고리'
-                    ws.D1.v = '인기 순위'
-                    ws.E1.v = '이전 가격'
-                    ws.F1.v = '현재 가격'
-                    ws.G1.v = '이전 상태'
-                    ws.H1.v = '현재 상태'
+                    ws.C1.v = '인기 순위'
+                    ws.D1.v = '이전 가격'
+                    ws.E1.v = '현재 가격'
+                    ws.F1.v = '이전 상태'
+                    ws.G1.v = '현재 상태'
 
                     table.forEach((row, index) => {
                         let cell = ws[`B${index + 2}`]
-                        cell.f = `=HYPERLINK("${storeUrl}/goods/goods_view.php?goodsNo=${row.id}", "${row.title}")`
+                        cell.f = `=HYPERLINK("${storeUrl}/product/${row.title.replace(' ', '-').replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣\-]+/g, '')}/${row.id}")`
                     })
 
                     let wb = XLSX.utils.book_new()
