@@ -3,21 +3,34 @@ import fs from 'fs'
 import bodyParser from 'body-parser'
 import http from 'http'
 import https from 'https'
-import parser from 'node-html-parser'
+import { parse } from 'node-html-parser'
 import express from 'express'
 import mysql from 'mysql2/promise'
+import fetch from 'node-fetch'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { Builder, By, until } from 'selenium-webdriver'
 import chrome, { Options, ServiceBuilder } from 'selenium-webdriver/chrome.js'
+import { ensureChromedriver } from 'node-chromedriver-downloader'
+import UserAgent from 'user-agents'
+import admin from 'firebase-admin'
+import { getAuth } from 'firebase-admin/auth'
+import serviceAccount from './store-manager-5d527-firebase-adminsdk-2ovpp-f0b6ef3a8a.json' assert { type: 'json' }
+
+class Product {
+  constructor(id = 0, title = '', price = 0, popularityIndex = 0, isSoldOut = false, category = null) {
+    this.id = id
+    this.title = title
+    this.price = price
+    this.popularityIndex = popularityIndex
+    this.isSoldOut = isSoldOut
+    this.category = category
+  }
+}
 
 const app = express()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-
-import admin from 'firebase-admin'
-import { getAuth } from 'firebase-admin/auth'
-import serviceAccount from './store-manager-5d527-firebase-adminsdk-2ovpp-f0b6ef3a8a.json' assert { type: 'json' }
 
 const credentials = {
   key: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.key.pem'),
@@ -27,7 +40,7 @@ const credentials = {
 const args = process.argv.slice(2);
 
 if (args.length < 9) {
-  console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [chromedriver_path] [n09_b2b_id] [n09_b2b_pwd] [washmart_id] [washmart_pwd]')
+  console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [n09_b2b_id] [n09_b2b_pwd] [washmart_id] [washmart_pwd]')
   exit(1)
 }
 
@@ -39,14 +52,18 @@ const pool = mysql.createPool({
   connectionLimit: args[4],
 })
 
-const service = new ServiceBuilder(args[5]).build()
-chrome.setDefaultService(service);
+const chromedriverBinaryPath = await ensureChromedriver()
 
-const n09B2BId = args[6]
-const n09B2BPwd = args[7]
+const service = new ServiceBuilder(chromedriverBinaryPath).build()
+chrome.setDefaultService(service)
 
-const washmartId = args[8]
-const washmartPwd = args[9]
+const n09B2BId = args[5]
+const n09B2BPwd = args[6]
+
+const washmartId = args[7]
+const washmartPwd = args[8]
+
+const timeout = 10000
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -157,7 +174,6 @@ await conn.query(`
     ('https://n09.co.kr', '엔공구'),
     ('https://n09b2b.co.kr', '엔공구 B2B'),
     ('https://autowash.co.kr', '오토워시'),
-    ('http://autowash2.com', '오토워시 B2B'),
     ('https://hyundai.auton.kr', '카라이프몰'),
     ('https://theclasskorea.co.kr', '더클래스'),
     ('https://autowax.co.kr', '오토왁스'),
@@ -174,7 +190,7 @@ app.use(bodyParser.urlencoded({
 app.use('/', express.static('libs'))
 
 app.use((req, res, next) => {
-  let protocol = req.headers['x-forwarded-proto'] || req.protocol
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol
   if (protocol == 'https') {
     next()
   }
@@ -188,23 +204,21 @@ app.get('/', async (req, res) => {
 })
 
 app.get('/smartstore/:endpoint', async (req, res) => {
-  let endpoint = req.params.endpoint
-  let storeUrl = `https://smartstore.naver.com/${endpoint}`
+  const storeUrl = `https://smartstore.naver.com/${req.params.endpoint}`
 
-  if (!new RegExp('^[a-z0-9_-]+$').test(endpoint)) {
+  if (!new RegExp('^[a-z0-9_-]+$').test(req.params.endpoint)) {
     res.sendFile(__dirname + '/views/storeNotFound.html')
     return
   }
 
-  let storeTitle
-  let conn
+  let storeTitle, conn
 
   try {
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`)
+    const store = (await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`))[0][0]
 
-    if (result[0].length > 0) {
-      storeTitle = result[0][0].title
+    if (store) {
+      storeTitle = store.title
     }
     else {
       storeTitle = await searchSmartstore(storeUrl)
@@ -228,9 +242,10 @@ app.get('/smartstore/:endpoint', async (req, res) => {
         return
       }
 
-      let htmlString = data.toString()
-      htmlString = htmlString.replaceAll('$storeUrl', storeUrl)
-      htmlString = htmlString.replaceAll('$storeTitle', storeTitle)
+      const htmlString = data.toString()
+        .replaceAll('$storeUrl', storeUrl)
+        .replaceAll('$storeTitle', storeTitle)
+
       res.send(htmlString)
     })
   }
@@ -238,7 +253,7 @@ app.get('/smartstore/:endpoint', async (req, res) => {
     res.sendFile(__dirname + '/views/storeNotFound.html')
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
@@ -259,10 +274,6 @@ app.get('/hyundai/auton', async (req, res) => {
 app.get('/autowash', async (req, res) => {
   res.sendFile(__dirname + '/views/autowash.html')
 })
-
-// app.get('/autowash/b2b', async (req, res) => {
-//   res.sendFile(__dirname + '/views/autowashB2B.html')
-// })
 
 app.get('/theclass', async (req, res) => {
   res.sendFile(__dirname + '/views/theclass.html')
@@ -289,27 +300,25 @@ app.get('/admin', async (req, res) => {
 })
 
 app.post('/signin', async (req, res) => {
-  let idToken = req.body.idToken
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-    let user = await auth.getUser(uid)
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
+    const firebaseUser = await auth.getUser(decodedToken.uid)
 
-    let now = await getKST()
+    const now = await getKST()
 
     conn = await pool.getConnection()
     await conn.query(`
-      INSERT INTO user (uid, email, name, firstLoginSecond, lastLoginSecond) VALUES ('${uid}', '${user.email}', '${user.displayName}', ${getSecond(now)}, ${getSecond(now)})
-      ON DUPLICATE KEY UPDATE user.email = '${user.email}', name = '${user.displayName}', lastLoginSecond = ${getSecond(now)}
+      INSERT INTO user (uid, email, name, firstLoginSecond, lastLoginSecond) VALUES ('${decodedToken.uid}', '${firebaseUser.email}', '${firebaseUser.displayName}', ${getSecond(now)}, ${getSecond(now)})
+      ON DUPLICATE KEY UPDATE user.email = '${firebaseUser.email}', name = '${firebaseUser.displayName}', lastLoginSecond = ${getSecond(now)}
     `)
 
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     res.json({
       result: 'ok',
-      user: result[0][0],
+      user: user,
     })
   }
   catch (error) {
@@ -319,26 +328,25 @@ app.post('/signin', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/user', async (req, res) => {
-  let idToken = req.body.idToken
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
+    const uid = decodedToken.uid
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`))[0][0]
 
     res.json({
       result: 'ok',
-      user: result[0][0],
+      user: user,
     })
   }
   catch (error) {
@@ -348,25 +356,20 @@ app.post('/user', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/user/update', async (req, res) => {
-  let idToken = req.body.idToken
-  let loadAll = req.body.loadAll
-  let highlightChanges = req.body.highlightChanges
-  let sortMethod = req.body.sortMethod
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
     conn = await pool.getConnection()
-    await conn.query(`UPDATE user SET loadAll = ${loadAll}, highlightChanges = ${highlightChanges}, sortMethod = ${sortMethod} WHERE uid = '${uid}'`)
+    await conn.query(`UPDATE user SET loadAll = ${req.body.loadAll}, highlightChanges = ${req.body.highlightChanges}, sortMethod = ${req.body.sortMethod} WHERE uid = '${decodedToken.uid}'`)
 
     res.json({ result: 'ok' })
   }
@@ -377,39 +380,36 @@ app.post('/user/update', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/user/byEmail', async (req, res) => {
-  let idToken = req.body.idToken
-  let email = req.body.email
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    let user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
-    if (result[0][0].permission == 0) {
+    if (user.permission == 0) {
       res.json({ result: 'no permission' })
       return
     }
 
-    result = await conn.query(`SELECT * FROM user WHERE email = '${email}'`)
+    user = (await conn.query(`SELECT * FROM user WHERE email = '${req.body.email}'`))[0][0]
 
-    if (result[0].length <= 0) {
+    if (!user) {
       res.json({ result: 'user not found' })
       return
     }
 
     res.json({
       result: 'ok',
-      user: result[0][0]
+      user: user,
     })
   }
   catch (error) {
@@ -419,47 +419,43 @@ app.post('/user/byEmail', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/user/permission', async (req, res) => {
-  let idToken = req.body.idToken
-  let email = req.body.email
-  let permission = req.body.permission
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
-    if (decodedToken.email == email) {
+    if (decodedToken.email == req.body.email) {
       res.json({ result: 'self assignment not allowed' })
       return
     }
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    let user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
-    if (result[0][0].permission == 0) {
+    if (user.permission == 0) {
       res.json({ result: 'no permission' })
       return
     }
 
-    result = await conn.query(`SELECT * FROM user WHERE email = '${email}'`)
+    user = (await conn.query(`SELECT * FROM user WHERE email = '${req.body.email}'`))[0][0]
 
-    if (result[0].length <= 0) {
+    if (!user) {
       res.json({ result: 'user not found' })
       return
     }
-    else if (result[0][0].permission == permission) {
+    else if (user.permission == req.body.permission) {
       res.json({ result: 'not changed' })
       return
     }
 
-    result = await conn.query(`UPDATE user SET permission = ${permission} WHERE email = '${email}'`)
+    await conn.query(`UPDATE user SET permission = ${req.body.permission} WHERE email = '${req.body.email}'`)
     res.json({ result: 'ok' })
   }
   catch (error) {
@@ -469,33 +465,31 @@ app.post('/user/permission', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/user/admin', async (req, res) => {
-  let idToken = req.body.idToken
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
-    if (result[0][0].permission == 0) {
+    if (user.permission == 0) {
       res.json({ result: 'no permission' })
       return
     }
 
-    result = await conn.query('SELECT * FROM user WHERE permission = 1')
+    const adminList = (await conn.query('SELECT * FROM user WHERE permission = 1'))[0]
 
     res.json({
       result: 'ok',
-      admin: result[0],
+      admin: adminList,
     })
   }
   catch (error) {
@@ -505,33 +499,30 @@ app.post('/user/admin', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/bookmark', async (req, res) => {
-  let idToken = req.body.idToken
-  let storeUrl = req.body.storeUrl
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
-    let query = `SELECT bookmark.storeUrl, store.title FROM bookmark INNER JOIN store WHERE uid = '${uid}' AND bookmark.storeUrl = store.url`
+    let query = `SELECT bookmark.storeUrl, store.title FROM bookmark INNER JOIN store WHERE uid = '${decodedToken.uid}' AND bookmark.storeUrl = store.url`
 
-    if (storeUrl) {
-      query += ` AND storeUrl = '${storeUrl}'`
+    if (req.body.storeUrl) {
+      query += ` AND storeUrl = '${req.body.storeUrl}'`
     }
 
     conn = await pool.getConnection()
-    let result = await conn.query(query)
+    const bookmarkList = (await conn.query(query))[0]
 
     res.json({
       result: 'ok',
-      bookmark: result[0],
+      bookmark: bookmarkList,
     })
   }
   catch (error) {
@@ -541,25 +532,20 @@ app.post('/bookmark', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/bookmark/update', async (req, res) => {
-  let idToken = req.body.idToken
-  let storeUrl = req.body.storeUrl
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    let query = `REPLACE INTO bookmark (uid, storeUrl) VALUES ('${uid}', '${storeUrl}')`
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
     conn = await pool.getConnection()
-    await conn.query(query)
+    await conn.query(`REPLACE INTO bookmark (uid, storeUrl) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}')`)
 
     res.json({ result: 'ok' })
   }
@@ -570,25 +556,20 @@ app.post('/bookmark/update', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/bookmark/delete', async (req, res) => {
-  let idToken = req.body.idToken
-  let storeUrl = req.body.storeUrl
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
-
-    let query = `DELETE FROM bookmark WHERE uid = '${uid}' AND storeUrl = '${storeUrl}'`
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
     conn = await pool.getConnection()
-    await conn.query(query)
+    await conn.query(`DELETE FROM bookmark WHERE uid = '${decodedToken.uid}' AND storeUrl = '${req.body.storeUrl}'`)
 
     res.json({ result: 'ok' })
   }
@@ -599,32 +580,30 @@ app.post('/bookmark/delete', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/quota', async (req, res) => {
-  let idToken = req.body.idToken
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
-    let now = await getKST()
+    const now = await getKST()
     conn = await pool.getConnection()
 
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-    let isAdmin = result[0][0].permission == 1
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const isAdmin = user.permission > 0
 
-    result = await conn.query(`SELECT * FROM query WHERE uid = '${uid}' AND day = ${getDay(now)}`)
+    const queryList = (await conn.query(`SELECT * FROM query WHERE uid = '${decodedToken.uid}' AND day = ${getDay(now)}`))[0]
 
     res.json({
       result: 'ok',
       isAdmin: isAdmin,
-      quota: result[0],
+      quota: queryList,
     })
   }
   catch (error) {
@@ -634,36 +613,32 @@ app.post('/quota', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/excel', async (req, res) => {
-  let idToken = req.body.idToken
-  let storeUrl = req.body.storeUrl
+  const quotaLimit = 10
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
-    let now = await getKST()
+    const now = await getKST()
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
-    if (result[0][0].permission == 0) {
-      let result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND day = ${getDay(now)} AND type = 3`)
+    if (user.permission == 0) {
+      const sum = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${decodedToken.uid}' AND day = ${getDay(now)} AND type = 3`))[0][0]
 
-      let quotaLimit = 10
-
-      if (result[0].length > 0) {
-        if (result[0][0].amount >= quotaLimit) {
+      if (sum) {
+        if (sum.amount >= quotaLimit) {
           res.json({
             result: 'quota exceeded',
-            quotaUsed: result[0][0].amount,
+            quotaUsed: sum.amount,
             quotaLimit: quotaLimit,
           })
           return
@@ -672,7 +647,7 @@ app.post('/excel', async (req, res) => {
     }
 
     await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 3, 1)
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 3, 1)
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + 1
     `)
 
@@ -685,7 +660,7 @@ app.post('/excel', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
@@ -696,11 +671,11 @@ app.post('/siDo', async (req, res) => {
 
   try {
     conn = await pool.getConnection()
-    let result = await conn.query('SELECT siDo FROM carWash GROUP BY siDo')
+    const result = (await conn.query('SELECT siDo FROM carWash GROUP BY siDo'))[0]
 
-    let siDoList = []
+    const siDoList = []
 
-    for (let row of result[0]) {
+    for (let row of result) {
       siDoList.push(row.siDo)
     }
 
@@ -716,24 +691,23 @@ app.post('/siDo', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/siGunGu', async (req, res) => {
-  let siDo = req.body.siDo
   let conn
 
   try {
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT siGunGu FROM carWash WHERE siDo = '${siDo}' GROUP BY siGunGu`)
+    const result = (await conn.query(`SELECT siGunGu FROM carWash WHERE siDo = '${req.body.siDo}' GROUP BY siGunGu`))[0]
 
-    let siGunGuList = []
+    const siGunGuList = []
 
-    for (let row of result[0]) {
+    for (let row of result) {
       siGunGuList.push(row.siGunGu)
     }
 
@@ -749,29 +723,27 @@ app.post('/siGunGu', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/eupMyeonDong', async (req, res) => {
-  let siDo = req.body.siDo
-  let siGunGu = req.body.siGunGu
   let conn
 
   try {
     conn = await pool.getConnection()
 
     let query = 'SELECT eupMyeonDong FROM carWash'
-    let whereClause = []
+    const whereClause = []
 
-    if (siDo) {
-      whereClause.push(`siDo = '${siDo}'`)
+    if (req.body.siDo) {
+      whereClause.push(`siDo = '${req.body.siDo}'`)
     }
 
-    if (siGunGu) {
-      whereClause.push(`siGunGu = '${siGunGu}'`)
+    if (req.body.siGunGu) {
+      whereClause.push(`siGunGu = '${req.body.siGunGu}'`)
     }
 
     if (whereClause.length > 0) {
@@ -779,11 +751,11 @@ app.post('/eupMyeonDong', async (req, res) => {
     }
 
     query += ' GROUP BY eupMyeonDong'
-    let result = await conn.query(query)
+    const result = (await conn.query(query))[0]
 
-    let eupMyeonDongList = []
+    const eupMyeonDongList = []
 
-    for (let row of result[0]) {
+    for (const row of result) {
       eupMyeonDongList.push(row.eupMyeonDong)
     }
 
@@ -799,46 +771,41 @@ app.post('/eupMyeonDong', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/carWash', async (req, res) => {
-  let siDo = req.body.siDo
-  let siGunGu = req.body.siGunGu
-  let eupMyeonDong = req.body.eupMyeonDong
   let conn
 
   try {
     conn = await pool.getConnection()
 
     let query = 'SELECT * FROM carWash'
-    let whereClause = []
+    const whereClause = []
 
-    if (siDo) {
-      whereClause.push(`siDo = '${siDo}'`)
+    if (req.body.siDo) {
+      whereClause.push(`siDo = '${req.body.siDo}'`)
     }
 
-    if (siGunGu) {
-      whereClause.push(`siGunGu = '${siGunGu}'`)
+    if (req.body.siGunGu) {
+      whereClause.push(`siGunGu = '${req.body.siGunGu}'`)
     }
 
-    if (eupMyeonDong) {
-      whereClause.push(`eupMyeonDong = '${eupMyeonDong}'`)
+    if (req.body.eupMyeonDong) {
+      whereClause.push(`eupMyeonDong = '${req.body.eupMyeonDong}'`)
     }
 
     if (whereClause.length > 0) {
       query += ` WHERE ${whereClause.join(' AND ')}`
     }
 
-    let result = await conn.query(query)
-    let carWashList = result[0]
+    const carWashList = (await conn.query(query))[0]
 
     query = query.replace('*', 'AVG(lat) as lat, AVG(lon) as lon')
-    result = await conn.query(query)
-    let center = result[0][0]
+    const center = (await conn.query(query))[0][0]
 
     res.json({
       result: 'ok',
@@ -853,49 +820,27 @@ app.post('/carWash', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/cjTracking', async (req, res) => {
-  let invcNoList = req.body.invcNo
-  let idToken = req.body.idToken
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
-    if (result[0][0].permission == 0) {
+    if (user.permission == 0) {
       res.json({ result: 'no permission' })
       return
     }
 
-    let trackingList = await getCJTrackingList(invcNoList)
-
-    while (true) {
-      let errorList = trackingList.filter((tracking) => tracking.error == true)
-
-      if (errorList.length <= 0) {
-        break
-      }
-
-      let tempInvcNoList = []
-
-      for (let error of errorList) {
-        tempInvcNoList.push(error.id)
-      }
-
-      let tempTrackingList = await getCJTrackingList(tempInvcNoList)
-
-      trackingList = trackingList.filter((tracking) => tracking.error == false)
-      trackingList.concat(tempTrackingList)
-    }
+    const trackingList = await getCJTrackingList(req.body.invcNo)
 
     res.json({
       result: 'ok',
@@ -911,11 +856,10 @@ app.post('/cjTracking', async (req, res) => {
 })
 
 app.post('/smartstore/search', async (req, res) => {
-  let query = req.body.query
   let storeUrl, endpoint
 
-  if (query.includes('smartstore.naver.com')) {
-    storeUrl = query
+  if (req.body.query.includes('smartstore.naver.com')) {
+    storeUrl = req.body.query
 
     if (storeUrl.startsWith('http://')) {
       storeUrl = storeUrl.replace('http://', 'https://')
@@ -927,12 +871,12 @@ app.post('/smartstore/search', async (req, res) => {
   }
   else {
     try {
-      endpoint = await searchNaver(query)
+      endpoint = await searchNaver(req.body.query)
 
       if (!endpoint) {
         res.json({
           result: 'zeroResult',
-          query: query,
+          query: req.body.query,
         })
         return
       }
@@ -951,7 +895,7 @@ app.post('/smartstore/search', async (req, res) => {
   let conn
 
   try {
-    let storeTitle = await searchSmartstore(storeUrl)
+    const storeTitle = await searchSmartstore(storeUrl)
 
     if (!storeTitle) {
       res.json({
@@ -985,47 +929,44 @@ app.post('/smartstore/search', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/history', async (req, res) => {
-  let idToken = req.body.idToken
-  let storeUrl = req.body.storeUrl
+  let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
-    let now = await getKST()
-    let conn = await pool.getConnection()
+    const now = await getKST()
+    conn = await pool.getConnection()
 
-    let result
+    if (req.body.storeUrl == 'https://n09.co.kr' || req.body.storeUrl == 'https://hyundai.auton.kr/') {
+      const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
-    if (storeUrl == 'https://n09.co.kr' || storeUrl == 'https://hyundai.auton.kr/') {
-      result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
-      if (result[0][0].permission == 0) {
+      if (user.permission == 0) {
         res.json({ result: 'no permission' })
       }
     }
 
     await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 0, 1)
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 0, 1)
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + 1
     `)
 
-    result = await conn.query(`SELECT minute FROM history WHERE storeUrl = '${storeUrl}'`)
-    let history = []
+    const result = (await conn.query(`SELECT minute FROM history WHERE storeUrl = '${req.body.storeUrl}'`))[0]
+    const historyList = []
 
-    for (let row of result[0]) {
-      history.push(row.minute)
+    for (const history of result) {
+      historyList.push(history.minute)
     }
 
     res.json({
       result: 'ok',
-      history: history,
+      history: historyList,
     })
   }
   catch (error) {
@@ -1035,38 +976,37 @@ app.post('/history', async (req, res) => {
     })
     return
   }
+  finally {
+    if (conn) {
+      conn.release()
+    }
+  }
 })
 
 app.post('/product', async (req, res) => {
-  let idToken = req.body.idToken
-  let storeUrl = req.body.storeUrl
-  let minute = req.body.minute
-
+  const quotaLimit = 100000
   let conn
 
   try {
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
-    let now = await getKST()
+    const now = await getKST()
 
     conn = await pool.getConnection()
-    let result = await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`)
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
-    if (result[0][0].permission == 0) {
-      if (storeUrl == 'https://n09.co.kr' || storeUrl == 'https://hyundai.auton.kr/') {
+    if (user.permission == 0) {
+      if (req.body.storeUrl == 'https://n09.co.kr' || req.body.storeUrl == 'https://hyundai.auton.kr/') {
         res.json({ result: 'no permission' })
       }
 
-      result = await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid = '${uid}' AND day = ${getDay(now)} AND type = 1`)
+      const sum = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid = '${decodedToken.uid}' AND day = ${getDay(now)} AND type = 1`))[0][0]
 
-      let quotaLimit = 100000
-
-      if (result[0].length > 0) {
-        if (result[0][0].amount >= quotaLimit) {
+      if (sum) {
+        if (sum.amount >= quotaLimit) {
           res.json({
             result: 'quota exceeded',
-            quotaUsed: result[0][0].amount,
+            quotaUsed: sum.amount,
             quotaLimit: quotaLimit,
           })
           return
@@ -1074,11 +1014,10 @@ app.post('/product', async (req, res) => {
       }
     }
 
-    result = await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${minute}`)
-    let productList = result[0]
+    const productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${req.body.minute}`))[0]
 
     await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 1, ${productList.length})
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 1, ${productList.length})
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
     `)
 
@@ -1094,35 +1033,32 @@ app.post('/product', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
 
 app.post('/product/update', async (req, res) => {
-  let storeUrl = req.body.storeUrl
-  let idToken = req.body.idToken
+  const quotaLimit = 25000
   let conn
 
   try {
-    let now = await getKST()
+    const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
-    let decodedToken = await auth.verifyIdToken(idToken)
-    let uid = decodedToken.uid
+    const now = await getKST()
 
     conn = await pool.getConnection()
-    let user = (await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`))[0][0]
+    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
-      let query = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${uid}' AND day = ${getDay(now)} AND type = 2`))[0][0]
-      let quotaLimit = 25000
+      const sum = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${decodedToken.uid}' AND day = ${getDay(now)} AND type = 2`))[0][0]
 
-      if (query) {
-        if (query.amount >= quotaLimit) {
+      if (sum) {
+        if (sum.amount >= quotaLimit) {
           res.json({
             result: 'quota exceeded',
-            quotaUsed: result[0][0].amount,
+            quotaUsed: sum.amount,
             quotaLimit: quotaLimit,
           })
           return
@@ -1130,26 +1066,22 @@ app.post('/product/update', async (req, res) => {
       }
     }
 
-    let store = (await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`))[0][0]
-    
+    const store = (await conn.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
+
     if (!store) {
       res.json({ result: 'no such store' })
       return
     }
 
-    let history = (await conn.query(`SELECT * FROM history WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`))[0][0]
-    let productList = []
+    const history = (await conn.query(`SELECT * FROM history WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0][0]
+    let productList
 
     if (history) {
-      productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${storeUrl}' AND minute = ${getMinute(now)}`))[0]
+      productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0]
     }
 
-    let categoryIdList
-    let categoryList
-    let productAmount
-
-    if (storeUrl.includes('smartstore.naver.com')) {
-      if (productList.length > 0) {
+    if (req.body.storeUrl.includes('smartstore.naver.com')) {
+      if (productList) {
         res.json({
           result: 'already exists',
           minute: history.minute,
@@ -1158,8 +1090,7 @@ app.post('/product/update', async (req, res) => {
         return
       }
 
-      productAmount = await getSmartstoreProductAmount(storeUrl)
-      productList = await getSmartstoreProductList(storeUrl, productAmount)
+      productList = await getSmartstoreProductList(req.body.storeUrl)
     }
     else {
       if (user.permission == 0) {
@@ -1167,7 +1098,7 @@ app.post('/product/update', async (req, res) => {
         return
       }
 
-      if (productList.length > 0) {
+      if (productList) {
         res.json({
           result: 'already exists',
           minute: history.minute,
@@ -1176,13 +1107,12 @@ app.post('/product/update', async (req, res) => {
         return
       }
 
-      switch (storeUrl) {
+      switch (req.body.storeUrl) {
         // 엔공구
         case 'https://n09.co.kr':
-          productAmount = await getN09ProductAmount()
-          productList = await getN09ProductList(productAmount)
+          productList = await getN09ProductList()
           break
-        
+
         // 엔공구 B2B
         case 'https://n09b2b.co.kr':
           productList = await getN09B2BProductList()
@@ -1190,111 +1120,22 @@ app.post('/product/update', async (req, res) => {
 
         // 오토워시
         case 'https://autowash.co.kr':
-          categoryIdList = await getAutowashCategoryIdList()
-          categoryList = await getAutowashCategoryList(categoryIdList)
-          productList = await getAutowashProductList(categoryList)
+          productList = await getAutowashProductList()
           break
-
-        // 오토워시 B2B
-        // case 'http://autowash2.com':
-        //   productList = await getAutowashB2BProductList()
-        //   break
 
         // 카라이프몰
         case 'https://hyundai.auton.kr':
-          categoryIdList = []
-
-          while (categoryIdList <= 0) {
-            categoryIdList = await getCarlifemallCategoryIdList()
-          }
-
-          categoryList = await getCarlifemallCategoryList(categoryIdList)
-
-          while (true) {
-            let tempCategoryIdList = []
-
-            for (let index = categoryList.length - 1; index >= 0; index--) {
-              let category = categoryList[index]
-
-              if (isNaN(category.productAmount)) {
-                tempCategoryIdList.push(category.id)
-              }
-            }
-
-            if (tempCategoryIdList.length > 0) {
-              let tempCategoryList = await getCarlifemallCategoryList(tempCategoryIdList)
-
-              for (let tempCategory of tempCategoryList) {
-                for (let category of categoryList) {
-                  if (category.id == tempCategory.id) {
-                    category.productAmount = tempCategory.productAmount
-                  }
-                }
-              }
-            }
-            else {
-              break
-            }
-          }
-
-          let pageList = []
-
-          for (let category of categoryList) {
-            for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
-              pageList.push({
-                categoryId: category.id,
-                categoryTitle: category.title,
-                num: page,
-              })
-            }
-          }
-
-          pageList = await getCarlifemallProductList(pageList)
-
-          while (true) {
-            let tempPageList = []
-
-            for (let page of pageList) {
-              if (page.productList.length <= 0) {
-                tempPageList.push(page)
-              }
-            }
-
-            if (tempPageList.length > 0) {
-              tempPageList = await getCarlifemallProductList(tempPageList)
-
-              for (let tempPage of tempPageList) {
-                for (let page of pageList) {
-                  if (tempPage.categoryId == page.categoryId && tempPage.num == page.num) {
-                    page.productList = tempPage.productList
-                  }
-                }
-              }
-            }
-            else {
-              break
-            }
-          }
-
-          for (let page of pageList) {
-            for (let product of page.productList) {
-              if (productList.filter((tempProduct) => tempProduct.id == product.id).length <= 0) {
-                productList.push(product)
-              }
-            }
-          }
+          productList = await getCarlifemallProductList()
           break
 
         // 더클래스
         case 'https://theclasskorea.co.kr':
-          productAmount = await getTheClassProductAmount()
-          productList = await getTheClassProductList(productAmount)
+          productList = await getTheClassProductList()
           break
 
         // 오토왁스
         case 'https://autowax.co.kr':
-          productAmount = await getAutowaxProductAmount()
-          productList = await getAutowaxProductList(productAmount)
+          productList = await getAutowaxProductList()
           break
 
         // 워시마트
@@ -1304,22 +1145,29 @@ app.post('/product/update', async (req, res) => {
       }
     }
 
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
-    let values = []
+    productList = productList.filter((value, index, self) =>
+      index == self.findIndex((t) => (
+        t.id == value.id
+      ))
+    )
 
-    for (let product of productList) {
-      let title = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      let category = product.category ? `'${product.category}'` : 'null'
-      values.push(`('${storeUrl}', ${getMinute(now)}, ${product.id}, '${title}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, ${category})`)
+    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
+    const valueList = []
+
+    for (const product of productList) {
+      const title = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+      const category = product.category ? `'${product.category}'` : 'null'
+
+      valueList.push(`('${req.body.storeUrl}', ${getMinute(now)}, ${product.id}, '${title}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, ${category})`)
     }
 
-    query += values.join(', ')
+    query += valueList.join(', ')
 
     await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(now)})`)
+    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${req.body.storeUrl}', ${getMinute(now)})`)
 
     await conn.query(`
-      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${uid}', '${storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
+      INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
     `)
 
@@ -1336,11 +1184,15 @@ app.post('/product/update', async (req, res) => {
     })
   }
   finally {
-    if (typeof conn == 'object') {
+    if (conn) {
       conn.release()
     }
   }
 })
+
+function parseNumber(text) {
+  return Number(text.replace(/[^0-9]/g, ''))
+}
 
 function getSecond(date) {
   return parseInt(date.getTime() / 1000)
@@ -1360,14 +1212,34 @@ async function getKST() {
   return new Date(now.getTime() + 1000 * 60 * 60 * 9)
 }
 
-function initiateDriver() {
+function fetchWithRandomUserAgent(url, device = 'desktop', encoding = 'utf-8') {
+  return new Promise(async (resolve, reject) => {
+    fetch(url, {
+      headers: { 'User-Agent': new UserAgent([/Chrome/, { 'deviceCategory': device }]) }
+    }).then(async (res) => {
+      if (encoding.toLowerCase() == 'euc-kr') {
+        const buffer = Buffer.from(await res.arrayBuffer())
+        resolve(iconv.decode(buffer, 'euc-kr'))
+      }
+      else {
+        resolve(await res.text())
+      }
+    }).catch((error) => reject(error))
+  })
+}
+
+function buildDriver(device = 'desktop') {
   return new Promise(async (resolve, reject) => {
     try {
+      const options = new Options()
+      options.addArguments(`user-agent=${new UserAgent([/Chrome/, { 'deviceCategory': device }])}`)
+      options.addArguments('no-sandbox', 'headless')
+
       const driver = await new Builder()
+        .withCapabilities({ 'pageLoadStrategy': 'none' })
         .forBrowser('chrome')
-        .setChromeOptions(new Options()
-          .addArguments('--headless', '--no-sandbox')
-        ).build()
+        .setChromeOptions(options)
+        .build()
 
       resolve(driver)
     }
@@ -1378,76 +1250,37 @@ function initiateDriver() {
 }
 
 function getCJTrackingList(invcNoList) {
-  return new Promise((resolve, reject) => {
-    let trackingList = []
-    let i = 0
+  return new Promise(async (resolve, reject) => {
+    const trackingList = []
 
-    for (let invcNo of invcNoList) {
-      let tracking = {
+    for (const invcNo of invcNoList) {
+      const tracking = {
         id: invcNo,
-        available: true,
+        available: false,
         error: false,
       }
 
-      https.get(`https://www.doortodoor.co.kr/parcel/doortodoor.do?fsp_action=PARC_ACT_002&fsp_cmd=retrieveInvNoACT&invc_no=${invcNo}`, (res) => {
-        let data = ''
+      fetchWithRandomUserAgent(`https://www.doortodoor.co.kr/parcel/doortodoor.do?fsp_action=PARC_ACT_002&fsp_cmd=retrieveInvNoACT&invc_no=${invcNo}`, 'mobile').then(async (res) => {
+        const document = parse(res)
+        const tdList = document.querySelectorAll('.last_b')
 
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-          let contList = document.querySelectorAll('.cont')
+        if (!tdList[0].innerText.includes('데이터가 없습니다')) {
+          tracking.available = true
+          tracking.sender = tdList[1].innerText
+          tracking.receiver = tdList[2].innerText
+          tracking.product = tdList[3].innerText
+        }
 
-          try {
-            for (let cont of contList) {
-              let contTit = cont.querySelector('.cont_tit')
-              let tdList = cont.getElementsByTagName('td')
+        if (!tdList[tdList.length - 1].innerText.includes('데이터가 없습니다')) {
+          tracking.state = tdList[5].innerText.trim()
+          tracking.lastUpdateAt = tdList[6].innerText
+        }
 
-              if (contTit.innerText.trim() == '조회결과') {
-                tracking.receiver = tdList[2].innerText.trim()
-                tracking.product = tdList[3].innerText.trim()
-              }
-              else if (contTit.innerText.trim() == '상품상태 확인') {
-                let progress = []
-
-                let trList = cont.getElementsByTagName('tr')
-                trList.shift()
-
-                for (let tr of trList) {
-                  tdList = tr.getElementsByTagName('td')
-
-                  if (tdList.length < 4) {
-                    continue
-                  }
-
-                  progress.push({
-                    step: tdList[0].innerText.trim(),
-                    time: tdList[1].innerText.trim(),
-                    place: tdList[3].innerText.trim(),
-                  })
-                }
-
-                tracking.progress = progress
-              }
-            }
-          }
-          catch {
-            tracking.available = false
-          }
-          finally {
-            trackingList.push(tracking)
-
-            if (trackingList.length >= invcNoList.length) {
-              resolve(trackingList)
-            }
-          }
-        })
-      }).on('error', () => {
+        trackingList.push(tracking)
+      }).catch((error) => {
         tracking.error = true
         trackingList.push(tracking)
-
+      }).finally(() => {
         if (trackingList.length >= invcNoList.length) {
           resolve(trackingList)
         }
@@ -1457,739 +1290,260 @@ function getCJTrackingList(invcNoList) {
 }
 
 function searchNaver(query) {
-  return new Promise((resolve, reject) => {
-    https.get(`https://search.naver.com/search.naver?query=${query}+스마트스토어`, (resp) => {
-      let data = ''
+  return new Promise(async (resolve, reject) => {
+    fetchWithRandomUserAgent(`https://m.search.naver.com/search.naver?query=${query}+스마트스토어`, 'mobile').then(async (res) => {
+      const document = parse(res)
+      const linkElementList = document.querySelectorAll('.url')
 
-      resp.on('error', (error) => reject(error))
-      resp.on('data', (chunk) => data += chunk)
-      resp.on('end', () => {
-        let document = parser.parse(data)
-        let linkElements = document.querySelectorAll('.txt.elss')
+      for (const linkElement of linkElementList) {
+        const url = linkElement.innerText.split('›')
 
-        for (let linkElement of linkElements) {
-          let url = linkElement.innerText.split('›')
+        const baseUrl = url[0]
+        const endpoint = url[1]
 
-          let baseUrl = url[0]
-          let endpoint = url[1]
-
-          if (baseUrl == 'smartstore.naver.com') {
-            resolve(endpoint)
-          }
+        if (baseUrl == 'smartstore.naver.com') {
+          resolve(endpoint)
         }
-        resolve(null)
-      })
-    }).on('error', (error) => reject(error))
+      }
+      resolve(null)
+    }).catch((error) => reject(error))
   })
 }
 
 function searchSmartstore(storeUrl) {
-  return new Promise((resolve, reject) => {
-    https.get(storeUrl, (res) => {
-      let data = ''
-
-      res.on('error', (error) => {
-        reject(error)
-      })
-      res.on('data', (chunk) => data += chunk)
-      res.on('end', () => {
-        let document = parser.parse(data)
-
-        let titleElements = document.getElementsByTagName('title')
-        let errorElement = document.querySelector('._141KVzmWyN')
-
-        if (titleElements.length > 0) {
-          let storeTitle = titleElements[0].innerText
-
-          if (errorElement) {
-            reject(new Error(errorElement.innerHTML))
-          }
-          resolve(storeTitle)
-        }
-        resolve(null)
-      })
-    }).on('error', (error) => reject(error))
-  })
-}
-
-function getSmartstoreProductAmount(storeUrl) {
-  return new Promise((resolve, reject) => {
-    https.get(`${storeUrl}/category/ALL`, (res) => {
-      let data = ''
-
-      res.on('error', (error) => reject(error))
-      res.on('data', (chunk) => {
-        data += chunk
-      })
-      res.on('end', () => {
-        let document = parser.parse(data)
-
-        let productAmountElement = document.querySelector('._3-WhDl_6j2')
-        let productAmount = Number(productAmountElement.innerText.replace(/[^0-9]/g, ''))
-
-        resolve(productAmount)
-      })
-    }).on('error', (error) => reject(error))
-  })
-}
-
-function getSmartstoreProductList(storeUrl, productAmount) {
-  return new Promise((resolve, reject) => {
-    let productList = []
-
-    for (let page = 1; page <= Math.ceil(productAmount / 80); page++) {
-      https.get(`${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page}&size=80`, (res) => {
-        let data = ''
-
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-          let li = document.querySelectorAll('._3S7Ho5J2Ql')
-
-          li.forEach((item, index) => {
-            let linkElement = item.getElementsByTagName('a')[0]
-            let titleElement = item.querySelector('._1Zvjahn0GA')
-            let priceElement = item.querySelector('._3_9J443eIx')
-
-            try {
-              let product = {
-                id: Number(linkElement.getAttribute('href').split('/').pop()),
-                popularityIndex: (page - 1) * 80 + index,
-                title: titleElement.innerText.trim(),
-                price: Number(priceElement.innerText.replace(/[^\d.]/g, '')),
-                isSoldOut: false,
-              }
-
-              if (item.querySelectorAll('._3Btky8fCyp').length > 0) {
-                product.isSoldOut = true
-              }
-
-              productList.push(product)
-            }
-            catch {
-
-            }
-            finally {
-              productAmount--
-
-              if (productAmount <= 0) {
-                resolve(productList)
-              }
-            }
-          })
-        })
-      }).on('error', (error) => reject(error))
-    }
-  })
-}
-
-function getCarlifemallCategoryIdList() {
-  return new Promise((resolve, reject) => {
-    https.get('https://hyundai.auton.kr/product/category/category_main?pcid=4441&rootid=4388', (res) => {
-      let data = ''
-
-      res.on('error', (error) => reject(error))
-      res.on('data', (chunk) => {
-        data += chunk
-      })
-      res.on('end', () => {
-        let document = parser.parse(data)
-        let links = document.getElementsByTagName('a')
-
-        let categoryIdList = []
-
-        for (let link of links) {
-          let href = link.getAttribute('href')
-
-          if (!href) {
-            continue
-          }
-
-          if (href.includes('Redirect')) {
-            href = href.slice(href.indexOf('Redirect') + 9)
-            let pcid = href.slice(0, href.indexOf(','))
-
-            if (!isNaN(pcid)) {
-              let categoryId = Number(pcid)
-
-              if (!categoryIdList.includes(categoryId)) {
-                categoryIdList.push(categoryId)
-              }
-            }
-          }
-        }
-        resolve(categoryIdList)
-      })
-    }).on('error', (error) => reject(error))
-  })
-}
-
-function getCarlifemallCategoryList(categoryIdList) {
-  return new Promise((resolve, reject) => {
-    let categoryList = []
-
-    for (let categoryId of categoryIdList) {
-      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${categoryId}&rootid=4388`, (res) => {
-        let data = ''
-
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-          let flex = document.querySelector('.list_top_wrap')
-          let activeList = document.querySelectorAll('.active')
-
-          try {
-            let flexText = flex.innerText.trim()
-            let categoryTitle
-
-            for (let active of activeList) {
-              let href = active.getAttribute('href')
-              if (href.includes('Redirect')) {
-                href = href.split(`'', '`)[1]
-                categoryTitle = href.split(`'`)[0]
-              }
-            }
-
-            let productAmount = Number(flexText.slice(3, flexText.indexOf('개')))
-
-            categoryList.push({
-              id: categoryId,
-              title: categoryTitle,
-              productAmount: productAmount,
-            })
-          }
-          catch {
-            categoryList.push({
-              id: categoryId,
-              title: undefined,
-              productAmount: NaN,
-            })
-          }
-          finally {
-            if (categoryList.length >= categoryIdList.length) {
-              resolve(categoryList)
-            }
-          }
-        })
-      }).on('error', (error) => reject(error))
-    }
-  })
-}
-
-function getCarlifemallProductList(pageList) {
-  return new Promise((resolve, reject) => {
-    let pages = 0
-
-    for (let page of pageList) {
-      let productList = []
-
-      https.get(`https://hyundai.auton.kr/product/category/category_main?pcid=${page.categoryId}&rootid=4388&page=${page.num}&recodeCount=100&search.orderBy=sellCount&search.order=desc`, (res) => {
-        let data = ''
-
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-
-          let idElements = document.getElementsByTagName('a')
-          let titleElements = document.querySelectorAll('.title')
-          let priceElements = document.querySelectorAll('.sell_price')
-
-          let idList = []
-
-          for (let idElement of idElements) {
-            let href = idElement.getAttribute('href')
-
-            if (!href) {
-              continue
-            }
-
-            if (href.includes('ProductDetail')) {
-              href = href.slice(href.indexOf('ProductDetail') + 14)
-              href = href.slice(0, href.indexOf(','))
-
-              if (!isNaN(href)) {
-                idList.push(Number(href))
-              }
-            }
-          }
-
-          for (let productIndex = 0; productIndex < idList.length; productIndex++) {
-            let product = {
-              id: idList[productIndex],
-              title: titleElements[productIndex].innerText.trim(),
-              price: Number(priceElements[productIndex].innerText.replace(/[^\d.]/g, '')),
-              popularityIndex: (page.num - 1) * 100 + productIndex,
-              isSoldOut: false,
-              category: page.categoryTitle
-            }
-            productList.push(product)
-          }
-
-          page.productList = productList
-          pages++
-
-          if (pages >= pageList.length) {
-            resolve(pageList)
-          }
-        })
-      }).on('error', (error) => reject(error))
-    }
-  })
-}
-
-function getN09ProductAmount() {
-  return new Promise((resolve, reject) => {
-    https.get('https://www.n09.co.kr/product/list.html?cate_no=844', (res) => {
-      let data = ''
-
-      res.on('error', (error) => reject(error))
-      res.on('data', (chunk) => {
-        data += chunk
-      })
-      res.on('end', () => {
-        let document = parser.parse(data)
-        let productAmountElement = document.querySelector('.prdCount')
-        let productAmountText = productAmountElement.innerText
-        productAmountText = productAmountText.split(' : ')[1]
-        productAmountText = productAmountText.split('개')[0]
-        let productAmount = Number(productAmountText)
-        resolve(productAmount)
-      })
-    }).on('error', (error) => reject(error))
-  })
-}
-
-function getN09ProductList(productAmount) {
-  return new Promise((resolve, reject) => {
-    let pages = Math.ceil(productAmount / 112)
-    let productList = []
-
-    for (let page = 1; page <= pages; page++) {
-      https.get(`https://www.n09.co.kr/product/list.html?cate_no=844&sort_method=6&page=${page}`, (res) => {
-        let data = ''
-
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-          let li = document.querySelectorAll('.item.xans-record-')
-
-          li.forEach((item, index) => {
-            let product = {
-              isSoldOut: false,
-              popularityIndex: (page - 1) * 112 + index,
-            }
-
-            let linkElement = item.getElementsByTagName('a')[0]
-            let link = linkElement.getAttribute('href')
-            link = link.split('=')[1]
-            link = link.split('&')[0]
-            product.id = Number(link)
-
-            let statusElements = item.getElementsByTagName('img')
-            for (let statusElement of statusElements) {
-              if (statusElement.getAttribute('alt').includes('품절')) {
-                product.isSoldOut = true
-              }
-            }
-
-            let spanList = item.getElementsByTagName('span')
-            for (let span of spanList) {
-              let style = span.getAttribute('style')
-
-              if (style) {
-                if (style.includes('font-size:13px;color:#242424;font-weight:bold;')) {
-                  product.title = span.innerText.trim()
-                }
-                else if (style.includes('font-size:15px;color:#242424;font-weight:bold;')) {
-                  product.price = Number(span.innerText.replace(/[^\d.]/g, ''))
-                }
-              }
-            }
-
-            if (!product.price) {
-              product.price = 0
-            }
-
-            productList.push(product)
-
-            if (--productAmount <= 0) {
-              resolve(productList)
-            }
-          })
-        })
-      }).on('error', (error) => reject(error))
-    }
-  })
-}
-
-function getN09B2BProductList() {
   return new Promise(async (resolve, reject) => {
-    let driverList = []
+    fetchWithRandomUserAgent(storeUrl, 'mobile').then(async (res) => {
+      const document = parse(res)
 
-    try {
-      let productList = []
-      let progress = 0
+      const titleElement = document.querySelector('title')
+      const errorElement = document.querySelector('._141KVzmWyN')
 
-      for (let i = 0; i < 5; i++) {
-        initiateDriver().then(async (driver) => {
-          driverList.push(driver)
-          await driver.get('https://n09b2b.co.kr')
+      if (titleElement) {
+        const storeTitle = titleElement.innerText
 
-          let idInput = await driver.wait(until.elementLocated(By.id('member_id')))
-          idInput.sendKeys(n09B2BId)
-
-          let pwdInput = await driver.findElement(By.id('member_passwd'))
-          pwdInput.sendKeys(n09B2BPwd)
-
-          let loginButton = await driver.findElement(By.className('btn'))
-          await loginButton.click()
-
-          await driver.wait(until.elementLocated(By.className('log')))
-          await driver.get('https://n09b2b.co.kr/product/search.html?product_price1=0&product_price2=10000000&order_by=favor')
-
-          let productAmountElement = await driver.wait(until.elementLocated(By.className('record')))
-          let productAmountText = await productAmountElement.getAttribute('innerText')
-          let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
-
-          for (let page = i + 1; page <= Math.ceil(productAmount / 120); page += 5) {
-            let url = `https://n09b2b.co.kr/product/search.html?product_price1=0&product_price2=10000000&order_by=favor&page=${page}`
-            await driver.get(url)
-
-            let body = await driver.wait(until.elementLocated(By.css('body')))
-            let data = await body.getAttribute('innerHTML')
-            let document = parser.parse(data)
-
-            document.querySelector('.prdList.grid4').querySelectorAll('li.xans-record-').forEach((item, index) => {
-              let titleElement = item.querySelector('.name')
-
-              let idElement = titleElement.querySelector('a')
-              let idSplit = idElement.getAttribute('href').split('/category')[0].split('/')
-              let id = Number(idSplit[idSplit.length - 1])
-
-              let title = titleElement.innerText.split(':')[1].trim()
-
-              let priceSpan = item.querySelector('div.description > ul > li > span:nth-last-child(2)')
-              let price = Number(priceSpan.innerText.replace(/[^0-9]/g, ''))
-
-              let product = {
-                id: id,
-                title: title,
-                popularityIndex: (page - 1) * 120 + index,
-                price: price,
-                isSoldOut: false,
-              }
-
-              let iconImg = item.querySelector('.icon_img')
-
-              if (iconImg) {
-                product.isSoldOut = iconImg.getAttribute('alt') == '품절'
-              }
-
-              productList.push(product)
-            })
-          }
-
-          progress++
-          driverList = driverList.filter(tempDriver => tempDriver != driver)
-
-          if (progress >= 5) {
-            resolve(productList)
-          }
-        })
-      }
-    }
-    catch (error) {
-      reject(error)
-    }
-    finally {
-      for (let driver of driverList) {
-        driver.quit()
-      }
-    }
-  })
-}
-
-function getAutowashCategoryIdList() {
-  return new Promise((resolve, reject) => {
-    https.get('https://autowash.co.kr/goods/goods_list.php?cateCd=032', (res) => {
-      let data = ''
-
-      res.on('error', (error) => reject(error))
-      res.on('data', (chunk) => {
-        data += chunk
-      })
-      res.on('end', () => {
-        let document = parser.parse(data)
-        let links = document.getElementsByTagName('a')
-
-        let categoryIdList = []
-
-        for (let link of links) {
-          let categoryId = link.getAttribute('data-cate')
-
-          if (!categoryId) {
-            let href = link.getAttribute('href')
-
-            if (href.includes('cateCd=')) {
-              categoryId = href.split('cateCd=')[1]
-
-              if (categoryId.length != 3) {
-                continue
-              }
-            }
-            else {
-              continue
-            }
-          }
-
-          if (categoryIdList.filter((element) => element == categoryId).length <= 0) {
-            categoryIdList.push(categoryId)
-          }
+        if (errorElement) {
+          reject(new Error(errorElement.innerHTML))
         }
-        resolve(categoryIdList)
-      })
-    }).on('error', (error) => reject(error))
+
+        resolve(storeTitle)
+      }
+      resolve(null)
+    }).catch((error) => reject(error))
   })
 }
 
-function getAutowashCategoryList(categoryIdList) {
-  return new Promise((resolve, reject) => {
-    let categoryList = []
-    let categories = categoryIdList.length
+function getSmartstoreProductList(storeUrl) {
+  return new Promise(async (resolve, reject) => {
+    fetchWithRandomUserAgent(`${storeUrl}/category/ALL`).then(async (res) => {
+      const document = parse(res)
 
-    for (let categoryId of categoryIdList) {
-      https.get(`https://autowash.co.kr/goods/goods_list.php?cateCd=${categoryId}`, (res) => {
-        let data = ''
+      const productAmountElement = document.querySelector('._3-WhDl_6j2')
+      const productAmount = parseNumber(productAmountElement.innerText)
 
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-          let categoryTitleElement = document.querySelector('.this_category')
-          let productAmountElement = document.querySelector('.pick_list_num')
+      const productList = []
 
-          let productAmount = 0
+      for (let page = 1; page <= Math.ceil(productAmount / 80); page++) {
+        fetchWithRandomUserAgent(`${storeUrl}/category/ALL/?st=POPULAR&free=false&dt=LIST&page=${page}&size=80`).then(async (res) => {
+          const document = parse(res)
+          const li = document.querySelectorAll('._3S7Ho5J2Ql')
 
-          if (productAmountElement) {
-            productAmount = Number(productAmountElement.innerText.replace(/[^\d.]/g, ''))
-          }
+          li.forEach((item, index) => {
+            const product = new Product()
 
-          if (productAmount == 0) {
-            categories--
-          }
-          else {
-            categoryList.push({
-              id: categoryId,
-              title: categoryTitleElement.innerText.trim(),
-              productAmount: productAmount,
-            })
-          }
+            const href = item.querySelector('a').getAttribute('href')
+            product.id = Number(href.split('/').pop())
 
-          if (categoryList.length >= categories) {
-            resolve(categoryList)
-          }
-        })
-      }).on('error', (error) => reject(error))
-    }
-  })
-}
+            product.title = item.querySelector('._1Zvjahn0GA').innerText
+            product.price = parseNumber(item.querySelector('._3_9J443eIx').innerText)
+            product.popularityIndex = (page - 1) * 80 + index
+            product.isSoldOut = item.querySelectorAll('._3Btky8fCyp').length > 0
 
-function getAutowashProductList(categoryList) {
-  return new Promise((resolve, reject) => {
-    let productList = []
-    let productAmount = 0
-
-    for (let category of categoryList) {
-      productAmount += category.productAmount
-
-      for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
-        https.get(`https://autowash.co.kr/goods/goods_list.php?cateCd=${category.id}&page=${page}&start_price=&end_price=&prc_type=0&pageNum=100&sort=sellcnt`, (res) => {
-          let data = ''
-
-          res.on('error', (error) => reject(error))
-          res.on('data', (chunk) => {
-            data += chunk
-          })
-          res.on('end', () => {
-            let document = parser.parse(data)
-            let mainGoodsList = document.querySelector('.item_gallery_type.main_goods_list')
-            let itemContentList = mainGoodsList.querySelectorAll('.item_cont')
-
-            itemContentList.forEach((itemContent, index) => {
-              let id
-              let linkElements = itemContent.getElementsByTagName('a')
-
-              for (let linkElement of linkElements) {
-                let href = linkElement.getAttribute('href')
-
-                if (href.includes('goodsNo')) {
-                  href = href.split('goodsNo=')[1]
-                  href = href.split('&')[0]
-                  id = Number(href)
-                }
-              }
-
-              let title = itemContent.querySelector('.item_name').innerText.trim()
-              let priceElement = itemContent.querySelector('.item_price')
-              let price = Number(priceElement.innerText.replace(/[^\d.]/g, ''))
-
-              let product = {
-                id: id,
-                title: title,
-                price: price,
-                popularityIndex: (page - 1) * 100 + index,
-                isSoldOut: false,
-                category: category.title,
-              }
-
-              if (itemContent.querySelectorAll('.item_soldout_bg').length > 0) {
-                product.isSoldOut = true
-              }
-
-              productList.push(product)
-            })
+            productList.push(product)
 
             if (productList.length >= productAmount) {
               resolve(productList)
             }
           })
-        }).on('error', (error) => reject(error))
+        }).catch((error) => reject(error))
       }
-    }
+    })
+  }).catch((error) => reject(error))
+}
+
+function getN09ProductList() {
+  return new Promise(async (resolve, reject) => {
+    fetchWithRandomUserAgent('https://www.n09.co.kr/product/list.html?cate_no=844').then(async (res) => {
+      const document = parse(res)
+
+      const productAmountElement = document.querySelector('.prdCount')
+      const productAmount = parseNumber(productAmountElement.innerText)
+
+      const productList = []
+
+      for (let page = 1; page <= Math.ceil(productAmount / 112); page++) {
+        fetchWithRandomUserAgent(`https://www.n09.co.kr/product/list.html?cate_no=844&sort_method=6&page=${page}`).then(async (res) => {
+          const document = parse(res)
+          const li = document.querySelectorAll('.item.xans-record-')
+
+          li.forEach((item, index) => {
+            const product = new Product()
+
+            const href = item.querySelector('p > strong > a').getAttribute('href')
+            product.id = Number(href.split('=')[1].split('&')[0])
+
+            product.title = item.querySelector('p > strong > a > span:nth-child(2)').innerText
+            product.price = parseNumber(item.querySelector('li > span[style*="font-size:15px"]').innerText)
+
+            if (!product.price) {
+              product.price = 0
+            }
+
+            product.popularityIndex = (page - 1) * 112 + index
+
+            const icon = item.querySelector('.icon_img')
+            if (icon) {
+              product.isSoldOut = icon.getAttribute('alt') == '품절'
+            }
+
+            productList.push(product)
+
+            if (productList.length >= productAmount) {
+              resolve(productList)
+            }
+          })
+        }).catch((error) => reject(error))
+      }
+    })
+  }).catch((error) => reject(error))
+}
+
+function getN09B2BProductList() {
+  return new Promise(async (resolve, reject) => {
+    let tempDriver
+
+    buildDriver().then(async (driver) => {
+      tempDriver = driver
+
+      await driver.get('https://m.n09b2b.co.kr')
+
+      const idInput = await driver.wait(until.elementLocated(By.css('#member_id')), timeout)
+      idInput.sendKeys(n09B2BId)
+
+      const pwdInput = await driver.wait(until.elementLocated(By.css('#member_passwd')), timeout)
+      pwdInput.sendKeys(n09B2BPwd)
+
+      const loginButton = await driver.wait(until.elementLocated(By.css('.btnSubmit')), timeout)
+      await loginButton.click()
+
+      await driver.wait(until.elementLocated(By.css('.category')), timeout)
+      await driver.get('https://m.n09b2b.co.kr/product/search.html?product_price1=0&product_price2=10000000&order_by=favor')
+
+      const productAmountElement = await driver.wait(until.elementLocated(By.css('#titleArea > * > .count')), timeout)
+      const productAmount = parseNumber(await productAmountElement.getAttribute('innerText'))
+
+      const productList = []
+
+      for (let page = 1; page <= Math.ceil(productAmount / 120); page++) {
+        await driver.get(`https://m.n09b2b.co.kr/product/search.html?product_price1=0&product_price2=10000000&order_by=favor&page=${page}`)
+        await driver.wait(until.elementLocated(By.css(`.this[href*="page=${page}"]`)), timeout)
+
+        const body = await driver.wait(until.elementLocated(By.css('body')), timeout)
+        const document = parse(await body.getAttribute('innerHTML'))
+
+        document.querySelectorAll('.prdList.grid3 > .xans-record-').forEach((item, index) => {
+          const product = new Product()
+
+          const linkElement = item.querySelector('.name > a')
+          const idSplit = linkElement.getAttribute('href').split('/category')[0].split('/')
+          product.id = Number(idSplit[idSplit.length - 1])
+
+          product.title = linkElement.innerText
+
+          const priceSpan = item.querySelector('.price')
+          product.price = parseNumber(priceSpan.innerText)
+
+          product.popularityIndex = (page - 1) * 120 + index
+
+          const icon = item.querySelector('.icon')
+          if (icon) {
+            product.isSoldOut = icon.getAttribute('alt') == '품절'
+          }
+
+          productList.push(product)
+        })
+      }
+      resolve(productList)
+    }).catch((error) => reject(error)).finally(() => {
+      if (tempDriver) {
+        tempDriver.quit()
+      }
+    })
   })
 }
 
-function getAutowashB2BProductList() {
+function getAutowashProductList() {
   return new Promise(async (resolve, reject) => {
-    const driver = await initiateDriver()
+    fetchWithRandomUserAgent('https://autowash.co.kr/goods/goods_list.php?cateCd=032').then(async (res) => {
+      const document = parse(res)
+      const linkElementList = document.querySelectorAll('.swiper-slide > a')
 
-    try {
-      await driver.get('http://autowash2.com')
+      const categoryIdList = []
 
-      let idInput = await driver.wait(until.elementLocated(By.id('loginId')))
-      idInput.sendKeys(autowashB2BId)
+      for (const linkElement of linkElementList) {
+        let categoryId = linkElement.getAttribute('data-cate')
 
-      let pwdInput = await driver.findElement(By.id('loginPwd'))
-      pwdInput.sendKeys(autowashB2BPwd)
-
-      let loginDiv = await driver.findElement(By.className('login_input_sec'))
-      await loginDiv.findElement(By.css('button')).click()
-
-      await driver.wait(until.elementLocated(By.className('top_srarch_text')))
-      await driver.get('http://autowash2.com/goods/goods_list.php?cateCd=096')
-
-      let productAmountElement = await driver.wait(until.elementLocated(By.className('pick_list_num')))
-      let productAmountText = await productAmountElement.getAttribute('innerText')
-      let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
-
-      await driver.get(`http://autowash2.com/goods/goods_list.php?cateCd=096&sort=sellcnt&pageNum=${productAmount}`)
-
-      let body = await driver.wait(until.elementLocated(By.css('body')))
-      let data = await body.getAttribute('innerHTML')
-      let document = parser.parse(data)
-
-      let productList = []
-
-      document.querySelectorAll('.item_cont').forEach((itemCont, index) => {
-        let idElement = itemCont.getElementsByTagName('a')[0]
-        let idText = idElement.getAttribute('href')
-        let id = Number(idText.split('=')[1])
-
-        let title = itemCont.querySelector('.item_name').innerText
-
-        let priceElement = itemCont.querySelector('.item_price')
-        let price = Number(priceElement.innerText.replace(/[^0-9]/g, ''))
-
-        let product = {
-          id: id,
-          title: title,
-          popularityIndex: index,
-          price: price,
-          isSoldOut: itemCont.innerHTML.includes('soldout'),
+        if (!categoryId) {
+          categoryId = linkElement.getAttribute('href').split('cateCd=')[1]
         }
 
-        productList.push(product)
-      })
+        categoryIdList.push(categoryId)
+      }
 
-      resolve(productList)
-    }
-    catch (error) {
-      reject(error)
-    }
-    finally {
-      driver.quit()
-    }
-  })
-}
+      const categoryList = await new Promise(async (resolve, reject) => {
+        const categoryList = []
+        let categoryAmount = categoryIdList.length
 
-function getTheClassProductAmount() {
-  return new Promise((resolve, reject) => {
-    https.get('https://theclasskorea.co.kr/product/list.html?cate_no=43', (res) => {
-      let data = ''
+        for (const categoryId of categoryIdList) {
+          fetchWithRandomUserAgent(`https://autowash.co.kr/goods/goods_list.php?cateCd=${categoryId}`).then(async (res) => {
+            const document = parse(res)
+            const productAmount = parseNumber(document.querySelector('.pick_list_num').innerText)
 
-      res.on('error', (error) => reject(error))
-      res.on('data', (chunk) => {
-        data += chunk
-      })
-      res.on('end', () => {
-        let document = parser.parse(data)
-        let productAmountDiv = document.querySelector('.prdCount')
-        let productAmountElement = productAmountDiv.getElementsByTagName('strong')[0]
-        let productAmount = Number(productAmountElement.innerText)
-        resolve(productAmount)
-      })
-    }).on('error', (error) => reject(error))
-  })
-}
-
-function getTheClassProductList(productAmount) {
-  return new Promise((resolve, reject) => {
-    let productList = []
-
-    for (let page = 1; page <= Math.ceil(productAmount / 30); page++) {
-      https.get(`https://theclasskorea.co.kr/product/list.html?cate_no=43&sort_method=6&page=${page}`, (res) => {
-        let data = ''
-
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-          let normalProductDiv = document.querySelector('.xans-element-.xans-product.xans-product-normalpackage')
-
-          normalProductDiv.querySelectorAll('.item.xans-record-').forEach((productElement, index) => {
-            let titleElement = productElement.querySelector('.name')
-
-            let linkElement = titleElement.getElementsByTagName('a')[0]
-            let id = Number(linkElement.getAttribute('href').split('=')[1].split('&')[0])
-            let title = linkElement.innerText.split(':')[1].trim()
-
-            let priceElementList = productElement.querySelectorAll('.xans-record-')
-            let priceElement = priceElementList.find(priceElement => priceElement.getAttribute('rel') == '판매가')
-            let price = Number(priceElement.innerText.replace(/[^\d.]/g, ''))
-
-            let product = {
-              id: id,
-              title: title,
-              popularityIndex: (page - 1) * 30 + index,
-              price: price,
-              isSoldOut: false,
+            if (productAmount == 0) {
+              categoryAmount--
             }
+            else {
+              categoryList.push({
+                id: categoryId,
+                title: document.querySelector('.this_category').innerText.trim(),
+                productAmount: productAmount,
+              })
+            }
+
+            if (categoryList.length >= categoryAmount) {
+              resolve(categoryList)
+            }
+          }).catch((error) => reject(error))
+        }
+      })
+
+      const productList = []
+      let productAmount = 0
+
+      for (const category of categoryList) {
+        productAmount += category.productAmount
+
+        fetchWithRandomUserAgent(`https://autowash.co.kr/goods/goods_list.php?cateCd=${category.id}&pageNum=${category.productAmount}&sort=sellcnt`).then(async (res) => {
+          const document = parse(res)
+
+          document.querySelectorAll('.main_goods_list > ul > li').forEach((item, index) => {
+            const product = new Product()
+
+            product.id = parseNumber(item.querySelector('.item_tit_box > a').getAttribute('href'))
+            product.title = item.querySelector('.item_name').innerText
+            product.price = parseNumber(item.querySelector('.item_price').innerText)
+            product.popularityIndex = index
+            product.category = category.title
+            product.isSoldOut = item.querySelectorAll('.item_soldout_bg').length > 0
 
             productList.push(product)
           })
@@ -2197,172 +1551,237 @@ function getTheClassProductList(productAmount) {
           if (productList.length >= productAmount) {
             resolve(productList)
           }
-        })
-      }).on('error', (error) => reject(error))
-    }
-  })
+        }).catch((error) => reject(error))
+      }
+    })
+  }).catch((error) => reject(error))
 }
 
-function getAutowaxProductAmount() {
-  return new Promise((resolve, reject) => {
-    https.get('https://www.autowax.co.kr/goods/goods_list.php?cateCd=001', (res) => {
-      let data = ''
+function getCarlifemallProductList() {
+  return new Promise(async (resolve, reject) => {
+    fetchWithRandomUserAgent('https://hyundai.auton.kr/product/category/category_main?pcid=4441&rootid=4388', 'mobile').then(async (res) => {
+      const document = parse(res)
+      const linkList = document.querySelectorAll('.tab_title_sub > li > a')
 
-      res.on('error', (error) => reject(error))
-      res.on('data', (chunk) => {
-        data += chunk
+      const categoryIdList = []
+
+      for (const link of linkList) {
+        let href = link.getAttribute('href')
+
+        if (!href) {
+          continue
+        }
+
+        if (href.includes('Redirect')) {
+          href = href.slice(href.indexOf('Redirect') + 9)
+          const pcid = href.slice(0, href.indexOf(','))
+
+          if (!isNaN(pcid)) {
+            const categoryId = Number(pcid)
+
+            if (!categoryIdList.includes(categoryId)) {
+              categoryIdList.push(categoryId)
+            }
+          }
+        }
+      }
+
+      const categoryList = await new Promise(async (resolve, reject) => {
+        const categoryList = []
+
+        for (const categoryId of categoryIdList) {
+          fetchWithRandomUserAgent(`https://hyundai.auton.kr/product/category/category_main?pcid=${categoryId}&rootid=4388`, 'mobile').then(async (res) => {
+            const document = parse(res)
+
+            const flex = document.querySelector('.list_top_wrap > .flexleft')
+            const active = document.querySelector('.tab_title_sub > li > .active')
+
+            const categoryTitle = active.getAttribute('href').split(`'', '`)[1].split(`'`)[0]
+            const productAmount = parseNumber(flex.innerText.trim())
+
+            categoryList.push({
+              id: categoryId,
+              title: categoryTitle,
+              productAmount: productAmount,
+            })
+
+            if (categoryList.length >= categoryIdList.length) {
+              resolve(categoryList)
+            }
+          }).catch((error) => reject(error))
+        }
       })
-      res.on('end', () => {
-        let document = parser.parse(data)
-        let productAmountSpan = document.querySelector('.tc')
-        let productAmountElement = productAmountSpan.getElementsByTagName('strong')[0]
-        let productAmount = Number(productAmountElement.innerText.replace(/[^\d.]/g, ''))
-        resolve(productAmount)
-      })
-    }).on('error', (error) => reject(error))
-  })
-}
 
-function getAutowaxProductList(productAmount) {
-  return new Promise((resolve, reject) => {
-    let productList = []
-    let progress = productAmount
+      const productList = []
+      let productAmount = 0
 
-    for (let page = 1; page <= Math.ceil(productAmount / 40); page++) {
-      https.get(`https://www.autowax.co.kr/goods/goods_list.php?page=${page}&cateCd=001&sort=orderCnt%20desc%2Cg.regDt%20desc&pageNum=40`, (res) => {
-        let data = ''
+      for (const category of categoryList) {
+        productAmount += category.productAmount
 
-        res.on('error', (error) => reject(error))
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          let document = parser.parse(data)
-          let productElementList = document.querySelectorAll('.space')
+        for (let page = 1; page <= Math.ceil(category.productAmount / 100); page++) {
+          fetchWithRandomUserAgent(`https://hyundai.auton.kr/product/category/category_main?pcid=${category.id}&rootid=4388&page=${page}&recodeCount=100&search.orderBy=sellCount&search.order=desc`, 'mobile').then(async (res) => {
+            const document = parse(res)
 
-          productElementList.forEach((productElement, index) => {
-            try {
-              let titleElement = productElement.querySelector('.txt')
+            document.querySelectorAll('.list_content_wrap > ul > li').forEach((item, index) => {
+              const product = new Product()
 
-              let linkElement = titleElement.getElementsByTagName('a')[0]
-              let id = Number(linkElement.getAttribute('href').split('=')[1])
-              let title = linkElement.getElementsByTagName('strong')[0].innerText
+              let href = item.querySelector('a').getAttribute('href')
+              href = href.slice(href.indexOf('ProductDetail') + 14)
+              product.id = Number(href.slice(0, href.indexOf(',')))
 
-              let priceElement = productElement.querySelector('.cost')
-              let price = Number(priceElement.innerText.replace(/[^\d.]/g, ''))
-
-              if (!price) {
-                throw new Error()
-              }
-
-              let product = {
-                id: id,
-                title: title,
-                popularityIndex: (page - 1) * 40 + index,
-                price: price,
-                isSoldOut: false,
-              }
-
-              if (productElement.querySelector('ico-soldout-box')) {
-                product.isSoldOut = true
-              }
+              product.title = item.querySelector('.title').innerText.trim()
+              product.price = parseNumber(item.querySelector('.sell_price').innerText)
+              product.popularityIndex = (page - 1) * 100 + index
+              product.category = category.title
 
               productList.push(product)
-            }
-            catch {
-              progress--
-            }
-            finally {
-              if (productList.length >= progress) {
+
+              if (productList.length >= productAmount) {
                 resolve(productList)
               }
-            }
+            })
+          }).catch((error) => reject(error))
+        }
+      }
+    })
+  }).catch((error) => reject(error))
+}
+
+function getTheClassProductList() {
+  return new Promise(async (resolve, reject) => {
+    fetchWithRandomUserAgent('https://theclasskorea.co.kr/product/list.html?cate_no=43').then(async (res) => {
+      const document = parse(res)
+      const productAmount = parseNumber(document.querySelector('.prdCount').innerText)
+
+      const productList = []
+
+      for (let page = 1; page <= Math.ceil(productAmount / 30); page++) {
+        fetchWithRandomUserAgent(`https://theclasskorea.co.kr/product/list.html?cate_no=43&sort_method=6&page=${page}`).then(async (res) => {
+          const document = parse(res)
+
+          document.querySelectorAll('.xans-product-listnormal > ul > li').forEach((item, index) => {
+            const product = new Product()
+
+            product.id = Number(item.querySelector('.name > a').getAttribute('href').split('=')[1].split('&')[0])
+            product.title = item.querySelector('.name > a > span:nth-last-child(1)').innerText
+            product.price = parseNumber(document.querySelector('li[rel="판매가"] > span:nth-child(2)').innerText)
+            product.popularityIndex = (page - 1) * 30 + index
+            product.isSoldOut = item.querySelectorAll('.soldoutbg.-nodrag.displaynone').length <= 0
+
+            productList.push(product)
           })
+
+          if (productList.length >= productAmount) {
+            resolve(productList)
+          }
+        }).catch((error) => reject(error))
+      }
+    })
+  }).catch((error) => reject(error))
+}
+
+function getAutowaxProductList() {
+  return new Promise(async (resolve, reject) => {
+    fetchWithRandomUserAgent('https://www.autowax.co.kr/goods/goods_list.php?cateCd=001').then(async (res) => {
+      const document = parse(res)
+      const productAmount = parseNumber(document.querySelector('.tc').innerText)
+
+      const productList = []
+
+      fetchWithRandomUserAgent(`https://www.autowax.co.kr/goods/goods_list.php?cateCd=001&sort=orderCnt%20desc%2Cg.regDt%20desc&pageNum=${productAmount}`).then(async (res) => {
+        const document = parse(res)
+
+        document.querySelectorAll('.space').forEach((item, index) => {
+          const product = new Product()
+
+          const idElement = item.querySelector('.txt > a')
+          if (!idElement) {
+            return
+          }
+
+          product.id = parseNumber(idElement.getAttribute('href'))
+          product.title = item.querySelector('.txt > a > strong').innerText
+          product.price = parseNumber(item.querySelector('.cost').innerText)
+
+          const timeSale = item.querySelector('.time_sale_cost')
+
+          if (timeSale) {
+            product.price = parseNumber(timeSale.innerText)
+          }
+
+          product.popularityIndex = index
+          product.isSoldOut = item.querySelectorAll('.ico-soldout-box > img').length > 0
+
+          productList.push(product)
         })
-      }).on('error', (error) => reject(error))
-    }
-  })
+        resolve(productList)
+      }).catch((error) => reject(error))
+    })
+  }).catch((error) => reject(error))
 }
 
 function getWashmartProductList() {
   return new Promise(async (resolve, reject) => {
-    const driver = await initiateDriver()
+    let tempDriver
 
-    try {
+    buildDriver().then(async (driver) => {
+      tempDriver = driver
+
       await driver.get('https://washmart.co.kr')
 
-      let idInput = await driver.wait(until.elementLocated(By.id('member_id')))
+      let idInput = await driver.wait(until.elementLocated(By.css('#member_id')), timeout)
       idInput.sendKeys(washmartId)
 
-      let pwdInput = await driver.findElement(By.id('member_passwd'))
+      let pwdInput = await driver.wait(until.elementLocated(By.css('#member_passwd')), timeout)
       pwdInput.sendKeys(washmartPwd)
 
-      let loginButton = await driver.findElement(By.className('Loginbtn'))
+      let loginButton = await driver.wait(until.elementLocated(By.css('.Loginbtn')), timeout)
       await loginButton.click()
 
-      await driver.wait(until.elementLocated(By.id('xans_myshop_mileage')))
+      await driver.wait(until.elementLocated(By.css('#xans_myshop_mileage')), timeout)
       await driver.get('https://washmart.co.kr/product/list3.html?cate_no=24&sort_method=6')
 
-      let productAmountElement = await driver.wait(until.elementLocated(By.className('prdCount')))
-      let productAmountText = await productAmountElement.getAttribute('innerText')
-      let productAmount = Number(productAmountText.replace(/[^0-9]/g, ''))
+      const productAmountElement = await driver.wait(until.elementLocated(By.css('.prdCount')), timeout)
+      const productAmount = parseNumber(await productAmountElement.getAttribute('innerText'))
 
-      let productList = []
+      const productList = []
 
       for (let page = 1; page <= Math.ceil(productAmount / 60); page++) {
         if (page > 1) {
           await driver.get(`https://washmart.co.kr/product/list3.html?cate_no=24&sort_method=6&page=${page}`)
         }
 
-        let body = await driver.wait(until.elementLocated(By.css('body')))
-        let data = await body.getAttribute('innerHTML')
-        let document = parser.parse(data)
+        await driver.wait(until.elementLocated(By.css(`.this[href*="page=${page}"]`)), timeout)
+
+        const body = await driver.wait(until.elementLocated(By.css('body')), timeout)
+        const document = parse(await body.getAttribute('innerHTML'))
 
         document.querySelectorAll('.item.hovimg.xans-record-').forEach((item, index) => {
-          let titleElement = item.querySelector('.name')
+          const product = new Product()
 
-          let idElement = titleElement.querySelector('a')
-          let idSplit = idElement.getAttribute('href').split('/category')[0].split('/')
-          let id = Number(idSplit[idSplit.length - 1])
+          const linkElement = item.querySelector('.name > a')
+          const idSplit = linkElement.getAttribute('href').split('/category')[0].split('/')
+          product.id = Number(idSplit[idSplit.length - 1])
 
-          let title = titleElement.innerText.split(':')[1].trim()
+          product.title = item.querySelector('.name > a > span:nth-last-child(1)').innerText
 
-          let priceElement = item.querySelector('.xans-record-.halfli2')
-          let price = 0
-
-          try {
-            price = Number(priceElement.innerText.replace(/[^0-9]/g, ''))
-          }
-          catch {
-
+          const priceElement = item.querySelector('.halfli2')
+          if (priceElement) {
+            product.price = parseNumber(priceElement.innerText)
           }
 
-          let product = {
-            id: id,
-            title: title,
-            popularityIndex: (page - 1) * 60 + index,
-            price: price,
-            isSoldOut: false,
-          }
-
-          let soldOutElement = item.querySelector('.sold')
-
-          if (soldOutElement.querySelector('img')) {
-            product.isSoldOut = true
-          }
+          product.popularityIndex = (page - 1) * 60 + index
+          product.isSoldOut = item.querySelectorAll('.sold > img').length > 0
 
           productList.push(product)
         })
       }
-
       resolve(productList)
-    }
-    catch (error) {
-      reject(error)
-    }
-    finally {
-      driver.quit()
-    }
+    }).catch((error) => reject(error)).finally(() => {
+      if (tempDriver) {
+        tempDriver.quit()
+      }
+    })
   })
 }
 

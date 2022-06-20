@@ -192,7 +192,7 @@
                     track(reader.result)
                 }
 
-                reader.readAsText(file, "utf-8")
+                reader.readAsText(file, 'utf-8')
             })
 
             document.getElementById('example-button').addEventListener('click', async () => {
@@ -312,33 +312,24 @@
                 table = []
 
                 for (let tracking of trackingList) {
-                    if (!tracking.available) {
-                        table.push({
-                            id: tracking.id,
-                            receiver: '',
-                            product: '',
-                            progress: '운송장 미등록',
-                            lastUpdate: '',
-                        })
-                        continue
-                    }
-
                     let row = {
                         id: tracking.id,
-                        receiver: tracking.receiver,
-                        product: tracking.product,
-                        progress: '',
-                        lastUpdate: '',
+                        sender: '',
+                        receiver: '',
+                        product: '',
+                        state: '운송장 미등록',
+                        lastUpdateAt: '',
                     }
 
-                    if (tracking.progress.length > 0) {
-                        let lastTracking = tracking.progress.pop()
-                        row.progress = lastTracking.step
-                        row.lastUpdate = new Date(lastTracking.time).toLocaleString('ko-KR')
+                    if (tracking.available) {
+                        row.sender = tracking.sender
+                        row.receiver = tracking.receiver
+                        row.product = tracking.product
                     }
-                    else {
-                        row.progress = '정보없음'
-                        row.lastUpdate = ''
+
+                    if (tracking.state) {
+                        row.state = tracking.state
+                        row.lastUpdateAt = new Date(tracking.lastUpdateAt).toLocaleString('ko-KR')
                     }
 
                     table.push(row)
@@ -353,18 +344,21 @@
                 th1.innerHTML = '송장 번호'
 
                 let th2 = document.createElement('th')
-                th2.innerHTML = '수령인'
+                th2.innerHTML = '발송인'
 
                 let th3 = document.createElement('th')
-                th3.innerHTML = '제품'
+                th3.innerHTML = '수령인'
 
                 let th4 = document.createElement('th')
-                th4.innerHTML = '상태'
+                th4.innerHTML = '제품'
 
                 let th5 = document.createElement('th')
-                th5.innerHTML = '최근 업데이트'
+                th5.innerHTML = '상태'
 
-                for (let th of [th1, th2, th3, th4, th5]) {
+                let th6 = document.createElement('th')
+                th6.innerHTML = '최근 업데이트'
+
+                for (let th of [th1, th2, th3, th4, th5, th6]) {
                     th.setAttribute('style', 'font-weight: 600')
                     tr.appendChild(th)
                 }
@@ -383,24 +377,27 @@
                     th1.appendChild(a)
 
                     let th2 = document.createElement('th')
-                    th2.innerHTML = row.receiver
+                    th2.innerHTML = row.sender
 
                     let th3 = document.createElement('th')
-
-                    if (row.product.length > 24) {
-                        th3.innerHTML = `${row.product.slice(0, 32)} ...`
-                    }
-                    else {
-                        th3.innerHTML = row.product
-                    }
+                    th3.innerHTML = row.receiver
 
                     let th4 = document.createElement('th')
-                    th4.innerHTML = row.progress
+
+                    if (row.product.length > 24) {
+                        th4.innerHTML = `${row.product.slice(0, 32)} ...`
+                    }
+                    else {
+                        th4.innerHTML = row.product
+                    }
 
                     let th5 = document.createElement('th')
-                    th5.innerHTML = row.lastUpdate.toLocaleString('ko-KR')
+                    th5.innerHTML = row.state
 
-                    for (let th of [th1, th2, th3, th4, th5]) {
+                    let th6 = document.createElement('th')
+                    th6.innerHTML = row.lastUpdateAt.toLocaleString('ko-KR')
+
+                    for (let th of [th1, th2, th3, th4, th5, th6]) {
                         th.setAttribute('style', 'font-weight: 400')
                         tr.appendChild(th)
                     }
@@ -418,14 +415,14 @@
                 let ws = XLSX.utils.json_to_sheet(table)
 
                 ws.A1.v = '송장번호'
-                ws.B1.v = '수령인'
-                ws.C1.v = '제품'
-                ws.D1.v = '상태'
-                ws.E1.v = '최근 업데이트'
+                ws.B1.v = '발송인'
+                ws.C1.v = '수령인'
+                ws.D1.v = '제품'
+                ws.E1.v = '상태'
+                ws.F1.v = '최근 업데이트'
 
                 for (let index = 1; index <= table.length; index++) {
                     let idCell = ws[`A${index}`]
-
                     idCell.f = `=HYPERLINK("https://www.doortodoor.co.kr/parcel/doortodoor.do?fsp_action=PARC_ACT_002&fsp_cmd=retrieveInvNoACT&invc_no=${idCell.v}", "${idCell.v}")`
                 }
 
