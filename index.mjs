@@ -1131,7 +1131,6 @@ function getDay(date) {
 }
 
 async function getKST() {
-  // let now = await NTPClient.getNetworkTime(setTimeout(() => {}, 3000), 'ntp.ubuntu.com')
   let now = new Date()
   return new Date(now.getTime() + 1000 * 60 * 60 * 9)
 }
@@ -1805,7 +1804,7 @@ function updateProductList(storeUrl, productList, date) {
   })
 }
 
-cron.schedule('0 9,18 * * *', async () => {
+cron.schedule('0 0,9 * * *', async () => {
   const now = await getKST()
 
   for (const storeUrl of [
