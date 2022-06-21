@@ -1,3 +1,4 @@
+import cron from 'node-cron'
 import { exit } from 'process'
 import fs from 'fs'
 import bodyParser from 'body-parser'
@@ -701,7 +702,6 @@ app.post('/siGunGu', async (req, res) => {
   let conn
 
   try {
-
     conn = await pool.getConnection()
     const result = (await conn.query(`SELECT siGunGu FROM carWash WHERE siDo = '${req.body.siDo}' GROUP BY siGunGu`))[0]
 
@@ -875,7 +875,7 @@ app.post('/smartstore/search', async (req, res) => {
 
       if (!endpoint) {
         res.json({
-          result: 'zeroResult',
+          result: 'zero results',
           query: req.body.query,
         })
         return
@@ -899,7 +899,7 @@ app.post('/smartstore/search', async (req, res) => {
 
     if (!storeTitle) {
       res.json({
-        result: 'notSmartstoreUrl',
+        result: 'not smartstore url',
         url: storeUrl,
       })
       return
@@ -1073,98 +1073,22 @@ app.post('/product/update', async (req, res) => {
       return
     }
 
+    if (user.permission == 0 && !req.body.storeUrl.includes('smartstore.naver.com')) {
+      res.json({ result: 'no permission' })
+      return
+    }
+
     const history = (await conn.query(`SELECT * FROM history WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0][0]
     let productList
 
     if (history) {
       productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0]
     }
-
-    if (req.body.storeUrl.includes('smartstore.naver.com')) {
-      if (productList) {
-        res.json({
-          result: 'already exists',
-          minute: history.minute,
-          product: productList,
-        })
-        return
-      }
-
-      productList = await getSmartstoreProductList(req.body.storeUrl)
-    }
     else {
-      if (user.permission == 0) {
-        res.json({ result: 'no permission' })
-        return
-      }
-
-      if (productList) {
-        res.json({
-          result: 'already exists',
-          minute: history.minute,
-          product: productList,
-        })
-        return
-      }
-
-      switch (req.body.storeUrl) {
-        // 엔공구
-        case 'https://n09.co.kr':
-          productList = await getN09ProductList()
-          break
-
-        // 엔공구 B2B
-        case 'https://n09b2b.co.kr':
-          productList = await getN09B2BProductList()
-          break
-
-        // 오토워시
-        case 'https://autowash.co.kr':
-          productList = await getAutowashProductList()
-          break
-
-        // 카라이프몰
-        case 'https://hyundai.auton.kr':
-          productList = await getCarlifemallProductList()
-          break
-
-        // 더클래스
-        case 'https://theclasskorea.co.kr':
-          productList = await getTheClassProductList()
-          break
-
-        // 오토왁스
-        case 'https://autowax.co.kr':
-          productList = await getAutowaxProductList()
-          break
-
-        // 워시마트
-        case 'https://washmart.co.kr':
-          productList = await getWashmartProductList()
-          break
-      }
+      productList = await getProductList(req.body.storeUrl)
     }
 
-    productList = productList.filter((value, index, self) =>
-      index == self.findIndex((t) => (
-        t.id == value.id
-      ))
-    )
-
-    let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
-    const valueList = []
-
-    for (const product of productList) {
-      const title = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
-      const category = product.category ? `'${product.category}'` : 'null'
-
-      valueList.push(`('${req.body.storeUrl}', ${getMinute(now)}, ${product.id}, '${title}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, ${category})`)
-    }
-
-    query += valueList.join(', ')
-
-    await conn.query(query)
-    await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${req.body.storeUrl}', ${getMinute(now)})`)
+    await updateProductList(req.body.storeUrl, productList, now)
 
     await conn.query(`
       INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
@@ -1303,8 +1227,10 @@ function searchNaver(query) {
 
         if (baseUrl == 'smartstore.naver.com') {
           resolve(endpoint)
+          return
         }
       }
+
       resolve(null)
     }).catch((error) => reject(error))
   })
@@ -1323,10 +1249,12 @@ function searchSmartstore(storeUrl) {
 
         if (errorElement) {
           reject(new Error(errorElement.innerHTML))
+          return
         }
 
         resolve(storeTitle)
       }
+
       resolve(null)
     }).catch((error) => reject(error))
   })
@@ -1472,6 +1400,7 @@ function getN09B2BProductList() {
           productList.push(product)
         })
       }
+
       resolve(productList)
     }).catch((error) => reject(error)).finally(() => {
       if (tempDriver) {
@@ -1704,7 +1633,6 @@ function getAutowaxProductList() {
           product.price = parseNumber(item.querySelector('.cost').innerText)
 
           const timeSale = item.querySelector('.time_sale_cost')
-
           if (timeSale) {
             product.price = parseNumber(timeSale.innerText)
           }
@@ -1714,6 +1642,7 @@ function getAutowaxProductList() {
 
           productList.push(product)
         })
+
         resolve(productList)
       }).catch((error) => reject(error))
     })
@@ -1784,6 +1713,117 @@ function getWashmartProductList() {
     })
   })
 }
+
+function getProductList(storeUrl) {
+  return new Promise(async (resolve, reject) => {
+    let productList
+
+    try {
+      // 스마트스토어
+      if (storeUrl.includes('smartstore.naver.com')) {
+        productList = await getSmartstoreProductList(storeUrl)
+      }
+      else {
+        switch (storeUrl) {
+          // 엔공구
+          case 'https://n09.co.kr':
+            productList = await getN09ProductList()
+            break
+
+          // 엔공구 B2B
+          case 'https://n09b2b.co.kr':
+            productList = await getN09B2BProductList()
+            break
+
+          // 오토워시
+          case 'https://autowash.co.kr':
+            productList = await getAutowashProductList()
+            break
+
+          // 카라이프몰
+          case 'https://hyundai.auton.kr':
+            productList = await getCarlifemallProductList()
+            break
+
+          // 더클래스
+          case 'https://theclasskorea.co.kr':
+            productList = await getTheClassProductList()
+            break
+
+          // 오토왁스
+          case 'https://autowax.co.kr':
+            productList = await getAutowaxProductList()
+            break
+
+          // 워시마트
+          case 'https://washmart.co.kr':
+            productList = await getWashmartProductList()
+            break
+
+          default:
+            throw new Error('no such store')
+        }
+      }
+    }
+    catch (error) {
+      reject(error)
+      return
+    }
+
+    productList = productList.filter((value, index, self) =>
+      index == self.findIndex((t) => (
+        t.id == value.id
+      ))
+    )
+
+    resolve(productList)
+  })
+}
+
+function updateProductList(storeUrl, productList, date) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let query = 'REPLACE INTO product (storeUrl, minute, id, title, price, popularityIndex, isSoldOut, category) VALUES '
+      const valueList = []
+
+      for (const product of productList) {
+        const title = product.title.replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣!@#$%^&*()-_=+\[{\]}\/\\\s]+/g, '')
+        const category = product.category ? `'${product.category}'` : null
+        valueList.push(`('${storeUrl}', ${getMinute(date)}, ${product.id}, '${title}', ${product.price}, ${product.popularityIndex}, ${product.isSoldOut ? 1 : 0}, ${category})`)
+      }
+
+      query += valueList.join(', ')
+
+      await conn.query(query)
+      await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(date)})`)
+
+      resolve(getMinute(date))
+    }
+    catch (error) {
+      reject(error)
+    }
+  })
+}
+
+cron.schedule('0 9,18 * * *', async () => {
+  const now = await getKST()
+
+  for (const storeUrl of [
+    'https://smartstore.naver.com/n09',
+    'https://smartstore.naver.com/selfwash',
+    'https://n09.co.kr',
+    'https://n09b2b.co.kr',
+    'https://autowash.co.kr',
+    'https://hyundai.auton.kr',
+    'https://theclasskorea.co.kr',
+    'https://autowax.co.kr',
+    'https://washmart.co.kr',
+  ]) {
+    getProductList(storeUrl).then(async (productList) => {
+      await updateProductList(storeUrl, productList, now)
+    }).catch(() => {})
+  }
+})
 
 http.createServer(app).listen(80)
 https.createServer(credentials, app).listen(443)
