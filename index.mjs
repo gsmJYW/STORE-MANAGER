@@ -1,4 +1,3 @@
-import cron from 'node-cron'
 import { exit } from 'process'
 import fs from 'fs'
 import bodyParser from 'body-parser'
@@ -1804,25 +1803,28 @@ function updateProductList(storeUrl, productList, date) {
   })
 }
 
-cron.schedule('0 0,9 * * *', async () => {
+setInterval(async () => {
   const now = await getKST()
 
-  for (const storeUrl of [
-    'https://smartstore.naver.com/n09',
-    'https://smartstore.naver.com/selfwash',
-    'https://n09.co.kr',
-    'https://n09b2b.co.kr',
-    'https://autowash.co.kr',
-    'https://hyundai.auton.kr',
-    'https://theclasskorea.co.kr',
-    'https://autowax.co.kr',
-    'https://washmart.co.kr',
-  ]) {
-    getProductList(storeUrl).then(async (productList) => {
-      await updateProductList(storeUrl, productList, now)
-    }).catch(() => {})
+  if (now.getUTCHours() == 9 && now.getUTCHours() == 18 && now.getUTCMinutes() == 0 && now.getUTCSeconds() == 0) {
+    for (const storeUrl of [
+      'https://smartstore.naver.com/n09',
+      'https://smartstore.naver.com/selfwash',
+      'https://n09.co.kr',
+      'https://n09b2b.co.kr',
+      'https://autowash.co.kr',
+      'https://hyundai.auton.kr',
+      'https://theclasskorea.co.kr',
+      'https://autowax.co.kr',
+      'https://washmart.co.kr',
+    ]) {
+      getProductList(storeUrl).then(async (productList) => {
+        await updateProductList(storeUrl, productList, now)
+      }).catch(() => { })
+    }
   }
-})
+}, 1000)
+
 
 http.createServer(app).listen(80)
 https.createServer(credentials, app).listen(443)
