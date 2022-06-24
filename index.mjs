@@ -1,4 +1,5 @@
 import { exit } from 'process'
+import cron from 'node-cron'
 import fs from 'fs'
 import bodyParser from 'body-parser'
 import http from 'http'
@@ -1347,9 +1348,8 @@ function getN09B2BProductList() {
   return new Promise(async (resolve, reject) => {
     let tempDriver
 
-    buildDriver().then(async (driver) => {
+    buildDriver('mobile').then(async (driver) => {
       tempDriver = driver
-
       await driver.get('https://m.n09b2b.co.kr')
 
       const idInput = await driver.wait(until.elementLocated(By.css('#member_id')), timeout)
@@ -1426,32 +1426,40 @@ function getAutowashProductList() {
         categoryIdList.push(categoryId)
       }
 
-      const categoryList = await new Promise(async (resolve, reject) => {
-        const categoryList = []
-        let categoryAmount = categoryIdList.length
+      let categoryList
 
-        for (const categoryId of categoryIdList) {
-          fetchWithRandomUserAgent(`https://autowash.co.kr/goods/goods_list.php?cateCd=${categoryId}`).then(async (res) => {
-            const document = parse(res)
-            const productAmount = parseNumber(document.querySelector('.pick_list_num').innerText)
+      try {
+        categoryList = await new Promise(async (resolve, reject) => {
+          const categoryList = []
+          let categoryAmount = categoryIdList.length
 
-            if (productAmount == 0) {
-              categoryAmount--
-            }
-            else {
-              categoryList.push({
-                id: categoryId,
-                title: document.querySelector('.this_category').innerText.trim(),
-                productAmount: productAmount,
-              })
-            }
+          for (const categoryId of categoryIdList) {
+            fetchWithRandomUserAgent(`https://autowash.co.kr/goods/goods_list.php?cateCd=${categoryId}`).then(async (res) => {
+              const document = parse(res)
+              const productAmount = parseNumber(document.querySelector('.pick_list_num').innerText)
 
-            if (categoryList.length >= categoryAmount) {
-              resolve(categoryList)
-            }
-          }).catch((error) => reject(error))
-        }
-      })
+              if (productAmount == 0) {
+                categoryAmount--
+              }
+              else {
+                categoryList.push({
+                  id: categoryId,
+                  title: document.querySelector('.this_category').innerText.trim(),
+                  productAmount: productAmount,
+                })
+              }
+
+              if (categoryList.length >= categoryAmount) {
+                resolve(categoryList)
+              }
+            }).catch((error) => reject(error))
+          }
+        })
+      }
+      catch (error) {
+        reject(error)
+        return
+      }
 
       const productList = []
       let productAmount = 0
@@ -1513,31 +1521,39 @@ function getCarlifemallProductList() {
         }
       }
 
-      const categoryList = await new Promise(async (resolve, reject) => {
-        const categoryList = []
+      let categoryList
 
-        for (const categoryId of categoryIdList) {
-          fetchWithRandomUserAgent(`https://hyundai.auton.kr/product/category/category_main?pcid=${categoryId}&rootid=4388`, 'mobile').then(async (res) => {
-            const document = parse(res)
+      try {
+        categoryList = await new Promise(async (resolve, reject) => {
+          const categoryList = []
 
-            const flex = document.querySelector('.list_top_wrap > .flexleft')
-            const active = document.querySelector('.tab_title_sub > li > .active')
+          for (const categoryId of categoryIdList) {
+            fetchWithRandomUserAgent(`https://hyundai.auton.kr/product/category/category_main?pcid=${categoryId}&rootid=4388`, 'mobile').then(async (res) => {
+              const document = parse(res)
 
-            const categoryTitle = active.getAttribute('href').split(`'', '`)[1].split(`'`)[0]
-            const productAmount = parseNumber(flex.innerText.trim())
+              const flex = document.querySelector('.list_top_wrap > .flexleft')
+              const active = document.querySelector('.tab_title_sub > li > .active')
 
-            categoryList.push({
-              id: categoryId,
-              title: categoryTitle,
-              productAmount: productAmount,
-            })
+              const categoryTitle = active.getAttribute('href').split(`'', '`)[1].split(`'`)[0]
+              const productAmount = parseNumber(flex.innerText.trim())
 
-            if (categoryList.length >= categoryIdList.length) {
-              resolve(categoryList)
-            }
-          }).catch((error) => reject(error))
-        }
-      })
+              categoryList.push({
+                id: categoryId,
+                title: categoryTitle,
+                productAmount: productAmount,
+              })
+
+              if (categoryList.length >= categoryIdList.length) {
+                resolve(categoryList)
+              }
+            }).catch((error) => reject(error))
+          }
+        })
+      }
+      catch (error) {
+        reject(error)
+        return
+      }
 
       const productList = []
       let productAmount = 0
@@ -1570,8 +1586,8 @@ function getCarlifemallProductList() {
           }).catch((error) => reject(error))
         }
       }
-    })
-  }).catch((error) => reject(error))
+    }).catch((error) => reject(error))
+  })
 }
 
 function getTheClassProductList() {
@@ -1603,8 +1619,8 @@ function getTheClassProductList() {
           }
         }).catch((error) => reject(error))
       }
-    })
-  }).catch((error) => reject(error))
+    }).catch((error) => reject(error))
+  })
 }
 
 function getAutowaxProductList() {
@@ -1656,13 +1672,13 @@ function getWashmartProductList() {
 
       await driver.get('https://washmart.co.kr')
 
-      let idInput = await driver.wait(until.elementLocated(By.css('#member_id')), timeout)
+      const idInput = await driver.wait(until.elementLocated(By.css('#member_id')), timeout)
       idInput.sendKeys(washmartId)
 
-      let pwdInput = await driver.wait(until.elementLocated(By.css('#member_passwd')), timeout)
+      const pwdInput = await driver.wait(until.elementLocated(By.css('#member_passwd')), timeout)
       pwdInput.sendKeys(washmartPwd)
 
-      let loginButton = await driver.wait(until.elementLocated(By.css('.Loginbtn')), timeout)
+      const loginButton = await driver.wait(until.elementLocated(By.css('.Loginbtn')), timeout)
       await loginButton.click()
 
       await driver.wait(until.elementLocated(By.css('#xans_myshop_mileage')), timeout)
@@ -1803,15 +1819,15 @@ function updateProductList(storeUrl, productList, date) {
   })
 }
 
-setInterval(async () => {
+cron.schedule('0 * * * *', async () => {
   const now = await getKST()
 
-  if (now.getUTCHours() == 9 && now.getUTCHours() == 18 && now.getUTCMinutes() == 0 && now.getUTCSeconds() == 0) {
+  if (now.getUTCHours() == 9 || now.getUTCHours() == 18) {
     for (const storeUrl of [
       'https://smartstore.naver.com/n09',
       'https://smartstore.naver.com/selfwash',
       'https://n09.co.kr',
-      'https://n09b2b.co.kr',
+      // 'https://n09b2b.co.kr',
       'https://autowash.co.kr',
       'https://hyundai.auton.kr',
       'https://theclasskorea.co.kr',
@@ -1823,7 +1839,7 @@ setInterval(async () => {
       }).catch(() => { })
     }
   }
-}, 1000)
+})
 
 
 http.createServer(app).listen(80)
