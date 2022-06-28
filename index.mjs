@@ -1355,8 +1355,12 @@ function getN09B2BProductList() {
       const idInput = await driver.wait(until.elementLocated(By.css('#member_id')), timeout)
       idInput.sendKeys(n09B2BId)
 
+      await driver.sleep(500)
+
       const pwdInput = await driver.wait(until.elementLocated(By.css('#member_passwd')), timeout)
       pwdInput.sendKeys(n09B2BPwd)
+
+      await driver.sleep(500)
 
       const loginButton = await driver.wait(until.elementLocated(By.css('.btnSubmit')), timeout)
       await loginButton.click()
@@ -1675,8 +1679,12 @@ function getWashmartProductList() {
       const idInput = await driver.wait(until.elementLocated(By.css('#member_id')), timeout)
       idInput.sendKeys(washmartId)
 
+      await driver.sleep(500)
+
       const pwdInput = await driver.wait(until.elementLocated(By.css('#member_passwd')), timeout)
       pwdInput.sendKeys(washmartPwd)
+
+      await driver.sleep(500)
 
       const loginButton = await driver.wait(until.elementLocated(By.css('.Loginbtn')), timeout)
       await loginButton.click()
