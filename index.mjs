@@ -1,5 +1,5 @@
 import { exit } from 'process'
-import cron from 'node-cron'
+import schedule from 'node-schedule'
 import fs from 'fs'
 import bodyParser from 'body-parser'
 import http from 'http'
@@ -1824,7 +1824,7 @@ function updateProductList(storeUrl, productList, date) {
   })
 }
 
-cron.schedule('0 * * * *', async () => {
+schedule.scheduleJob('0 * * * *', async () => {
   const now = await getKST()
 
   if (now.getUTCHours() == 9 || now.getUTCHours() == 18) {
