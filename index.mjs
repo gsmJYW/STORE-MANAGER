@@ -1690,7 +1690,7 @@ function getWashmartProductList() {
       await loginButton.click()
 
       await driver.wait(until.elementLocated(By.css('#xans_myshop_mileage')), timeout)
-      await driver.get('https://washmart.co.kr/product/list3.html?cate_no=24&sort_method=6')
+      await driver.get('https://washmart.co.kr/product/list3.html?cate_no=253&sort_method=6')
 
       const productAmountElement = await driver.wait(until.elementLocated(By.css('.prdCount')), timeout)
       const productAmount = parseNumber(await productAmountElement.getAttribute('innerText'))
@@ -1699,7 +1699,7 @@ function getWashmartProductList() {
 
       for (let page = 1; page <= Math.ceil(productAmount / 60); page++) {
         if (page > 1) {
-          await driver.get(`https://washmart.co.kr/product/list3.html?cate_no=24&sort_method=6&page=${page}`)
+          await driver.get(`https://washmart.co.kr/product/list3.html?cate_no=253&sort_method=6&page=${page}`)
         }
 
         await driver.wait(until.elementLocated(By.css(`.this[href*="page=${page}"]`)), timeout)
@@ -1715,11 +1715,8 @@ function getWashmartProductList() {
           product.id = Number(idSplit[idSplit.length - 1])
 
           product.title = item.querySelector('.name > a > span:nth-last-child(1)').innerText
-
-          const priceElement = item.querySelector('.halfli2')
-          if (priceElement) {
-            product.price = parseNumber(priceElement.innerText)
-          }
+          const specSplit = item.innerText.split(':')
+          product.price = parseNumber(specSplit[specSplit.length - 1])
 
           product.popularityIndex = (page - 1) * 60 + index
           product.isSoldOut = item.querySelectorAll('.sold > img').length > 0
