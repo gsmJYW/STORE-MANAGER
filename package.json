@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.19.1",
+    "cron": "^2.0.0",
     "express": "^4.17.2",
     "firebase-admin": "^10.0.2",
     "fs": "^0.0.1-security",
@@ -18,7 +19,6 @@
     "node-chromedriver-downloader": "^0.9.2",
     "node-fetch": "^3.2.6",
     "node-html-parser": "^5.1.0",
-    "node-schedule": "^2.1.0",
     "npm": "^8.3.0",
     "selenium-webdriver": "^4.1.2",
     "user-agents": "^1.0.1048"

@@ -1,5 +1,5 @@
 import { exit } from 'process'
-import schedule from 'node-schedule'
+import { CronJob } from 'cron'
 import fs from 'fs'
 import bodyParser from 'body-parser'
 import http from 'http'
@@ -1824,10 +1824,9 @@ function updateProductList(storeUrl, productList, date) {
   })
 }
 
-schedule.scheduleJob('0 * * * *', async () => {
-  const now = await getKST()
-
-  if (now.getUTCHours() == 9 || now.getUTCHours() == 18) {
+new CronJob({
+  cronTime: '9,18 * * * *',
+  onTick: async () => {
     for (const storeUrl of [
       'https://smartstore.naver.com/n09',
       'https://smartstore.naver.com/selfwash',
@@ -1843,9 +1842,10 @@ schedule.scheduleJob('0 * * * *', async () => {
         await updateProductList(storeUrl, productList, now)
       }).catch(() => { })
     }
-  }
+  },
+  start: true,
+  timeZone: 'Asia/Seoul'
 })
-
 
 http.createServer(app).listen(80)
 https.createServer(credentials, app).listen(443)
