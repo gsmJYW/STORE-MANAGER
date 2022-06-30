@@ -1825,7 +1825,7 @@ function updateProductList(storeUrl, productList, date) {
 }
 
 new CronJob({
-  cronTime: '9,18 * * * *',
+  cronTime: '0 9,18 * * *',
   onTick: async () => {
     for (const storeUrl of [
       'https://smartstore.naver.com/n09',
