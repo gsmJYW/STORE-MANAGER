@@ -1611,7 +1611,7 @@ function getTheClassProductList() {
 
             product.id = Number(item.querySelector('.name > a').getAttribute('href').split('=')[1].split('&')[0])
             product.title = item.querySelector('.name > a > span:nth-last-child(1)').innerText
-            product.price = parseNumber(document.querySelector('li[rel="판매가"] > span:nth-child(2)').innerText)
+            product.price = parseNumber(item.querySelector('li[rel="판매가"] > span:nth-child(2)').innerText)
             product.popularityIndex = (page - 1) * 30 + index
             product.isSoldOut = item.querySelectorAll('.soldoutbg.-nodrag.displaynone').length <= 0
 
