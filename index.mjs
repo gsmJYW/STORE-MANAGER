@@ -1827,6 +1827,8 @@ function updateProductList(storeUrl, productList, date) {
 new CronJob({
   cronTime: '0 9,18 * * *',
   onTick: async () => {
+    const now = await getKST()
+
     for (const storeUrl of [
       'https://smartstore.naver.com/n09',
       'https://smartstore.naver.com/selfwash',
@@ -1840,7 +1842,9 @@ new CronJob({
     ]) {
       getProductList(storeUrl).then(async (productList) => {
         await updateProductList(storeUrl, productList, now)
-      }).catch(() => { })
+      }).catch((error) => {
+        console.error(error)
+      })
     }
   },
   start: true,
