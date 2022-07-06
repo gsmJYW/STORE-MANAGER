@@ -54,7 +54,7 @@
         }
     </style>
 
-    <title>STORE MANAGER - 오토왁스</title>
+    <title>STORE MANAGER - 로드중</title>
     <link rel="icon" type="image/x-icon" href="https://imgur.com/YPhrrAJ.png">
 
     <link rel="stylesheet"
@@ -76,7 +76,7 @@
                     <i id="home-icon" class="fa fa-home" style="font-size: 32px; margin: 1px 8px 18px 0px"></i>
                 </button>
             </form>
-            <h2 style="font-size: 30px; font-weight: 600; margin-bottom: auto">오토왁스</h2>
+            <h2 id="store-title" style="font-size: 30px; font-weight: 600; margin-bottom: auto">로드중</h2>
         </div>
         <div class="d-flex p-2 border" style="width: 680px; margin: auto">
             <select id="old-select" class="form-select w-auto" style="width: 250px !important; margin: auto">
@@ -99,8 +99,8 @@
                     </button>
                 </div>
                 <div class="form-check form-check-inline" style="padding: 0px 2px 0px 14px; margin: 0px 8px 0px 0px">
-                    <input class="form-check-input" type="checkbox" id="load-all" value="load-all">
-                    <label class="form-check-label">전부 로딩하기</label>
+                    <input class="form-check-input" type="checkbox" id="load-gradually" value="load-gradually">
+                    <label class="form-check-label">순차적 로딩</label>
                 </div>
                 <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
                     <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
@@ -161,8 +161,40 @@
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.0-beta1/js/bootstrap.bundle.min.js"></script>
         <script type="module">
-            const storeUrl = 'https://autowax.co.kr'
-            const storeTitle = '오토왁스'
+            const storeUrl = 'storeUrlHere'
+            const storeTitle = 'storeTitleHere'
+
+            document.title = storeTitle
+            document.getElementById('store-title').innerHTML = storeTitle
+
+            class Product {
+                constructor(id, title, category, popularityIndex, price, status, prevPrice = null, prevStatus = null) {
+                    this.id = id
+                    this.title = title
+
+                    if (category != null) {
+                        this.category = category
+                    }
+
+                    this.popularityRank = popularityIndex + 1
+
+                    if (prevPrice != null) {
+                        this.prevPrice = prevPrice
+                    }
+
+                    this.price = price
+
+                    if (prevStatus != null) {
+                        this.prevStatus = prevStatus
+                    }
+
+                    this.status = status
+                }
+
+                isChanged() {
+                    return (this.prevPrice != undefined && this.prevPrice != this.price) || (this.prevStatus != undefined && this.prevStatus != this.status)
+                }
+            }
 
 
 
@@ -183,7 +215,7 @@
                 measurementId: "G-37DECVWLYX"
             })
 
-            const loadAll = document.getElementById('load-all')
+            const loadGradually = document.getElementById('load-gradually')
             const highlightChanges = document.getElementById('highlight-changes')
             const byPopularity = document.getElementById('by-popularity')
             const byRecent = document.getElementById('by-recent')
@@ -205,7 +237,7 @@
                             throw new Error(json.error)
                         }
 
-                        loadAll.checked = json.user.loadAll
+                        loadGradually.checked = json.user.loadGradually
                         highlightChanges.checked = json.user.highlightChanges
                         byRecent.checked = json.user.sortMethod == 0
                         byPopularity.checked = json.user.sortMethod == 1
@@ -443,7 +475,7 @@
                         for (let history of historyList) {
                             if (json.minute == history) {
                                 showWarning(`
-                                    이미 업데이트 되어있어요.<br>
+                                    이미 업데이트 되어있어요!<br>
                                     업데이트는 1분 단위로 하실 수 있어요.
                                 `)
                                 return
@@ -640,7 +672,7 @@
                 sellingLabel.innerText = '판매중'
 
                 let soldOutLabel = document.createElement('label')
-                soldOutLabel.innerText = '품절 & 판매중단'
+                soldOutLabel.innerText = '품절 && 판매중단'
 
                 let codeDiv = document.createElement('div')
                 codeDiv.classList.add('form-group')
@@ -807,11 +839,57 @@
                 updateTable()
             })
 
+            function createTableRow(row) {
+                const tr = document.createElement('tr')
+
+                const th1 = document.createElement('th')
+                th1.innerHTML = row.id
+
+                const a = document.createElement('a')
+                a.setAttribute('href', `productUrlHere`)
+                a.setAttribute('target', '_blank')
+                a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
+
+                const th2 = document.createElement('th')
+                th2.appendChild(a)
+
+                const th3 = document.createElement('th')
+                th3.innerHTML = `${row.popularityRank}`
+
+                if (table[0].category) {
+                    th3.innerHTML += ` (${row.category})`
+                }
+
+                const th4 = document.createElement('th')
+
+                if (row.prevPrice && row.price && row.prevPrice != row.price) {
+                    th4.innerHTML = `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ${row.price.toLocaleString('ko-KR')}원`
+                }
+                else {
+                    th4.innerHTML += `${(row.price ? row.price : (row.prevPrice ? row.prevPrice : 0)).toLocaleString('ko-KR')}원`
+                }
+
+                const th5 = document.createElement('th')
+
+                if (row.prevStatus && row.prevStatus != row.status) {
+                    th5.innerHTML = `${row.prevStatus}<br>→ `
+                }
+
+                th5.innerHTML += row.status
+
+                for (let th of [th1, th2, th3, th4, th5]) {
+                    th.setAttribute('style', 'font-weight: 400')
+                    tr.appendChild(th)
+                }
+
+                return tr
+            }
+
             function updateTable() {
                 resultTable.innerHTML = ''
                 productAmount.textContent = ''
 
-                if (recentProductList.length == 0 && oldProductList.length == 0) {
+                if (oldProductList.length == 0 && recentProductList.length == 0) {
                     result.hidden = true
                     return
                 }
@@ -825,122 +903,86 @@
                 let newProductAmount = 0
                 let deletedProductAmount = 0
 
-                if (oldProductList.length > 0 & recentProductList.length > 0) {
+                if (oldProductList.length > 0 && recentProductList.length > 0) {
                     deletedProductList = [...oldProductList]
                     let recentProductId = Math.max.apply(Math, oldProductList.map((product) => product.id))
 
                     productAmount.textContent += `${oldProductList.length.toLocaleString('ko-KR')}개 → `
                     let sum = 0
 
-                    for (let product of recentProductList) {
+                    for (const product of recentProductList) {
                         let oldProduct = oldProductList.find((element) => element.id == product.id)
                         deletedProductList = deletedProductList.filter((element) => element.id != product.id)
 
-                        let row = {
-                            id: product.id,
-                            title: product.title,
-                            popularityRank: product.popularityIndex + 1,
-                            prevPrice: '',
-                            price: product.price,
-                            prevStatus: '',
-                            status: product.isSoldOut ? '품절' : '판매중',
-                            isChanged: false,
-                        }
+                        const row = new Product(product.id, product.title, product.category, product.popularityIndex, product.price, product.isSoldOut ? '품절' : '판매중', '', '')
 
-                        if (!oldProduct) {
+                        if (oldProduct) {
+                            row.prevPrice = oldProduct.price
+                            row.prevStatus = oldProduct.isSoldOut ? '품절' : '판매중'
+                        }
+                        else {
                             if (recentProductId > product.id) {
                                 row.prevStatus = '판매중단'
-                                row.status = product.isSoldOut ? '품절' : '판매중'
                             }
                             else {
                                 row.status = `신규, ${row.status}`
                             }
 
-                            row.isChanged = true
                             newProductAmount++
-
                             table.push(row)
                             continue
                         }
 
-                        if (oldProduct.price != product.price) {
-                            if (product.price <= 0) {
-                                row.price = oldProduct.price
-                            }
-                            else if (oldProduct.price > 0) {
-                                row.prevPrice = oldProduct.price
-                                row.isChanged = true
-                            }
-                        }
-
-                        if (oldProduct.isSoldOut != product.isSoldOut) {
-                            row.prevStatus = oldProduct.isSoldOut ? '품절' : '판매중'
-                            row.isChanged = true
-                        }
-
                         table.push(row)
                     }
 
-                    for (let deletedProduct of deletedProductList) {
-                        let row = {
-                            id: deletedProduct.id,
-                            title: deletedProduct.title,
-                            popularityRank: deletedProduct.popularityIndex + 1,
-                            prevPrice: deletedProduct.price,
-                            price: '',
-                            prevStatus: deletedProduct.isSoldOut ? '품절' : '판매중',
-                            status: '판매중단',
-                            isChanged: true,
-                        }
-                        table.push(row)
+                    for (const deletedProduct of deletedProductList) {
+                        table.push(new Product(deletedProduct.id, deletedProduct.title, deletedProduct.category, deletedProduct.popularityIndex, '', '', deletedProduct.price, deletedProduct.isSoldOut ? '품절' : '판매중'))
                     }
                 }
                 else {
-                    for (let product of productList) {
-                        let row = {
-                            id: product.id,
-                            title: product.title,
-                            popularityRank: product.popularityIndex + 1,
-                            prevPrice: '',
-                            price: product.price,
-                            prevStatus: '',
-                            status: product.isSoldOut ? '품절' : '판매중',
-                        }
-                        table.push(row)
+                    for (const product of productList) {
+                        table.push(new Product(product.id, product.title, product.category, product.popularityIndex, product.price, product.isSoldOut ? '품절' : '판매중'))
                     }
                 }
 
                 productAmount.textContent += `${productList.length.toLocaleString('ko-KR')}개`
 
+                if (oldProductList.length > 0 && recentProductList.length > 0) {
+                    productAmount.innerHTML += `(<span style="color: green">+${newProductAmount}</span><span style="color: red"> -${deletedProductList.length}</span>)`
+
+                    if (highlightChanges.checked) {
+                        table.sort((a, b) => b.isChanged() - a.isChanged())
+                    }
+                }
+
                 if (byRecent.checked) {
                     table.sort((a, b) => b.id - a.id)
                 }
                 else if (byPopularity.checked) {
-                    table.sort((a, b) => a.popularityRank - b.popularityRank)
-                }
+                    table.sort((a, b) => {
+                        if (a.popularityRank > b.popularityRank) {
+                            return 1;
+                        }
 
-                if (newProductAmount > 0 || deletedProductList.length > 0) {
-                    productAmount.innerHTML += `(<span style="color: green">+${newProductAmount}</span><span style="color: red"> -${deletedProductList.length}</span>)`
+                        if (a.popularityRank < b.popularityRank) {
+                            return -1;
+                        }
 
-                    if (highlightChanges.checked) {
-                        table.sort((a, b) => b.isChanged - a.isChanged)
-                    }
-
-                    for (let row of table) {
-                        delete row.isChanged
-                    }
+                        return a.category - b.category
+                    })
                 }
 
                 for (let index = table.length - 1; index >= 0; index--) {
                     let isFiltered = false
 
                     isFiltered =
-                        table[index].id < minimumCode ||
-                        table[index].id > maximumCode ||
-                        !table[index].title.includes(title) ||
-                        table[index].popularityRank < minimumPopularity ||
-                        table[index].popularityRank > maximumPopularity ||
-                        table[index].price < minimumPrice ||
+                        table[index].id < minimumCode |
+                        table[index].id > maximumCode |
+                        !table[index].title.includes(title) |
+                        table[index].popularityRank < minimumPopularity |
+                        table[index].popularityRank > maximumPopularity |
+                        table[index].price < minimumPrice |
                         table[index].price > maximumPrice
 
                     let includeStatus = false
@@ -981,88 +1023,25 @@
                     tr.appendChild(th)
                 }
 
-                if (loadAll.checked) {
-                    loadCount = Infinity
+                if (loadGradually.checked) {
+                    loadCount = 50
                 }
                 else {
-                    loadCount = 50
+                    loadCount = Infinity
                 }
 
                 loadingTable = table.slice(loadCount)
 
-                for (let row of table.slice(0, loadCount)) {
-                    let tr = document.createElement('tr')
-                    resultTable.appendChild(tr)
-
-                    let th1 = document.createElement('th')
-                    th1.innerHTML = row.id
-
-                    let a = document.createElement('a')
-
-                    a.setAttribute('href', `${storeUrl}/goods/goods_view.php?goodsNo=${row.id}`)
-                    a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
-
-                    let th2 = document.createElement('th')
-                    th2.appendChild(a)
-
-                    let th3 = document.createElement('th')
-                    th3.innerHTML = row.popularityRank
-
-                    let th4 = document.createElement('th')
-
-                    if (row.prevPrice.toString().length > 0 && row.price.toString().length > 0) {
-                        th4.innerHTML = `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ${row.price.toLocaleString('ko-KR')}원`
-                    }
-                    else {
-                        th4.innerHTML += `${Number(row.prevPrice + row.price).toLocaleString('ko-KR')}원`
-                    }
-
-                    let th5 = document.createElement('th')
-
-                    th5.innerHTML = row.prevStatus.length > 0 ? `${row.prevStatus.toLocaleString('ko-KR')}<br>→ ` : ''
-                    th5.innerHTML += row.status
-
-                    for (let th of [th1, th2, th3, th4, th5]) {
-                        th.setAttribute('style', 'font-weight: 400')
-                        tr.appendChild(th)
-                    }
+                for (const row of table.slice(0, loadCount)) {
+                    resultTable.appendChild(createTableRow(row))
                 }
             }
 
             function loadTable() {
-                for (let row of loadingTable.slice(0, loadCount)) {
-                    let tr = document.createElement('tr')
-                    resultTable.appendChild(tr)
-
-                    let th1 = document.createElement('th')
-                    th1.innerHTML = row.id
-
-                    let a = document.createElement('a')
-
-                    a.setAttribute('href', `${storeUrl}/goods/goods_view.php?goodsNo=${row.id}`)
-                    a.setAttribute('target', '_blank')
-                    a.innerHTML = row.title.match(/.{1,36}/g).join('<br>')
-
-                    let th2 = document.createElement('th')
-                    th2.appendChild(a)
-
-                    let th3 = document.createElement('th')
-                    th3.innerHTML = row.popularityRank
-
-                    let th4 = document.createElement('th')
-                    th4.innerHTML = row.prevPrice.toString().length > 0 ? `${row.prevPrice.toLocaleString('ko-KR')}원<br>→ ` : ''
-                    th4.innerHTML += `${row.price.toLocaleString('ko-KR')}원`
-
-                    let th5 = document.createElement('th')
-                    th5.innerHTML = row.prevStatus.length > 0 ? `${row.prevStatus.toLocaleString('ko-KR')}<br>→ ` : ''
-                    th5.innerHTML += row.status
-
-                    for (let th of [th1, th2, th3, th4, th5]) {
-                        th.setAttribute('style', 'font-weight: 400')
-                        tr.appendChild(th)
-                    }
+                for (const row of loadingTable.slice(0, loadCount)) {
+                    resultTable.appendChild(createTableRow(row))
                 }
+
                 loadingTable = loadingTable.slice(loadCount)
             }
 
@@ -1122,18 +1101,27 @@
 
                     let filename = dateList.join(' → ')
 
-                    ws.A1.v = '상품 코드'
-                    ws.B1.v = '상품명'
-                    ws.C1.v = '카테고리'
-                    ws.D1.v = '인기 순위'
-                    ws.E1.v = '이전 가격'
-                    ws.F1.v = '현재 가격'
-                    ws.G1.v = '이전 상태'
-                    ws.H1.v = '현재 상태'
-                    
+                    const columnList = ['상품코드', '상품명', '인기순위', '현재가격', '현재상태']
+
+                    if (oldProductList.length > 0 && recentProductList.length > 0) {
+                        columnList.splice(3, 0, '이전가격')
+                        columnList.splice(5, 0, '이전상태')
+                    }
+
+                    if (table[0].category) {
+                        columnList.splice(2, 0, '카테고리')
+                    }
+
+                    let charCode = 65
+
+                    for (const column of columnList) {
+                        ws[`${String.fromCharCode(charCode)}1`].v = column
+                        charCode++
+                    }
+
                     table.forEach((row, index) => {
                         let cell = ws[`B${index + 2}`]
-                        cell.f = `=HYPERLINK("${storeUrl}/goods/goods_view.php?goodsNo=${row.id}", "${row.title}")`
+                        cell.f = `=HYPERLINK("productUrlHere", "${row.title}")`
                     })
 
                     let wb = XLSX.utils.book_new()
@@ -1249,14 +1237,6 @@
                 return new Promise((resolve, reject) => {
                     swal.fire(params).then((res) => resolve(res))
                 })
-            }
-
-            function breakTitle(title) {
-                let html = ''
-                
-                for (let word of title.split(' ')) {
- 
-                }
             }
         </script>
 </body>

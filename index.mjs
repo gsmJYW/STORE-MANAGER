@@ -234,21 +234,7 @@ app.get('/smartstore/:endpoint', async (req, res) => {
       `)
     }
 
-    fs.readFile(__dirname + '/views/smartstore.html', (error, data) => {
-      if (error) {
-        res.json({
-          result: 'error',
-          error: error.message,
-        })
-        return
-      }
-
-      const htmlString = data.toString()
-        .replaceAll('$storeUrl', storeUrl)
-        .replaceAll('$storeTitle', storeTitle)
-
-      res.send(htmlString)
-    })
+    res.send(getStoreHtml(storeUrl, storeTitle, '${storeUrl}/products/${row.id}'))
   }
   catch (error) {
     res.sendFile(__dirname + '/views/storeNotFound.html')
@@ -261,31 +247,31 @@ app.get('/smartstore/:endpoint', async (req, res) => {
 })
 
 app.get('/n09', async (req, res) => {
-  res.sendFile(__dirname + '/views/n09.html')
+  res.send(getStoreHtml('https://n09.co.kr', '엔공구', '${storeUrl}/product/detail.html?product_no=${row.id}'))
 })
 
 app.get('/n09/b2b', async (req, res) => {
-  res.sendFile(__dirname + '/views/n09B2B.html')
+  res.send(getStoreHtml('https://n09b2b.co.kr', '엔공구 B2B', "${storeUrl}/product/${row.title.replace(' ', '-').replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣\-]+/g, '')}/${row.id}"))
 })
 
 app.get('/hyundai/auton', async (req, res) => {
-  res.sendFile(__dirname + '/views/carlifemall.html')
+  res.send(getStoreHtml('https://hyundai.auton.kr', '카라이프몰', '${storeUrl}/product/category/product_view2/${row.id}'))
 })
 
 app.get('/autowash', async (req, res) => {
-  res.sendFile(__dirname + '/views/autowash.html')
+  res.send(getStoreHtml('https://autowash.co.kr', '오토워시', '${storeUrl}/goods/goods_view.php?goodsNo=${row.id}'))
 })
 
 app.get('/theclass', async (req, res) => {
-  res.sendFile(__dirname + '/views/theclass.html')
+  res.res.send(getStoreHtml('https://theclasskorea.co.kr', '더클래스', '${storeUrl}/product/detail.html?product_no=${row.id}'))
 })
 
 app.get('/autowax', async (req, res) => {
-  res.sendFile(__dirname + '/views/autowax.html')
+  res.send(getStoreHtml('https://autowax.co.kr', '오토왁스', '${storeUrl}/goods/goods_view.php?goodsNo=${row.id}'))
 })
 
 app.get('/washmart', async (req, res) => {
-  res.sendFile(__dirname + '/views/washmart.html')
+  res.send(getStoreHtml('https://washmart.co.kr', '워시마트', "${storeUrl}/product/${row.title.replace(' ', '-').replaceAll(/[^0-9A-Za-zㄱ-ㅎㅏ-ㅣ가-힣\-]+/g, '')}/${row.id}"))
 })
 
 app.get('/carWash', async (req, res) => {
@@ -853,6 +839,11 @@ app.post('/cjTracking', async (req, res) => {
       error: error.message,
     })
   }
+  finally {
+    if (conn) {
+      conn.release()
+    }
+  }
 })
 
 app.post('/smartstore/search', async (req, res) => {
@@ -944,7 +935,14 @@ app.post('/history', async (req, res) => {
     const now = await getKST()
     conn = await pool.getConnection()
 
-    if (req.body.storeUrl == 'https://n09.co.kr' || req.body.storeUrl == 'https://hyundai.auton.kr/') {
+    const store = (await conn.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
+
+    if (!store) {
+      res.json({ result: 'no such store' })
+      return
+    }
+
+    if (!req.body.storeUrl.includes('smartstore.naver.com')) {
       const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
       if (user.permission == 0) {
@@ -991,12 +989,19 @@ app.post('/product', async (req, res) => {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
     const now = await getKST()
-
     conn = await pool.getConnection()
+
+    const store = (await conn.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
+
+    if (!store) {
+      res.json({ result: 'no such store' })
+      return
+    }
+
     const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
-      if (req.body.storeUrl == 'https://n09.co.kr' || req.body.storeUrl == 'https://hyundai.auton.kr/') {
+      if (!req.body.storeUrl.includes('smartstore.naver.com')) {
         res.json({ result: 'no permission' })
       }
 
@@ -1079,15 +1084,20 @@ app.post('/product/update', async (req, res) => {
     }
 
     const history = (await conn.query(`SELECT * FROM history WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0][0]
-    let productList
 
     if (history) {
-      productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0]
-    }
-    else {
-      productList = await getProductList(req.body.storeUrl)
+      const productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0]
+
+      res.json({
+        result: 'already exists',
+        minute: history.minute,
+        product: productList,
+      })
+
+      return
     }
 
+    const productList = await getProductList(req.body.storeUrl)
     await updateProductList(req.body.storeUrl, productList, now)
 
     await conn.query(`
@@ -1210,6 +1220,14 @@ function getCJTrackingList(invcNoList) {
       })
     }
   })
+}
+
+function getStoreHtml(storeUrl, storeTitle, productUrl) {
+  const data = fs.readFileSync(__dirname + '/views/store.html')
+  return data.toString()
+    .replaceAll(/storeUrlHere/g, storeUrl)
+    .replaceAll(/storeTitleHere/g, storeTitle)
+    .replaceAll(/productUrlHere/g, productUrl)
 }
 
 function searchNaver(query) {
