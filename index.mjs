@@ -72,9 +72,8 @@ admin.initializeApp({
 })
 
 const auth = getAuth()
-const conn = await pool.getConnection()
 
-await conn.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS user (
     uid char(28) NOT NULL,
     email varchar(255) NOT NULL,
@@ -89,7 +88,7 @@ await conn.query(`
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 `)
 
-await conn.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS store (
     url varchar(256) NOT NULL,
     title varchar(256) NOT NULL,
@@ -97,7 +96,7 @@ await conn.query(`
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 `)
 
-await conn.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS bookmark (
     uid char(28) NOT NULL,
     storeUrl varchar(256) NOT NULL,
@@ -107,7 +106,7 @@ await conn.query(`
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='	'
 `)
 
-await conn.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS query (
     uid varchar(45) NOT NULL,
     storeUrl varchar(256) NOT NULL,
@@ -121,7 +120,7 @@ await conn.query(`
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 `)
 
-await conn.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS history (
     storeUrl varchar(256) NOT NULL,
     minute int NOT NULL,
@@ -130,7 +129,7 @@ await conn.query(`
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 `)
 
-await conn.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS product (
     storeUrl varchar(256) NOT NULL,
     minute int NOT NULL,
@@ -145,7 +144,7 @@ await conn.query(`
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 `)
 
-await conn.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS carWash (
     name varchar(64) NOT NULL,
     category varchar(64) DEFAULT NULL,
@@ -170,7 +169,7 @@ await conn.query(`
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 `)
 
-await conn.query(`
+await pool.query(`
   INSERT IGNORE INTO store VALUES
     ('https://n09.co.kr', '엔공구'),
     ('https://n09b2b.co.kr', '엔공구 B2B'),
@@ -180,8 +179,6 @@ await conn.query(`
     ('https://autowax.co.kr', '오토왁스'),
     ('https://washmart.co.kr', '워시마트')
 `)
-
-conn.release()
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({
@@ -212,11 +209,10 @@ app.get('/smartstore/:endpoint', async (req, res) => {
     return
   }
 
-  let storeTitle, conn
+  let storeTitle
 
   try {
-    conn = await pool.getConnection()
-    const store = (await conn.query(`SELECT * FROM store WHERE url = '${storeUrl}'`))[0][0]
+    const store = (await pool.query(`SELECT * FROM store WHERE url = '${storeUrl}'`))[0][0]
 
     if (store) {
       storeTitle = store.title
@@ -228,7 +224,7 @@ app.get('/smartstore/:endpoint', async (req, res) => {
         throw new Error()
       }
 
-      await conn.query(`
+      await pool.query(`
         INSERT INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')
         ON DUPLICATE KEY UPDATE title = '${storeTitle}'
       `)
@@ -238,11 +234,6 @@ app.get('/smartstore/:endpoint', async (req, res) => {
   }
   catch (error) {
     res.sendFile(__dirname + '/views/storeNotFound.html')
-  }
-  finally {
-    if (conn) {
-      conn.release()
-    }
   }
 })
 
@@ -287,21 +278,18 @@ app.get('/admin', async (req, res) => {
 })
 
 app.post('/signin', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
     const firebaseUser = await auth.getUser(decodedToken.uid)
 
     const now = await getKST()
 
-    conn = await pool.getConnection()
-    await conn.query(`
+    await pool.query(`
       INSERT INTO user (uid, email, name, firstLoginSecond, lastLoginSecond) VALUES ('${decodedToken.uid}', '${firebaseUser.email}', '${firebaseUser.displayName}', ${getSecond(now)}, ${getSecond(now)})
       ON DUPLICATE KEY UPDATE user.email = '${firebaseUser.email}', name = '${firebaseUser.displayName}', lastLoginSecond = ${getSecond(now)}
     `)
 
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     res.json({
       result: 'ok',
@@ -313,23 +301,15 @@ app.post('/signin', async (req, res) => {
       result: 'error',
       error: error.message,
     })
-  }
-  finally {
-    if (conn) {
-      conn.release()
-    }
   }
 })
 
 app.post('/user', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
     const uid = decodedToken.uid
 
-    conn = await pool.getConnection()
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${uid}'`))[0][0]
 
     res.json({
       result: 'ok',
@@ -342,21 +322,12 @@ app.post('/user', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/user/update', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
-    conn = await pool.getConnection()
-    await conn.query(`UPDATE user SET loadAll = ${req.body.loadAll}, highlightChanges = ${req.body.highlightChanges}, sortMethod = ${req.body.sortMethod} WHERE uid = '${decodedToken.uid}'`)
+    await pool.query(`UPDATE user SET loadAll = ${req.body.loadAll}, highlightChanges = ${req.body.highlightChanges}, sortMethod = ${req.body.sortMethod} WHERE uid = '${decodedToken.uid}'`)
 
     res.json({ result: 'ok' })
   }
@@ -366,28 +337,19 @@ app.post('/user/update', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/user/byEmail', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
-    conn = await pool.getConnection()
-    let user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    let user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
       res.json({ result: 'no permission' })
       return
     }
 
-    user = (await conn.query(`SELECT * FROM user WHERE email = '${req.body.email}'`))[0][0]
+    user = (await pool.query(`SELECT * FROM user WHERE email = '${req.body.email}'`))[0][0]
 
     if (!user) {
       res.json({ result: 'user not found' })
@@ -405,16 +367,9 @@ app.post('/user/byEmail', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/user/permission', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
@@ -423,15 +378,14 @@ app.post('/user/permission', async (req, res) => {
       return
     }
 
-    conn = await pool.getConnection()
-    let user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    let user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
       res.json({ result: 'no permission' })
       return
     }
 
-    user = (await conn.query(`SELECT * FROM user WHERE email = '${req.body.email}'`))[0][0]
+    user = (await pool.query(`SELECT * FROM user WHERE email = '${req.body.email}'`))[0][0]
 
     if (!user) {
       res.json({ result: 'user not found' })
@@ -442,7 +396,7 @@ app.post('/user/permission', async (req, res) => {
       return
     }
 
-    await conn.query(`UPDATE user SET permission = ${req.body.permission} WHERE email = '${req.body.email}'`)
+    await pool.query(`UPDATE user SET permission = ${req.body.permission} WHERE email = '${req.body.email}'`)
     res.json({ result: 'ok' })
   }
   catch (error) {
@@ -451,28 +405,19 @@ app.post('/user/permission', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/user/admin', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
-    conn = await pool.getConnection()
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
       res.json({ result: 'no permission' })
       return
     }
 
-    const adminList = (await conn.query('SELECT * FROM user WHERE permission = 1'))[0]
+    const adminList = (await pool.query('SELECT * FROM user WHERE permission = 1'))[0]
 
     res.json({
       result: 'ok',
@@ -485,16 +430,9 @@ app.post('/user/admin', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/bookmark', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
 
@@ -504,8 +442,7 @@ app.post('/bookmark', async (req, res) => {
       query += ` AND storeUrl = '${req.body.storeUrl}'`
     }
 
-    conn = await pool.getConnection()
-    const bookmarkList = (await conn.query(query))[0]
+    const bookmarkList = (await pool.query(query))[0]
 
     res.json({
       result: 'ok',
@@ -518,21 +455,12 @@ app.post('/bookmark', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/bookmark/update', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
-    conn = await pool.getConnection()
-    await conn.query(`REPLACE INTO bookmark (uid, storeUrl) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}')`)
+    await pool.query(`REPLACE INTO bookmark (uid, storeUrl) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}')`)
 
     res.json({ result: 'ok' })
   }
@@ -541,22 +469,13 @@ app.post('/bookmark/update', async (req, res) => {
       result: 'error',
       error: error.message,
     })
-  }
-  finally {
-    if (conn) {
-      conn.release()
-    }
   }
 })
 
 app.post('/bookmark/delete', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
-    conn = await pool.getConnection()
-    await conn.query(`DELETE FROM bookmark WHERE uid = '${decodedToken.uid}' AND storeUrl = '${req.body.storeUrl}'`)
+    await pool.query(`DELETE FROM bookmark WHERE uid = '${decodedToken.uid}' AND storeUrl = '${req.body.storeUrl}'`)
 
     res.json({ result: 'ok' })
   }
@@ -566,26 +485,17 @@ app.post('/bookmark/delete', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/quota', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
     const now = await getKST()
-    conn = await pool.getConnection()
 
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
     const isAdmin = user.permission > 0
 
-    const queryList = (await conn.query(`SELECT * FROM query WHERE uid = '${decodedToken.uid}' AND day = ${getDay(now)}`))[0]
+    const queryList = (await pool.query(`SELECT * FROM query WHERE uid = '${decodedToken.uid}' AND day = ${getDay(now)}`))[0]
 
     res.json({
       result: 'ok',
@@ -599,27 +509,19 @@ app.post('/quota', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/excel', async (req, res) => {
   const quotaLimit = 10
-  let conn
 
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
     const now = await getKST()
 
-    conn = await pool.getConnection()
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
-      const sum = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${decodedToken.uid}' AND day = ${getDay(now)} AND type = 3`))[0][0]
+      const sum = (await pool.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${decodedToken.uid}' AND day = ${getDay(now)} AND type = 3`))[0][0]
 
       if (sum) {
         if (sum.amount >= quotaLimit) {
@@ -633,7 +535,7 @@ app.post('/excel', async (req, res) => {
       }
     }
 
-    await conn.query(`
+    await pool.query(`
       INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 3, 1)
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + 1
     `)
@@ -646,23 +548,14 @@ app.post('/excel', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/siDo', async (req, res) => {
-  let conn
-
   try {
-    conn = await pool.getConnection()
-    const result = (await conn.query('SELECT siDo FROM carWash GROUP BY siDo'))[0]
+    const result = (await pool.query('SELECT siDo FROM carWash GROUP BY siDo'))[0]
 
     const siDoList = []
-
-    for (let row of result) {
+    for (const row of result) {
       siDoList.push(row.siDo)
     }
 
@@ -677,23 +570,14 @@ app.post('/siDo', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/siGunGu', async (req, res) => {
-  let conn
-
   try {
-    conn = await pool.getConnection()
-    const result = (await conn.query(`SELECT siGunGu FROM carWash WHERE siDo = '${req.body.siDo}' GROUP BY siGunGu`))[0]
+    const result = (await pool.query(`SELECT siGunGu FROM carWash WHERE siDo = '${req.body.siDo}' GROUP BY siGunGu`))[0]
 
     const siGunGuList = []
-
-    for (let row of result) {
+    for (const row of result) {
       siGunGuList.push(row.siGunGu)
     }
 
@@ -708,19 +592,10 @@ app.post('/siGunGu', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/eupMyeonDong', async (req, res) => {
-  let conn
-
   try {
-    conn = await pool.getConnection()
-
     let query = 'SELECT eupMyeonDong FROM carWash'
     const whereClause = []
 
@@ -737,10 +612,9 @@ app.post('/eupMyeonDong', async (req, res) => {
     }
 
     query += ' GROUP BY eupMyeonDong'
-    const result = (await conn.query(query))[0]
+    const result = (await pool.query(query))[0]
 
     const eupMyeonDongList = []
-
     for (const row of result) {
       eupMyeonDongList.push(row.eupMyeonDong)
     }
@@ -756,19 +630,10 @@ app.post('/eupMyeonDong', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/carWash', async (req, res) => {
-  let conn
-
   try {
-    conn = await pool.getConnection()
-
     let query = 'SELECT * FROM carWash'
     const whereClause = []
 
@@ -788,10 +653,10 @@ app.post('/carWash', async (req, res) => {
       query += ` WHERE ${whereClause.join(' AND ')}`
     }
 
-    const carWashList = (await conn.query(query))[0]
+    const carWashList = (await pool.query(query))[0]
 
     query = query.replace('*', 'AVG(lat) as lat, AVG(lon) as lon')
-    const center = (await conn.query(query))[0][0]
+    const center = (await pool.query(query))[0][0]
 
     res.json({
       result: 'ok',
@@ -805,21 +670,12 @@ app.post('/carWash', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/cjTracking', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
-    conn = await pool.getConnection()
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
       res.json({ result: 'no permission' })
@@ -838,11 +694,6 @@ app.post('/cjTracking', async (req, res) => {
       result: 'error',
       error: error.message,
     })
-  }
-  finally {
-    if (conn) {
-      conn.release()
-    }
   }
 })
 
@@ -883,8 +734,6 @@ app.post('/smartstore/search', async (req, res) => {
     }
   }
 
-  let conn
-
   try {
     const storeTitle = await searchSmartstore(storeUrl)
 
@@ -901,8 +750,7 @@ app.post('/smartstore/search', async (req, res) => {
       endpoint.slice(0, new RegExp('[^a-z0-9_-]+').exec(endpoint).index)
     }
 
-    conn = await pool.getConnection()
-    await conn.query(`
+    await pool.query(`
       INSERT INTO store (url, title) VALUES ('${storeUrl}', '${storeTitle}')
       ON DUPLICATE KEY UPDATE title = '${storeTitle}'
     `)
@@ -919,23 +767,14 @@ app.post('/smartstore/search', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/history', async (req, res) => {
-  let conn
-
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
     const now = await getKST()
-    conn = await pool.getConnection()
 
-    const store = (await conn.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
+    const store = (await pool.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
 
     if (!store) {
       res.json({ result: 'no such store' })
@@ -943,19 +782,19 @@ app.post('/history', async (req, res) => {
     }
 
     if (!req.body.storeUrl.includes('smartstore.naver.com')) {
-      const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+      const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
       if (user.permission == 0) {
         res.json({ result: 'no permission' })
       }
     }
 
-    await conn.query(`
+    await pool.query(`
       INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 0, 1)
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + 1
     `)
 
-    const result = (await conn.query(`SELECT minute FROM history WHERE storeUrl = '${req.body.storeUrl}'`))[0]
+    const result = (await pool.query(`SELECT minute FROM history WHERE storeUrl = '${req.body.storeUrl}'`))[0]
     const historyList = []
 
     for (const history of result) {
@@ -974,38 +813,30 @@ app.post('/history', async (req, res) => {
     })
     return
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/product', async (req, res) => {
   const quotaLimit = 100000
-  let conn
 
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
     const now = await getKST()
-    conn = await pool.getConnection()
 
-    const store = (await conn.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
+    const store = (await pool.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
 
     if (!store) {
       res.json({ result: 'no such store' })
       return
     }
 
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
       if (!req.body.storeUrl.includes('smartstore.naver.com')) {
         res.json({ result: 'no permission' })
       }
 
-      const sum = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid = '${decodedToken.uid}' AND day = ${getDay(now)} AND type = 1`))[0][0]
+      const sum = (await pool.query(`SELECT SUM(amount) AS amount FROM query WHERE uid = '${decodedToken.uid}' AND day = ${getDay(now)} AND type = 1`))[0][0]
 
       if (sum) {
         if (sum.amount >= quotaLimit) {
@@ -1019,9 +850,9 @@ app.post('/product', async (req, res) => {
       }
     }
 
-    const productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${req.body.minute}`))[0]
+    const productList = (await pool.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${req.body.minute}`))[0]
 
-    await conn.query(`
+    await pool.query(`
       INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 1, ${productList.length})
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
     `)
@@ -1037,27 +868,19 @@ app.post('/product', async (req, res) => {
       error: error.message,
     })
   }
-  finally {
-    if (conn) {
-      conn.release()
-    }
-  }
 })
 
 app.post('/product/update', async (req, res) => {
   const quotaLimit = 25000
-  let conn
 
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-
     const now = await getKST()
 
-    conn = await pool.getConnection()
-    const user = (await conn.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
+    const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
 
     if (user.permission == 0) {
-      const sum = (await conn.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${decodedToken.uid}' AND day = ${getDay(now)} AND type = 2`))[0][0]
+      const sum = (await pool.query(`SELECT SUM(amount) AS amount FROM query WHERE uid='${decodedToken.uid}' AND day = ${getDay(now)} AND type = 2`))[0][0]
 
       if (sum) {
         if (sum.amount >= quotaLimit) {
@@ -1071,7 +894,7 @@ app.post('/product/update', async (req, res) => {
       }
     }
 
-    const store = (await conn.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
+    const store = (await pool.query(`SELECT * FROM store WHERE url = '${req.body.storeUrl}'`))[0][0]
 
     if (!store) {
       res.json({ result: 'no such store' })
@@ -1083,10 +906,10 @@ app.post('/product/update', async (req, res) => {
       return
     }
 
-    const history = (await conn.query(`SELECT * FROM history WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0][0]
+    const history = (await pool.query(`SELECT * FROM history WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0][0]
 
     if (history) {
-      const productList = (await conn.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0]
+      const productList = (await pool.query(`SELECT * FROM product WHERE storeUrl = '${req.body.storeUrl}' AND minute = ${getMinute(now)}`))[0]
 
       res.json({
         result: 'already exists',
@@ -1100,7 +923,7 @@ app.post('/product/update', async (req, res) => {
     const productList = await getProductList(req.body.storeUrl)
     await updateProductList(req.body.storeUrl, productList, now)
 
-    await conn.query(`
+    await pool.query(`
       INSERT INTO query (uid, storeUrl, day, second, type, amount) VALUES ('${decodedToken.uid}', '${req.body.storeUrl}', ${getDay(now)}, ${getSecond(now)}, 2, ${productList.length})
       ON DUPLICATE KEY UPDATE second = ${getSecond(now)}, amount = amount + ${productList.length}
     `)
@@ -1116,11 +939,6 @@ app.post('/product/update', async (req, res) => {
       result: 'error',
       error: error.message,
     })
-  }
-  finally {
-    if (conn) {
-      conn.release()
-    }
   }
 })
 
@@ -1141,8 +959,7 @@ function getDay(date) {
 }
 
 async function getKST() {
-  let now = new Date()
-  return new Date(now.getTime() + 1000 * 60 * 60 * 9)
+  return new Date(new Date().getTime() + 1000 * 60 * 60 * 9)
 }
 
 function fetchWithRandomUserAgent(url, device = 'desktop', encoding = 'utf-8') {
@@ -1831,8 +1648,8 @@ function updateProductList(storeUrl, productList, date) {
 
       query += valueList.join(', ')
 
-      await conn.query(query)
-      await conn.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(date)})`)
+      await pool.query(query)
+      await pool.query(`REPLACE INTO history (storeUrl, minute) VALUES ('${storeUrl}', ${getMinute(date)})`)
 
       resolve(getMinute(date))
     }
