@@ -409,13 +409,6 @@
                 <span class="tooltip">전국 세차장</span>
             </li>
             <li class="signin-needed" hidden>
-                <a id="option-button" href="#">
-                    <i class='bx bx-cog'></i>
-                    <span class="links_name">설정</span>
-                </a>
-                <span class="tooltip">설정</span>
-            </li>
-            <li class="signin-needed" hidden>
                 <a id="quota-button" href="#">
                     <i class='bx bx-pie-chart'></i>
                     <span class="links_name">사용량</span>
@@ -449,7 +442,7 @@
     </div>
     <section class="home-section">
         <div class="d-flex" style="float: right; margin: 15px">
-            <div id="signin-button" class="g-signin2" data-onsuccess="onSignIn"></div>
+            <a id="cancel-button" type="button" class="btn btn-secondary" href="/signin" style="margin: auto">로그인</a>
             <div class="container d-flex align-items-center justify-content-center"
                 style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)">
                 <div>
@@ -498,7 +491,7 @@
                 showLoading('유저 정보를 불러오는 중이에요.')
 
                 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js'
-                import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
+                import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"
 
                 initializeApp({
                     apiKey: "AIzaSyDevqbIK-lcqYdqbmfBAWGPrSHlJT7F0FQ",
@@ -560,7 +553,7 @@
                     else {
                         let res = await swalAsync({
                             title: '환영합니다!',
-                            html: '기능을 열기 위해 회원가입 또는 로그인 해주세요!',
+                            html: '기능을 열기 위해 로그인 해주세요!',
                             icon: 'success',
                             showCancelButton: true,
                             confirmButtonText: '어떻게요?',
@@ -570,31 +563,19 @@
                         if (res.isConfirmed) {
                             await swalAsync({
                                 title: '회원가입 및 로그인',
-                                html: '우측 상단의 <img src="https://imgur.com/7l7Kakh.png"></img> 버튼을 통해 할 수 있습니다.<br>Google을 통해 로그인 하시면 회원가입 및 로그인이 끝나요!',
+                                html: `
+                                    우측 상단의 <img src="https://imgur.com/ej7KxS7.png"></img> 버튼을 통해<br>
+                                    로그인 페이지로 이동할 수 있습니다.<br><br>
+                                    <img src="https://imgur.com/IgV5dIM.png"></img><br><br>
+                                    Google 또는 카카오 계정을 연동하시면<br>
+                                    회원가입 및 로그인이 끝나요!
+                                `,
                                 icon: 'info',
                                 confirmButtonText: '멋지네요!',
                             })
                         }
                     }
                 })
-
-                function onSignIn(googleUser) {
-                    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-                        unsubscribe()
-                        if (!isUserEqual(googleUser, firebaseUser)) {
-                            const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token)
-
-                            signInWithCredential(auth, credential).then(() => location.reload()).catch((error) => {
-                                showError(`
-                                    <div style="line-height: 130%">
-                                        로그인 도중 오류가 발생했어요.<br>
-                                        다시 시도해주세요.
-                                    </div>
-                                `, error.message)
-                            })
-                        }
-                    })
-                }
 
                 document.getElementById('signout').addEventListener('click', () => {
                     signOut(auth).then(() => location.reload()).catch((error) => {
@@ -619,8 +600,6 @@
                     }
                     return false
                 }
-
-                window.onSignIn = onSignIn
 
 
 
@@ -857,146 +836,6 @@
                         })
                     }
                 }
-
-
-
-                // 설정
-
-                document.getElementById('option-button').addEventListener('click', async () => {
-                    try {
-                        let json = await postAsync('/user', { idToken: await user.getIdToken() })
-
-                        if (json.result == 'error') {
-                            throw new Error(json.error)
-                        }
-
-                        let loadAll = document.createElement('input')
-                        loadAll.classList.add('form-check-input')
-                        loadAll.setAttribute('type', 'checkbox')
-
-                        let highlightChanges = document.createElement('input')
-                        highlightChanges.classList.add('form-check-input')
-                        highlightChanges.setAttribute('type', 'checkbox')
-
-                        let byRecent = document.createElement('input')
-                        byRecent.classList.add('form-check-input')
-                        byRecent.setAttribute('type', 'radio')
-                        byRecent.setAttribute('name', 'sort-radio')
-
-                        let byPopularity = document.createElement('input')
-                        byPopularity.classList.add('form-check-input')
-                        byPopularity.setAttribute('type', 'radio')
-                        byPopularity.setAttribute('name', 'sort-radio')
-
-                        let loadAllLabel = document.createElement('label')
-                        loadAllLabel.innerText = '전부 로딩하기'
-
-                        let highlightChangesLabel = document.createElement('label')
-                        highlightChangesLabel.innerText = '바뀐 제품을 위로'
-
-                        let byRecentLabel = document.createElement('label')
-                        byRecentLabel.innerText = '최신 순으로'
-
-                        let byPopularityLabel = document.createElement('label')
-                        byPopularityLabel.innerText = '인기 순으로'
-
-                        if (json.user.loadAll) {
-                            loadAll.checked = true
-                        }
-
-                        if (json.user.highlightChanges) {
-                            highlightChanges.checked = true
-                        }
-
-                        if (json.user.sortMethod == 0) {
-                            byRecent.checked = true
-                        }
-                        else if (json.user.sortMethod == 1) {
-                            byPopularity.checked = true
-                        }
-
-                        let loadAllDiv = document.createElement('div')
-                        loadAllDiv.classList.add('form-check', 'form-check-inline')
-                        loadAllDiv.appendChild(loadAll)
-                        loadAllDiv.appendChild(loadAllLabel)
-
-                        let highlightChangesDiv = document.createElement('div')
-                        highlightChangesDiv.classList.add('form-check', 'form-check-inline')
-                        highlightChangesDiv.appendChild(highlightChanges)
-                        highlightChangesDiv.appendChild(highlightChangesLabel)
-
-                        let byRecentDiv = document.createElement('div')
-                        byRecentDiv.classList.add('form-check', 'form-check-inline')
-                        byRecentDiv.appendChild(byRecent)
-                        byRecentDiv.appendChild(byRecentLabel)
-
-                        let byPopularityDiv = document.createElement('div')
-                        byPopularityDiv.classList.add('form-check', 'form-check-inline')
-                        byPopularityDiv.appendChild(byPopularity)
-                        byPopularityDiv.appendChild(byPopularityLabel)
-
-                        let span = document.createElement('span')
-                        span.style = 'line-height: 130%'
-                        span.innerHTML = `
-                            스토어 접속 시 기본 설정이에요.<br>
-                            그때그때 바꾸실 수 있어요.<br><br>
-                        `
-
-                        let space = document.createElement('span')
-                        space.innerHTML = '&nbsp<br>'
-
-                        let form = document.createElement('form')
-                        form.appendChild(span)
-                        form.appendChild(loadAllDiv)
-                        form.appendChild(highlightChangesDiv)
-                        form.appendChild(space)
-                        form.appendChild(byRecentDiv)
-                        form.appendChild(byPopularityDiv)
-
-                        swal.fire({
-                            title: '설정',
-                            html: form,
-                            confirmButtonText: '확인',
-                            cancelButtonText: '안 돼요!',
-                            showCancelButton: true,
-                            heightAuto: false,
-                        }).then(async (res) => {
-                            if (res.isConfirmed) {
-                                try {
-                                    let json = await postAsync('/user/update', {
-                                        idToken: await user.getIdToken(),
-                                        loadAll: loadAll.checked ? 1 : 0,
-                                        highlightChanges: highlightChanges.checked ? 1 : 0,
-                                        sortMethod: byRecent.checked ? 0 : 1,
-                                    })
-
-                                    swal.fire({
-                                        title: '설정 변경 성공!',
-                                        icon: 'success',
-                                        heightAuto: false,
-                                        confirmButtonText: '좋네요!',
-                                    })
-                                }
-                                catch (error) {
-                                    showError(`
-                                        <div style="line-height: 130%">
-                                            설정을 변경하는 도중 오류가 발생했어요.<br>
-                                            다시 시도해주세요.
-                                        </div>
-                                    `, error.message)
-                                }
-                            }
-                        })
-                    }
-                    catch (error) {
-                        showError(`
-                            <div style="line-height: 130%">
-                                설정을 불러오는 도중 오류가 발생했어요.<br>
-                                다시 시도해주세요.
-                            </div>
-                        `, error.message)
-                    }
-                })
 
 
 
