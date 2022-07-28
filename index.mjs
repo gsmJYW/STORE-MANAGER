@@ -38,7 +38,7 @@ const credentials = {
   cert: fs.readFileSync(__dirname + '/ssl/store-manager.kro.kr_20220303F94AA.crt.pem'),
 }
 
-const args = process.argv.slice(2);
+const args = process.argv.slice(2)
 
 if (args.length < 9) {
   console.error('Parameters not provided: [host] [user] [password] [database] [connection_limit] [n09_b2b_id] [n09_b2b_pwd] [washmart_id] [washmart_pwd]')
@@ -79,7 +79,7 @@ await pool.query(`
     email varchar(255) NOT NULL,
     name varchar(64) NOT NULL,
     permission tinyint NOT NULL DEFAULT '0',
-    loadAll tinyint NOT NULL DEFAULT '0',
+    loadGradually tinyint NOT NULL DEFAULT '0',
     highlightChanges tinyint NOT NULL DEFAULT '1',
     sortMethod tinyint NOT NULL DEFAULT '0',
     firstLoginSecond int NOT NULL,
@@ -201,6 +201,10 @@ app.get('/', async (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 })
 
+app.get('/signin', async (req, res) => {
+  res.sendFile(__dirname + '/views/signin.html')
+})
+
 app.get('/smartstore/:endpoint', async (req, res) => {
   const storeUrl = `https://smartstore.naver.com/${req.params.endpoint}`
 
@@ -283,10 +287,11 @@ app.post('/signin', async (req, res) => {
     const firebaseUser = await auth.getUser(decodedToken.uid)
 
     const now = await getKST()
+    const name = firebaseUser.displayName.replaceAll(/'/g, `\\'`)
 
     await pool.query(`
-      INSERT INTO user (uid, email, name, firstLoginSecond, lastLoginSecond) VALUES ('${decodedToken.uid}', '${firebaseUser.email}', '${firebaseUser.displayName}', ${getSecond(now)}, ${getSecond(now)})
-      ON DUPLICATE KEY UPDATE user.email = '${firebaseUser.email}', name = '${firebaseUser.displayName}', lastLoginSecond = ${getSecond(now)}
+      INSERT INTO user (uid, email, name, firstLoginSecond, lastLoginSecond) VALUES ('${decodedToken.uid}', '${firebaseUser.email}', '${name}', ${getSecond(now)}, ${getSecond(now)})
+      ON DUPLICATE KEY UPDATE user.email = '${firebaseUser.email}', name = '${name}', lastLoginSecond = ${getSecond(now)}
     `)
 
     const user = (await pool.query(`SELECT * FROM user WHERE uid = '${decodedToken.uid}'`))[0][0]
@@ -297,6 +302,38 @@ app.post('/signin', async (req, res) => {
     })
   }
   catch (error) {
+    res.json({
+      result: 'error',
+      error: error.message,
+    })
+  }
+})
+
+app.post('/signin/kakao', async (req, res) => {
+  try {
+    const uid = `kakao-${req.body.email}`
+    const token = await auth.createCustomToken(uid)
+
+    await auth.updateUser(uid, {
+      email: req.body.email,
+      displayName: req.body.name,
+    })
+
+    const now = await getKST()
+    req.body.name = req.body.name.replaceAll(/'/g, `\\'`)
+
+    await pool.query(`
+      INSERT INTO user (uid, email, name, firstLoginSecond, lastLoginSecond) VALUES ('${uid}', '${req.body.email}', '${req.body.name}', ${getSecond(now)}, ${getSecond(now)})
+      ON DUPLICATE KEY UPDATE user.email = '${req.body.email}', name = '${req.body.name}', lastLoginSecond = ${getSecond(now)}
+    `)
+
+    res.json({
+      result: 'ok',
+      token: token,
+    })
+  }
+  catch (error) {
+    console.log(error)
     res.json({
       result: 'error',
       error: error.message,
@@ -327,7 +364,7 @@ app.post('/user', async (req, res) => {
 app.post('/user/update', async (req, res) => {
   try {
     const decodedToken = await auth.verifyIdToken(req.body.idToken)
-    await pool.query(`UPDATE user SET loadAll = ${req.body.loadAll}, highlightChanges = ${req.body.highlightChanges}, sortMethod = ${req.body.sortMethod} WHERE uid = '${decodedToken.uid}'`)
+    await pool.query(`UPDATE user SET loadGradually = ${req.body.loadGradually}, highlightChanges = ${req.body.highlightChanges}, sortMethod = ${req.body.sortMethod} WHERE uid = '${decodedToken.uid}'`)
 
     res.json({ result: 'ok' })
   }
@@ -786,6 +823,7 @@ app.post('/history', async (req, res) => {
 
       if (user.permission == 0) {
         res.json({ result: 'no permission' })
+        return
       }
     }
 
@@ -1128,8 +1166,8 @@ function getSmartstoreProductList(storeUrl) {
           })
         }).catch((error) => reject(error))
       }
-    })
-  }).catch((error) => reject(error))
+    }).catch((error) => reject(error))
+  })
 }
 
 function getN09ProductList() {
