@@ -174,21 +174,7 @@
                     showErrorWithRefresh('관리자 정보를 불러오는 도중 오류가 발생했어요.', error.message)
                 }
             } else {
-                swal.fire({
-                    title: '잠시만요!',
-                    html: '이용하기 전에 로그인 해주세요!',
-                    confirmButtonText: '메인으로',
-                    allowOutsideClick: false,
-                    showCancelButton: false,
-                    heightAuto: false,
-                }).then((res) => {
-                    let form = document.createElement('form')
-                    form.style.visibility = 'hidden'
-                    form.method = 'GET'
-                    form.action = '/'
-                    document.body.appendChild(form)
-                    form.submit()
-                })
+                showWarningWithHome('이용하기 전에 로그인 해주세요!')
             }
         })
 
@@ -213,7 +199,7 @@
                     throw new Error(json.error)
                 }
                 else if (json.result == 'no permission') {
-                    showNoPermissionError()
+                    showWarningWithHome('여기 접근하실 권한이 없어요!')
                     return
                 }
                 else if (json.result == 'user not found') {
@@ -243,7 +229,7 @@
                     return
                 }
                 else if (json.result == 'no permission') {
-                    showNoPermissionError()
+                    showWarningWithHome('여기 접근하실 권한이 없어요!')
                     return
                 }
                 else if (json.result == 'user not found') {
@@ -518,18 +504,42 @@
             })
         }
 
-        function showWarning(html, fontSize = 20) {
-            swal.fire({
-                icon: 'warning',
-                html: `
-                    <div style="font-size: ${fontSize}px">
-                        ${html}
-                    </div>
-                `,
-                confirmButtonText: '알겠어요',
-                heightAuto: false,
-            })
-        }
+        function showWarningWithHome(html, fontSize = 20) {
+                swal.fire({
+                    title: '잠시만요!',
+                    icon: 'warning',
+                    html: `
+                        <div style="font-size: ${fontSize}px">
+                            ${html}
+                        </div>
+                    `,
+                    confirmButtonText: '메인으로',
+                    allowOutsideClick: false,
+                    showCancelButton: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                })
+            }
+
+            function showWarning(html, fontSize = 20) {
+                swal.fire({
+                    title: '잠시만요!',
+                    icon: 'warning',
+                    html: `
+                        <div style="font-size: ${fontSize}px">
+                            ${html}
+                        </div>
+                    `,
+                    confirmButtonText: '알겠어요',
+                    heightAuto: false,
+                })
+            }
 
         function showLoading(html) {
             swal.fire({
@@ -571,24 +581,6 @@
                     ${quotaDesc}: <b>${quota.toLocaleString('ko-KR')} / ${maxQuota.toLocaleString('ko-KR')}</b>
                 </span>
             `)
-        }
-
-        function showNoPermissionError() {
-            swal.fire({
-                title: '잠시만요!',
-                html: '관리자만 접근할 수 있어요!',
-                confirmButtonText: '메인으로',
-                allowOutsideClick: false,
-                showCancelButton: false,
-                heightAuto: false,
-            }).then((res) => {
-                let form = document.createElement('form')
-                form.style.visibility = 'hidden'
-                form.method = 'GET'
-                form.action = '/'
-                document.body.appendChild(form)
-                form.submit()
-            })
         }
 
         function swalAsync(params) {
