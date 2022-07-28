@@ -100,7 +100,7 @@
                 </div>
                 <div class="form-check form-check-inline" style="padding: 0px 2px 0px 14px; margin: 0px 8px 0px 0px">
                     <input class="form-check-input" type="checkbox" id="load-gradually" value="load-gradually">
-                    <label class="form-check-label">순차적 로딩</label>
+                    <label class="form-check-label">천천히 로딩하기</label>
                 </div>
                 <div class="form-check form-check-inline" style="padding: 0px 2px 0px 20px; margin: 0px 8px 0px 0px">
                     <input class="form-check-input" type="checkbox" id="highlight-changes" value="highlight-changes"
@@ -269,8 +269,14 @@
                             storeUrl: storeUrl,
                         })
 
+                        console.log(json)
+
                         if (json.result == 'error') {
                             throw new Error(json.error)
+                        }
+                        else if (json.result == 'no permission') {
+                            showWarningWithHome('여기 접근하실 권한이 없어요!')
+                            return
                         }
 
                         json.history.sort((a, b) => b - a)
@@ -302,21 +308,7 @@
                         })
                     }
                 } else {
-                    swal.fire({
-                        title: '잠시만요!',
-                        html: '이용하기 전에 로그인 해주세요!',
-                        confirmButtonText: '메인으로',
-                        allowOutsideClick: false,
-                        showCancelButton: false,
-                        heightAuto: false,
-                    }).then((res) => {
-                        let form = document.createElement('form')
-                        form.style.visibility = 'hidden'
-                        form.method = 'GET'
-                        form.action = '/'
-                        document.body.appendChild(form)
-                        form.submit()
-                    })
+                    showWarningWithHome('이용하기 전에 로그인 해주세요!')
                 }
             })
 
@@ -835,7 +827,14 @@
             let loadingTable = []
             let sortedProductList = []
 
-            document.getElementById('sort-form').addEventListener('input', () => {
+            document.getElementById('sort-form').addEventListener('input', async () => {
+                postAsync('/user/update', {
+                    idToken: await user.getIdToken(),
+                    loadGradually: loadGradually.checked ? 1 : 0,
+                    highlightChanges: highlightChanges.checked ? 1 : 0,
+                    sortMethod: byRecent.checked ? 0 : 1,
+                }).catch(() => { })
+
                 updateTable()
             })
 
@@ -1180,8 +1179,32 @@
                 })
             }
 
+            function showWarningWithHome(html, fontSize = 20) {
+                swal.fire({
+                    title: '잠시만요!',
+                    icon: 'warning',
+                    html: `
+                        <div style="font-size: ${fontSize}px">
+                            ${html}
+                        </div>
+                    `,
+                    confirmButtonText: '메인으로',
+                    allowOutsideClick: false,
+                    showCancelButton: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                })
+            }
+
             function showWarning(html, fontSize = 20) {
                 swal.fire({
+                    title: '잠시만요!',
                     icon: 'warning',
                     html: `
                         <div style="font-size: ${fontSize}px">
