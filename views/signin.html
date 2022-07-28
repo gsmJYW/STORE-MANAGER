@@ -37,7 +37,7 @@
             font-family: "Poppins", sans-serif;
         }
 
-        .g-signin2 > div > div > span > span {
+        .g-signin2>div>div>span>span {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             font-size: 14px;
         }
@@ -50,13 +50,15 @@
             style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)">
             <div>
                 <div class="text-center">
-                    <div class="p-2 g-signin2" data-theme="dark" data-width="300" data-height="44" data-longtitle="true" data-onsuccess="signinWithGoogle"></div>
+                    <div class="p-2 g-signin2" data-theme="dark" data-width="300" data-height="44" data-longtitle="true"
+                        data-onsuccess="signinWithGoogle"></div>
                     <a class="p-2" href="javascript:signinWithKakao()">
-                        <img src="https://developers.kakao.com/tool/resource/static/img/button/login/full/ko/kakao_login_medium_wide.png" width="300"
-                            alt="카카오 로그인 버튼" />
+                        <img src="https://developers.kakao.com/tool/resource/static/img/button/login/full/ko/kakao_login_medium_wide.png"
+                            width="300" alt="카카오 로그인 버튼" />
                     </a>
                     <br>
-                    <a id="cancel-button" type="button" class="m-4 btn btn-secondary" href="/" style="margin: auto">취소</a>
+                    <a id="cancel-button" type="button" class="m-4 btn btn-secondary" href="/"
+                        style="margin: auto">취소</a>
                 </div>
             </div>
         </div>
@@ -84,12 +86,11 @@
         // 구글
 
         function signinWithGoogle(googleUser) {
-            showLoading('Google과 연동하는 중이에요.')
-
             const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
                 unsubscribe()
 
                 if (!isUserEqual(googleUser, firebaseUser)) {
+                    showLoading('Google과 연동하는 중이에요.')
                     const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token)
 
                     signInWithCredential(auth, credential).then(() => {
