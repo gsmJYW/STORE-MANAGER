@@ -143,7 +143,7 @@
                         }
 
                         if (json.user.permission == 0) {
-                            showNoPermissionError()
+                            showWarningWithHome('여기 접근하실 권한이 없어요!')
                             return
                         }
 
@@ -153,21 +153,7 @@
                         showErrorWithRefresh('유저 정보를 불러오는 도중 오류가 발생했어요.', error.message)
                     }
                 } else {
-                    swal.fire({
-                        title: '잠시만요!',
-                        html: '이용하기 전에 로그인 해주세요!',
-                        confirmButtonText: '메인으로',
-                        allowOutsideClick: false,
-                        showCancelButton: false,
-                        heightAuto: false,
-                    }).then((res) => {
-                        let form = document.createElement('form')
-                        form.style.visibility = 'hidden'
-                        form.method = 'GET'
-                        form.action = '/'
-                        document.body.appendChild(form)
-                        form.submit()
-                    })
+                    showWarningWithHome('이용하기 전에 로그인 해주세요!')
                 }
             })
 
@@ -276,7 +262,7 @@
                     let json = await postAsync('/cjTracking', { idToken: await user.getIdToken(), invcNo: invcNoList })
 
                     if (json.result == 'no permission') {
-                        showNoPermissionError()
+                        showWarningWithHome('여기 접근하실 공간이 없어요!')
                         return
                     }
                     else if (json.result == 'error') {
@@ -481,10 +467,38 @@
                 })
             }
 
-            function showWarning(html) {
+            function showWarningWithHome(html, fontSize = 20) {
                 swal.fire({
                     title: '잠시만요!',
-                    html: html,
+                    icon: 'warning',
+                    html: `
+                        <div style="font-size: ${fontSize}px">
+                            ${html}
+                        </div>
+                    `,
+                    confirmButtonText: '메인으로',
+                    allowOutsideClick: false,
+                    showCancelButton: false,
+                    heightAuto: false,
+                }).then((res) => {
+                    let form = document.createElement('form')
+                    form.style.visibility = 'hidden'
+                    form.method = 'GET'
+                    form.action = '/'
+                    document.body.appendChild(form)
+                    form.submit()
+                })
+            }
+
+            function showWarning(html, fontSize = 20) {
+                swal.fire({
+                    title: '잠시만요!',
+                    icon: 'warning',
+                    html: `
+                        <div style="font-size: ${fontSize}px">
+                            ${html}
+                        </div>
+                    `,
                     confirmButtonText: '알겠어요',
                     heightAuto: false,
                 })
@@ -499,24 +513,6 @@
                     heightAuto: false,
                 })
                 swal.showLoading()
-            }
-
-            function showNoPermissionError() {
-                swal.fire({
-                    title: '잠시만요!',
-                    html: '관리자만 접근할 수 있어요!',
-                    confirmButtonText: '메인으로',
-                    allowOutsideClick: false,
-                    showCancelButton: false,
-                    heightAuto: false,
-                }).then((res) => {
-                    let form = document.createElement('form')
-                    form.style.visibility = 'hidden'
-                    form.method = 'GET'
-                    form.action = '/'
-                    document.body.appendChild(form)
-                    form.submit()
-                })
             }
 
             function postAsync(url, params = {}) {
