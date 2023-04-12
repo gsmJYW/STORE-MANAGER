@@ -258,7 +258,7 @@ app.get('/autowash', async (req, res) => {
 })
 
 app.get('/theclass', async (req, res) => {
-  res.res.send(getStoreHtml('https://theclasskorea.co.kr', '더클래스', '${storeUrl}/product/detail.html?product_no=${row.id}'))
+  res.send(getStoreHtml('https://theclasskorea.co.kr', '더클래스', '${storeUrl}/product/detail.html?product_no=${row.id}'))
 })
 
 app.get('/autowax', async (req, res) => {
